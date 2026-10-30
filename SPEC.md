@@ -22,7 +22,7 @@ Non-goals (MVP):
   for the MVP)
 - Importing existing spreadsheets or backdating dates and history entries;
   all timestamps are set by the server at the moment of the action
-- Email/password auth, password reset, account deletion
+- Account deletion
 - Pagination (assumption: one user has fewer than ~500 applications)
 
 ## 3. Users
@@ -42,8 +42,8 @@ account can never read or modify my applications.
   so the existence of other users' records is not revealed
 
 ### US-0 Sign up / sign in (M2)
-- A user signs in with GitHub or Google (Auth.js); the first sign-in creates the
-  account. Signing out ends the session
+- A user can register and sign in; signing out ends the session (auth library
+  and method are decided in week 2, see Open questions)
 - Unauthenticated users are redirected to the sign-in page
 - After sign-in, every page and action shows only the current user's data
 - Opening, editing, changing status, archiving or deleting another user's
@@ -62,8 +62,8 @@ account can never read or modify my applications.
   - location (optional, max 200 chars)
   - level (optional, free text, max 100 chars, e.g. "Junior", "Senior")
   - stack (optional, list of up to 30 tags, each max 50 chars)
-  - salary min / salary max (optional, non-negative integers, annual gross;
-    if both are set, min ≤ max)
+  - salary min / salary max (optional, non-negative integers, annual gross
+    only; if both are set, min ≤ max)
   - salary currency (required if any salary value is set, ISO 4217 code, e.g.
     "USD", "EUR", "UAH")
 - Text inputs are trimmed; a whitespace-only value counts as empty
@@ -82,6 +82,9 @@ account can never read or modify my applications.
 
 ### US-3 Change status (M1)
 Statuses: Wishlist, Applied, Interview, Offer, Rejected
+- In M1 the status is changed on a minimal detail page: read-only fields, a
+  status select and the status history in chronological order (oldest first).
+  US-4 (M3) adds editing and deleting to this page
 - Any transition between two different statuses is allowed, in any direction
 - Setting the current status again (e.g. Applied → Applied) is a no-op: no
   history record is written and `updatedAt` does not change
@@ -90,14 +93,14 @@ Statuses: Wishlist, Applied, Interview, Offer, Rejected
 - All status changes (list, detail page, kanban) go through one server action
   and one data access layer function, so these rules cannot diverge
 
-### US-4 Application detail, edit, delete (M3)
-- The detail page shows all fields and the status history in chronological
-  order (oldest first), including the initial Wishlist record
+### US-4 Edit and delete on the detail page (M3)
+- Extends the M1 detail page (US-3), which already shows all fields and the
+  status history including the initial Wishlist record
 - All fields can be edited with the same validation as US-1; editing fields
   does not write status history
 - Delete asks for confirmation; after deletion the user returns to the list
-- Delete is a hard delete: the application and its status history are removed
-  permanently (database cascade)
+  and the application no longer appears anywhere in the UI (soft or hard
+  delete is decided in week 2, see Open questions)
 
 ### US-5 Kanban board (M5)
 - One column per status; archived applications are not shown
@@ -155,13 +158,13 @@ Statuses: Wishlist, Applied, Interview, Offer, Rejected
 - Archive and unarchive follow the same ownership rules as US-0
 
 ## 5. Data model (draft)
-User, Account, Session, VerificationToken: Auth.js Prisma adapter models
+User(id, email, ...auth fields): exact shape depends on the auth library
+  chosen in week 2
 Application(id, userId, company, role, url?, notes?, location?, level?,
   stack String[], salaryMin Int?, salaryMax Int?, salaryCurrency?, status,
   archivedAt?, createdAt, updatedAt)
 StatusChange(id, applicationId, from Status?, to Status, changedAt)
   - `from` is null only for the initial record written on creation
-  - `onDelete: Cascade` from Application
 Status: Prisma enum (WISHLIST, APPLIED, INTERVIEW, OFFER, REJECTED)
 
 `StatusChange` has no `userId`: it is always read and written through an
@@ -172,8 +175,8 @@ Application that has already been checked for ownership.
 | --- | --- |
 | UI | Next.js (App Router), Server Components by default, Tailwind, responsive down to 360px, accessible forms |
 | Logic | Server Actions with Zod validation on the server |
-| Data | Postgres on Neon via Prisma: Auth.js models, Application, StatusChange |
-| Access | Auth.js (GitHub, Google OAuth) + owner check on every request through a data access layer |
+| Data | Postgres on Neon via Prisma: User (+ auth library models), Application, StatusChange |
+| Access | Auth (library chosen in week 2) + owner check on every request through a data access layer |
 | AI | Claude API, called from server code only (M6) |
 | Quality | Vitest (unit), Playwright (e2e); from M7: CI and error monitoring |
 | Deploy | From M7: Vercel, preview deployment for every PR, each preview uses its own Neon branch (never the production database) |
@@ -191,22 +194,27 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
 - Responsive down to 360px, no horizontal page scroll
 - Job URLs are rendered as links only after server-side `http`/`https`
   validation
-- TypeScript strict; lint and typecheck pass before every commit, enforced by a
-  local pre-commit hook until M7 and by CI on every PR from M7
+- TypeScript strict; lint and typecheck pass before every commit (checked
+  manually in M1–M2, enforced by hooks from M3 and by CI on every PR from M7)
 
 ## 8. Milestones
-- M1 (week 1): list + create + status change, demo-user auth stub, pre-commit
-  hook (lint + typecheck), unit test for the status-change transaction
-- M2 (week 2): real auth (Auth.js, GitHub + Google) + data isolation per user,
-  e2e test for cross-user isolation; demo data wiped
-- M3 (week 3): edit + delete, unit and e2e tests for M1–M3 stories
+- M1 (week 1): list + create + minimal detail page with status change and
+  history, demo-user auth stub
+- M2 (week 2): real auth + data isolation per user (verified manually with two
+  accounts); demo data wiped
+- M3 (week 3): edit + delete; Vitest and Playwright set up; unit test for the
+  status-change transaction, e2e test for cross-user isolation, unit and e2e
+  tests for M1–M3 stories; hooks enforce lint and typecheck
 - M4 (week 4): archive application (US-8)
 - M5 (week 5): kanban board + search and filters
 - M6 (week 6): AI job posting parsing + eval script
 - M7–M8 (weeks 7–8): deploy, preview deployments, CI, monitoring, portfolio prep
 
 ## 9. Open questions
-- Salary period: annual only, or also monthly / hourly?
+- Soft delete or hard delete? (decide in week 2, day 1)
+- Auth library (Better Auth or Auth.js) and method (email + password or OAuth);
+  if email + password, are password reset and email verification in scope?
+  (decide in week 2, day 2)
 - Should the create form allow choosing an initial status other than Wishlist?
 
 ## 10. Decision log
@@ -222,18 +230,19 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
   same status is a no-op
 - 2026-10-30: parsed AI fields (stack, location, level, salary) are stored as
   optional Application columns
-- 2026-10-30: hard delete with cascade; "hide but keep" is covered by archive
-- 2026-10-30: auth via Auth.js with GitHub and Google OAuth only
+- 2026-10-30: salary is stored as annual gross only
 - 2026-10-30: date filter uses last updated (`updatedAt`)
 - 2026-10-30: reminders stay out of scope for the MVP
-- 2026-10-30: deploy, CI and previews stay in M7; a pre-commit hook enforces
-  lint and typecheck until then
+- 2026-10-30: deploy, CI and previews stay in M7; hooks enforce lint and
+  typecheck from M3 (week 3), tests start in M3
+- 2026-10-30: status change in M1 lives on a minimal detail page; US-4 adds
+  edit and delete to it in M3
 - 2026-10-30: other users' records return 404, not 403
 
 ## 11. End-to-end verification
-- Create an application, change its status, reload the page: both changes persist
-  and the status history shows the initial Wishlist record and the change with
-  timestamps
+- Create an application, open its detail page, change its status, reload the
+  page: both changes persist and the status history shows the initial Wishlist
+  record and the change with timestamps
 - A job URL with a `javascript:` scheme is rejected with a field error
 - `npm run lint` and `npm run typecheck` pass
 - (from M2) Signed in as user B, user A's application returns 404 on open, edit,
