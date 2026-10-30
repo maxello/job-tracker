@@ -46,9 +46,10 @@ account can never read or modify my applications.
   and method are decided in week 2, see Open questions)
 - Unauthenticated users are redirected to the sign-in page
 - After sign-in, every page and action shows only the current user's data
-- Opening, editing, changing status, archiving or deleting another user's
-  application (via UI or by swapping the id in a request) returns 404 and
-  changes nothing
+- Every action on another user's application that exists at the current
+  milestone (via UI or by swapping the id in a request) returns 404 and changes
+  nothing: open and change status from M2, edit and delete from M3, archive and
+  unarchive from M4
 - Data created under the M1 demo-user stub is wiped when M2 ships (it is dev
   data only; no migration)
 
@@ -90,7 +91,7 @@ Statuses: Wishlist, Applied, Interview, Offer, Rejected
   history record is written and `updatedAt` does not change
 - Each change is recorded in history with a timestamp (from, to, changedAt)
 - The status update and the history record are written in one transaction
-- All status changes (list, detail page, kanban) go through one server action
+- All status changes (detail page, kanban) go through one server action
   and one data access layer function, so these rules cannot diverge
 
 ### US-4 Edit and delete on the detail page (M3)
@@ -245,8 +246,9 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
   record and the change with timestamps
 - A job URL with a `javascript:` scheme is rejected with a field error
 - `npm run lint` and `npm run typecheck` pass
-- (from M2) Signed in as user B, user A's application returns 404 on open, edit,
-  status change, archive and delete, and stays unchanged
+- (from M2) Signed in as user B, every action on user A's application that
+  exists at that milestone returns 404 and leaves it unchanged: open and status
+  change (M2), plus edit and delete (M3), plus archive and unarchive (M4)
 - (from M3) Edit an application and reload: changes persist; delete it: it is
   gone from the list and its URL returns 404
 - (from M4) Archive an application: it disappears from the list, board and
