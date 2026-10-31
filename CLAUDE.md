@@ -48,6 +48,7 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 - Before installing any new package, stop and ask for confirmation, even if the user requested it: name the package, why it's needed, and a no-dependency alternative (e.g. `Intl.DateTimeFormat`). Install only after an explicit "yes".
 - Keep diffs small: one task = one change, no unrelated refactors
 - If requirements are ambiguous or conflict with SPEC.md, ask before coding
+- If unsure about a library API (Prisma, Zod, the auth library), check the docs for the installed version (see `package.json`) before writing code; don't guess
 
 ## Not built yet (don't invent these)
 
