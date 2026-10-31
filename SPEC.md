@@ -1,18 +1,22 @@
 # Job Tracker — Product Spec
 
 ## 1. Problem
+
 I track job applications in spreadsheets and notes. Statuses get lost, I can't
 see at a glance which stage each application is at, and there is no history of
 when things changed. Copying details from a job posting by hand is tedious.
 
 ## 2. Goals / Non-goals
+
 Goals:
+
 - One place to see all my applications and their current stage
 - A full, timestamped history of status changes per application
 - Fast entry: a short form, or paste a job posting and let AI fill in the fields
 - Private data: each user sees only their own applications
 
 Non-goals (MVP):
+
 - Email parsing
 - Browser extension
 - Team / shared features
@@ -26,12 +30,14 @@ Non-goals (MVP):
 - Pagination (assumption: one user has fewer than ~500 applications)
 
 ## 3. Users
+
 One type: a job seeker with an account. Data is private per user: another
 account can never read or modify my applications.
 
 ## 4. User stories + acceptance criteria
 
 ### Conventions used by all stories
+
 - "Last updated" means `Application.updatedAt`: it changes on any edit, status
   change, archive or unarchive. The list shows it, sorts by it, and the date
   filter uses it
@@ -42,7 +48,9 @@ account can never read or modify my applications.
   so the existence of other users' records is not revealed
 
 ### US-0 Sign up / sign in (M2)
+
 As a job seeker, I want to sign up and sign in, so that my applications are private and available only to me.
+
 - A user can register and sign in; signing out ends the session (auth library
   and method are decided in week 2, see Open questions)
 - Unauthenticated users are redirected to the sign-in page
@@ -55,7 +63,9 @@ As a job seeker, I want to sign up and sign in, so that my applications are priv
   data only; no migration)
 
 ### US-1 Add application (M1)
+
 As a job seeker, I want to quickly add an application I've sent, so that I have all my applications in one place.
+
 - Fields:
   - company (required, 1–200 chars)
   - role (required, 1–200 chars)
@@ -76,7 +86,9 @@ As a job seeker, I want to quickly add an application I've sent, so that I have 
 - After saving, it appears in the list without a full page reload
 
 ### US-2 View list (M1)
+
 As a job seeker, I want to see all my applications in one list, so that I know at a glance where each one stands.
+
 - The list is the home page
 - Each row shows company, role, status and last updated date
 - Sorted by last updated, newest first
@@ -85,8 +97,10 @@ As a job seeker, I want to see all my applications in one list, so that I know a
 - Each row links to the application detail page
 
 ### US-3 Change status (M1)
+
 As a job seeker, I want to change an application's status and see its history, so that I know which stage it is at and when it changed.
 Statuses: Wishlist, Applied, Interview, Offer, Rejected
+
 - In M1 the status is changed on a minimal detail page: read-only fields, a
   status select and the status history in chronological order (oldest first).
   US-4 (M3) adds editing and deleting to this page
@@ -99,7 +113,9 @@ Statuses: Wishlist, Applied, Interview, Offer, Rejected
   and one data access layer function, so these rules cannot diverge
 
 ### US-4 Edit and delete on the detail page (M3)
+
 As a job seeker, I want to edit or delete an application, so that my data stays accurate and free of mistakes.
+
 - Extends the M1 detail page (US-3), which already shows all fields and the
   status history including the initial Wishlist record
 - All fields can be edited with the same validation as US-1; editing fields
@@ -109,7 +125,9 @@ As a job seeker, I want to edit or delete an application, so that my data stays 
   delete is decided in week 2, see Open questions)
 
 ### US-5 Kanban board (M5)
+
 As a job seeker, I want to see my applications on a board by status and move them between columns, so that I can track and update my pipeline visually.
+
 - One column per status; archived applications are not shown
 - Cards within a column are ordered by last updated, newest first (no manual
   ordering)
@@ -124,7 +142,9 @@ As a job seeker, I want to see my applications on a board by status and move the
   (scroll snap); the page itself does not scroll horizontally
 
 ### US-6 Search and filters (M5)
+
 As a job seeker, I want to search and filter my applications, so that I can quickly find the ones I need.
+
 - Search by company and role: case-insensitive, substring match
 - Filter by status (multiple selection) and by last updated date range
   (from / to, both optional, inclusive, in the user's local timezone)
@@ -135,7 +155,9 @@ As a job seeker, I want to search and filter my applications, so that I can quic
   clear them
 
 ### US-7 AI job posting parsing (M6)
+
 As a job seeker, I want to paste a job posting and have the form filled in for me, so that I don't have to copy the details by hand.
+
 - The user pastes the text of a job posting (max 20,000 characters; longer input
   is rejected with a message before any API call)
 - The app calls the Claude API from the server only (the API key is never sent
@@ -158,7 +180,9 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
   stack). Target: ≥ 90% for company and role, ≥ 70% for the other fields
 
 ### US-8 Archive application (M4)
+
 As a job seeker, I want to archive applications that are no longer relevant, so that my list and board stay focused without losing their history.
+
 - An application can be archived from the detail page and unarchived from it
 - Archiving does not change the status and does not write status history
 - Archived applications are hidden from the list, kanban board and search
@@ -168,6 +192,8 @@ As a job seeker, I want to archive applications that are no longer relevant, so 
 - Archive and unarchive follow the same ownership rules as US-0
 
 ## 5. Data model (draft)
+
+```text
 User(id, email, ...auth fields): exact shape depends on the auth library
   chosen in week 2
 Application(id, userId, company, role, url?, notes?, location?, level?,
@@ -176,25 +202,28 @@ Application(id, userId, company, role, url?, notes?, location?, level?,
 StatusChange(id, applicationId, from Status?, to Status, changedAt)
   - `from` is null only for the initial record written on creation
 Status: Prisma enum (WISHLIST, APPLIED, INTERVIEW, OFFER, REJECTED)
+```
 
 `StatusChange` has no `userId`: it is always read and written through an
 Application that has already been checked for ownership.
 
 ## 6. Architecture
-| Layer | What |
-| --- | --- |
-| UI | Next.js (App Router), Server Components by default, Tailwind, responsive down to 360px, accessible forms |
-| Logic | Server Actions with Zod validation on the server |
-| Data | Postgres on Neon via Prisma: User (+ auth library models), Application, StatusChange |
-| Access | Auth (library chosen in week 2) + owner check on every request through a data access layer |
-| AI | Claude API, called from server code only (M6) |
-| Quality | Vitest (unit), Playwright (e2e); from M7: CI and error monitoring |
-| Deploy | From M7: Vercel, preview deployment for every PR, each preview uses its own Neon branch (never the production database) |
+
+| Layer   | What                                                                                                                    |
+| ------- | ----------------------------------------------------------------------------------------------------------------------- |
+| UI      | Next.js (App Router), Server Components by default, Tailwind, responsive down to 360px, accessible forms                |
+| Logic   | Server Actions with Zod validation on the server                                                                        |
+| Data    | Postgres on Neon via Prisma: User (+ auth library models), Application, StatusChange                                    |
+| Access  | Auth (library chosen in week 2) + owner check on every request through a data access layer                              |
+| AI      | Claude API, called from server code only (M6)                                                                           |
+| Quality | Vitest (unit), Playwright (e2e); from M7: CI and error monitoring                                                       |
+| Deploy  | From M7: Vercel, preview deployment for every PR, each preview uses its own Neon branch (never the production database) |
 
 Code layout: `src/features/applications/` with `components/`, `actions.ts`,
 `schemas.ts`, `queries.ts`.
 
 ## 7. Non-functional
+
 - Server-side validation for every mutation
 - Every DB query is scoped to the current user via the data access layer:
   Application queries filter by `userId`; StatusChange queries go through an
@@ -208,6 +237,7 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
   manually in M1–M2, enforced by hooks from M3 and by CI on every PR from M7)
 
 ## 8. Milestones
+
 - M1 (week 1): list + create + minimal detail page with status change and
   history, demo-user auth stub
 - M2 (week 2): real auth + data isolation per user (verified manually with two
@@ -221,6 +251,7 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
 - M7–M8 (weeks 7–8): deploy, preview deployments, CI, monitoring, portfolio prep
 
 ## 9. Open questions
+
 - Soft delete or hard delete? (decide in week 2, day 1)
 - Auth library (Better Auth or Auth.js) and method (email + password or OAuth);
   if email + password, are password reset and email verification in scope?
@@ -228,6 +259,7 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
 - Should the create form allow choosing an initial status other than Wishlist?
 
 ## 10. Decision log
+
 - 2026-10-30: application status is a Prisma enum, not a separate table
 - 2026-10-30: all mutations are Server Actions with Zod validation on the server
 - 2026-10-30: feature code lives in `src/features/applications/`
@@ -250,6 +282,7 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
 - 2026-10-30: other users' records return 404, not 403
 
 ## 11. End-to-end verification
+
 - Create an application, open its detail page, change its status, reload the
   page: both changes persist and the status history shows the initial Wishlist
   record and the change with timestamps
