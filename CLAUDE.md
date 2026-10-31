@@ -47,7 +47,7 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 
 - Never read or edit `.env` files (`.env.example` is fine)
 - Never run destructive DB commands (`migrate reset`, `--force-reset`) without asking
-- Don't add dependencies without asking
+- Before installing any new package, stop and ask for confirmation, even if the user requested it: name the package, why it's needed, and a no-dependency alternative (e.g. `Intl.DateTimeFormat`). Install only after an explicit "yes".
 - Keep diffs small: one task = one change, no unrelated refactors
 - If requirements are ambiguous or conflict with SPEC.md, ask before coding
 
