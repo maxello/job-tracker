@@ -42,6 +42,7 @@ account can never read or modify my applications.
   so the existence of other users' records is not revealed
 
 ### US-0 Sign up / sign in (M2)
+As a job seeker, I want to sign up and sign in, so that my applications are private and available only to me.
 - A user can register and sign in; signing out ends the session (auth library
   and method are decided in week 2, see Open questions)
 - Unauthenticated users are redirected to the sign-in page
@@ -54,6 +55,7 @@ account can never read or modify my applications.
   data only; no migration)
 
 ### US-1 Add application (M1)
+As a job seeker, I want to quickly add an application I've sent, so that I have all my applications in one place.
 - Fields:
   - company (required, 1–200 chars)
   - role (required, 1–200 chars)
@@ -74,6 +76,7 @@ account can never read or modify my applications.
 - After saving, it appears in the list without a full page reload
 
 ### US-2 View list (M1)
+As a job seeker, I want to see all my applications in one list, so that I know at a glance where each one stands.
 - The list is the home page
 - Each row shows company, role, status and last updated date
 - Sorted by last updated, newest first
@@ -82,6 +85,7 @@ account can never read or modify my applications.
 - Each row links to the application detail page
 
 ### US-3 Change status (M1)
+As a job seeker, I want to change an application's status and see its history, so that I know which stage it is at and when it changed.
 Statuses: Wishlist, Applied, Interview, Offer, Rejected
 - In M1 the status is changed on a minimal detail page: read-only fields, a
   status select and the status history in chronological order (oldest first).
@@ -95,6 +99,7 @@ Statuses: Wishlist, Applied, Interview, Offer, Rejected
   and one data access layer function, so these rules cannot diverge
 
 ### US-4 Edit and delete on the detail page (M3)
+As a job seeker, I want to edit or delete an application, so that my data stays accurate and free of mistakes.
 - Extends the M1 detail page (US-3), which already shows all fields and the
   status history including the initial Wishlist record
 - All fields can be edited with the same validation as US-1; editing fields
@@ -104,6 +109,7 @@ Statuses: Wishlist, Applied, Interview, Offer, Rejected
   delete is decided in week 2, see Open questions)
 
 ### US-5 Kanban board (M5)
+As a job seeker, I want to see my applications on a board by status and move them between columns, so that I can track and update my pipeline visually.
 - One column per status; archived applications are not shown
 - Cards within a column are ordered by last updated, newest first (no manual
   ordering)
@@ -118,6 +124,7 @@ Statuses: Wishlist, Applied, Interview, Offer, Rejected
   (scroll snap); the page itself does not scroll horizontally
 
 ### US-6 Search and filters (M5)
+As a job seeker, I want to search and filter my applications, so that I can quickly find the ones I need.
 - Search by company and role: case-insensitive, substring match
 - Filter by status (multiple selection) and by last updated date range
   (from / to, both optional, inclusive, in the user's local timezone)
@@ -128,6 +135,7 @@ Statuses: Wishlist, Applied, Interview, Offer, Rejected
   clear them
 
 ### US-7 AI job posting parsing (M6)
+As a job seeker, I want to paste a job posting and have the form filled in for me, so that I don't have to copy the details by hand.
 - The user pastes the text of a job posting (max 20,000 characters; longer input
   is rejected with a message before any API call)
 - The app calls the Claude API from the server only (the API key is never sent
@@ -150,6 +158,7 @@ Statuses: Wishlist, Applied, Interview, Offer, Rejected
   stack). Target: ≥ 90% for company and role, ≥ 70% for the other fields
 
 ### US-8 Archive application (M4)
+As a job seeker, I want to archive applications that are no longer relevant, so that my list and board stay focused without losing their history.
 - An application can be archived from the detail page and unarchived from it
 - Archiving does not change the status and does not write status history
 - Archived applications are hidden from the list, kanban board and search
