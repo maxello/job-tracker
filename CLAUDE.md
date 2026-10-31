@@ -5,8 +5,6 @@ Web app to track job applications (statuses, notes, history), built milestone by
 
 @AGENTS.md
 
-`docs/` is gitignored personal course material, not project documentation. When writing Ukrainian text there, keep IT terms in English.
-
 ## Commands
 
 ```bash
