@@ -43,3 +43,6 @@ next-env.d.ts
 
 # personal course material
 /course
+
+# personal Claude Code instructions
+CLAUDE.local.md
