@@ -280,6 +280,13 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
 - 2026-10-30: status change in M1 lives on a minimal detail page; US-4 adds
   edit and delete to it in M3
 - 2026-10-30: other users' records return 404, not 403
+- 2026-11-01: Prisma 7.10.1 (pinned stable) with `@prisma/adapter-pg`; the
+  generated client lives in `src/generated/prisma` (gitignored, created by
+  `postinstall`)
+- 2026-11-01: env is loaded with Node's `process.loadEnvFile()` and the seed
+  runs on native Node type stripping (no dotenv, no tsx)
+- 2026-11-01: the M1 demo-user stub finds the seeded user by email
+  (`demo@example.com`)
 
 ## 11. End-to-end verification
 
