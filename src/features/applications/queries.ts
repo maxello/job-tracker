@@ -18,3 +18,19 @@ export async function createApplication(
     },
   });
 }
+
+// Home page list: non-archived only, newest activity first.
+export async function listApplications(userId: string) {
+  return db.application.findMany({
+    where: { userId, archivedAt: null },
+    // id breaks ties so the order is stable for equal timestamps.
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    select: {
+      id: true,
+      company: true,
+      role: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+}
