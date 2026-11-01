@@ -307,3 +307,7 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
   survive a reload
 - (from M6) Paste a job posting: the form is pre-filled, nothing is saved until
   the user submits; the eval script reports per-field accuracy against targets
+- 2026-11-01: dates are shown in the browser's local timezone by a `LocalDate`
+  client component (`Intl.DateTimeFormat`, no date library): an inline script
+  corrects the server-rendered text before first paint on full page loads, and
+  the component formats in the browser on client-side navigations
