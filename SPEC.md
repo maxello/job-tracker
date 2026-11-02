@@ -295,6 +295,20 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
   is request-time data (no `"use cache"`); `redirect("/")` from the Server
   Action streams a fresh render. Once the list is cached, the action calls
   `updateTag` before redirecting
+- 2026-11-02: the status is changed with a `<select>` and an explicit "Update
+  status" button, not auto-submit on change (arrow keys would submit on every
+  step)
+- 2026-11-02: the status action calls `refresh()` (also on a no-op): the detail
+  page is request-time data with nothing cached to revalidate. Once it is
+  cached, the action calls `updateTag` instead
+- 2026-11-02: `changeApplicationStatus` reads the current status with
+  `SELECT … FOR UPDATE` inside an interactive transaction, so `from` is always
+  the status in the database and concurrent changes are serialized (last write
+  wins, history has no gaps)
+- 2026-11-02: the detail page checks ownership inside `<Suspense>` (Cache
+  Components), so a missing or foreign id streams the 404 UI with HTTP status
+  200 and `noindex` (soft 404)
+- 2026-11-02: empty optional fields on the detail page are shown as "—"
 
 ## 11. End-to-end verification
 
