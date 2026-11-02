@@ -1,10 +1,15 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { refresh } from "next/cache";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { getCurrentUserId } from "@/lib/current-user";
-import { createApplication } from "./queries";
-import { createApplicationSchema } from "./schemas";
+import {
+  changeApplicationStatus,
+  createApplication,
+  type ChangeStatusResult,
+} from "./queries";
+import { changeStatusSchema, createApplicationSchema } from "./schemas";
 
 const FIELD_NAMES = [
   "company",
@@ -63,4 +68,42 @@ export async function createApplicationAction(
   // a fresh render of "/" in the action response, so no revalidation needed.
   // redirect throws, so it stays outside the try/catch.
   redirect("/");
+}
+
+export type ChangeStatusState = { error?: string };
+
+// The single entry point for status changes (detail page now, kanban in M5).
+export async function changeStatusAction(
+  _prevState: ChangeStatusState,
+  formData: FormData,
+): Promise<ChangeStatusState> {
+  const userId = await getCurrentUserId();
+
+  const parsed = changeStatusSchema.safeParse({
+    id: formData.get("id"),
+    status: formData.get("status"),
+  });
+  if (!parsed.success) return { error: "Choose a valid status." };
+
+  let result: ChangeStatusResult;
+  try {
+    result = await changeApplicationStatus(
+      userId,
+      parsed.data.id,
+      parsed.data.status,
+    );
+  } catch (error) {
+    console.error("Failed to change application status", error);
+    return { error: "Couldn't update the status. Please try again." };
+  }
+
+  // Missing or another user's application: 404, never 403.
+  // notFound throws, so it stays outside the try/catch.
+  if (result === "not-found") notFound();
+
+  // The detail page is request-time data with nothing cached to revalidate;
+  // refresh re-renders it in this response. Also on a no-op, so a page left
+  // stale by another tab catches up with the database.
+  refresh();
+  return {};
 }

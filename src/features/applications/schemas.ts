@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Status } from "@/generated/prisma/enums";
 
 // Inputs arrive as FormData strings. Text is trimmed; empty or whitespace-only
 // optional values become undefined.
@@ -97,3 +98,9 @@ export const createApplicationSchema = z
   });
 
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
+
+// Only values of the Prisma Status enum are accepted.
+export const changeStatusSchema = z.object({
+  id: z.cuid(),
+  status: z.enum(Status),
+});
