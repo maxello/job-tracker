@@ -287,6 +287,14 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
   runs on native Node type stripping (no dotenv, no tsx)
 - 2026-11-01: the M1 demo-user stub finds the seeded user by email
   (`demo@example.com`)
+- 2026-11-02: the create form disables native browser validation (`noValidate`);
+  the server-side Zod schema is the only source of field errors
+- 2026-11-02: salary currency is a text input with `<datalist>` suggestions
+  (any ISO 4217 code is accepted), not a `<select>`
+- 2026-11-02: creating an application needs no revalidation while the home list
+  is request-time data (no `"use cache"`); `redirect("/")` from the Server
+  Action streams a fresh render. Once the list is cached, the action calls
+  `updateTag` before redirecting
 
 ## 11. End-to-end verification
 
