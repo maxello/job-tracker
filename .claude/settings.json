@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run lint)",
+      "Bash(npm run typecheck)",
+      "Bash(git status)",
+      "Bash(git diff *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Bash(rm -rf *)",
+      "Bash(npx prisma migrate reset*)",
+      "Bash(prisma migrate reset*)",
+      "Bash(npx prisma db push --force-reset*)",
+      "PowerShell(npx prisma migrate reset*)",
+      "PowerShell(prisma migrate reset*)",
+      "PowerShell(npx prisma db push --force-reset*)"
+    ]
+  }
+}
