@@ -83,7 +83,14 @@ export async function changeStatusAction(
     id: formData.get("id"),
     status: formData.get("status"),
   });
-  if (!parsed.success) return { error: "Choose a valid status." };
+  if (!parsed.success) {
+    // No usable id (field missing or not a string): not found, like an id that
+    // doesn't exist.
+    if (parsed.error.issues.some((issue) => issue.path[0] === "id")) {
+      notFound();
+    }
+    return { error: "Choose a valid status." };
+  }
 
   let result: ChangeStatusResult;
   try {

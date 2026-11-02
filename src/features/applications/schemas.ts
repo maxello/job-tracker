@@ -99,8 +99,10 @@ export const createApplicationSchema = z
 
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
 
-// Only values of the Prisma Status enum are accepted.
+// Only values of the Prisma Status enum are accepted. The id is not checked for
+// format: the ownership query decides, so any unknown id gets the not-found
+// response like a missing one.
 export const changeStatusSchema = z.object({
-  id: z.cuid(),
+  id: z.string().min(1),
   status: z.enum(Status),
 });
