@@ -1,7 +1,7 @@
 # Job Tracker
 
 Web app to track job applications (statuses, notes, history), built milestone by milestone (M1–M8, one per week).
-**`SPEC.md` is the source of truth** for scope, acceptance criteria, data model and cross-feature invariants (status changes, per-user scoping, 404 not 403). Read the relevant user story and its milestone before building a feature. Don't build later milestones or non-goals.
+**`SPEC.md` is the source of truth** for scope, acceptance criteria, data model and cross-feature invariants (status changes, per-user scoping, not-found never forbidden). Read the relevant user story and its milestone before building a feature. Don't build later milestones or non-goals.
 
 @AGENTS.md
 
@@ -49,9 +49,12 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 - Keep diffs small: one task = one change, no unrelated refactors
 - If requirements are ambiguous or conflict with SPEC.md, ask before coding
 - If unsure about a library API (Prisma, Zod, the auth library), check the docs for the installed version (see `package.json`) before writing code; don't guess
+- Tooling follows the milestones too: hooks come in M3, CI in M7. Don't add them early, even as a fix; propose it instead
+- In a plan, list the assumptions and product decisions you made separately, so I can confirm them
+- In code review, report only what affects correctness or SPEC.md requirements. If a finding relies on library behavior, verify it in the installed version before reporting it
 
 ## Not built yet (don't invent these)
 
-- Database: Prisma, Neon and Zod are not installed yet
-- Auth: none yet; until M2 it will be a demo-user stub, real auth comes in M2
+- Auth: the demo-user stub (`src/lib/current-user.ts`) until M2, real auth comes in M2
 - Tests: no test framework until M3, don't add one
+- Hooks: only `.claude/hooks/block-env-access.mjs` (added ahead of plan); the rest come in M3
