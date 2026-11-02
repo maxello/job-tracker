@@ -44,8 +44,11 @@ account can never read or modify my applications.
 - Timestamps are stored in UTC and displayed in the browser's local timezone as
   an absolute date (and time on the detail page)
 - Concurrent edits (e.g. two tabs): last write wins
-- An id that does not exist or belongs to another user returns 404 (never 403),
-  so the existence of other users' records is not revealed
+- An id that does not exist or belongs to another user gets the not-found
+  response (never a "forbidden" one), and the response is identical in both
+  cases, so the existence of other users' records is not revealed. Pages that
+  stream (Cache Components) show the not-found UI with HTTP status 200 and
+  `noindex`; responses sent before streaming use HTTP 404
 
 ### US-0 Sign up / sign in (M2)
 
@@ -56,9 +59,9 @@ As a job seeker, I want to sign up and sign in, so that my applications are priv
 - Unauthenticated users are redirected to the sign-in page
 - After sign-in, every page and action shows only the current user's data
 - Every action on another user's application that exists at the current
-  milestone (via UI or by swapping the id in a request) returns 404 and changes
-  nothing: open and change status from M2, edit and delete from M3, archive and
-  unarchive from M4
+  milestone (via UI or by swapping the id in a request) gets the not-found
+  response and changes nothing: open and change status from M2, edit and
+  delete from M3, archive and unarchive from M4
 - Data created under the M1 demo-user stub is wiped when M2 ships (it is dev
   data only; no migration)
 
@@ -308,6 +311,13 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
 - 2026-11-02: the detail page checks ownership inside `<Suspense>` (Cache
   Components), so a missing or foreign id streams the 404 UI with HTTP status
   200 and `noindex` (soft 404)
+- 2026-11-02: the soft 404 is accepted, and the 404 convention is reworded to
+  mean "the not-found response, identical for missing and foreign ids" rather
+  than the HTTP status. Non-disclosure is the goal, and it holds. The rejected
+  alternative was a real 404: check ownership before any `<Suspense>` and set
+  `export const instant = false` on the page. That costs the static shell,
+  instant navigation and partial prefetching for little gain in a private app.
+  E2E tests check the not-found UI, not the status code
 - 2026-11-02: empty optional fields on the detail page are shown as "—"
 
 ## 11. End-to-end verification
@@ -318,10 +328,11 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
 - A job URL with a `javascript:` scheme is rejected with a field error
 - `npm run lint` and `npm run typecheck` pass
 - (from M2) Signed in as user B, every action on user A's application that
-  exists at that milestone returns 404 and leaves it unchanged: open and status
-  change (M2), plus edit and delete (M3), plus archive and unarchive (M4)
+  exists at that milestone shows the not-found UI and leaves it unchanged:
+  open and status change (M2), plus edit and delete (M3), plus archive and
+  unarchive (M4). The response is the same as for an id that does not exist
 - (from M3) Edit an application and reload: changes persist; delete it: it is
-  gone from the list and its URL returns 404
+  gone from the list and its URL shows the not-found UI
 - (from M4) Archive an application: it disappears from the list, board and
   search, appears with "Show archived", and unarchive restores it
 - (from M5) Move a card on the board by drag-and-drop and by keyboard: status
