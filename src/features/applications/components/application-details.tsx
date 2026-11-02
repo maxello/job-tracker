@@ -25,6 +25,8 @@ function formatSalary(
     currency,
     maximumFractionDigits: 0,
   });
+  // formatRange marks equal ends as approximate ("~$100,000"), so show one value.
+  if (min !== null && min === max) return format.format(min);
   if (min !== null && max !== null) return format.formatRange(min, max);
   if (min !== null) return `from ${format.format(min)}`;
   return `up to ${format.format(max!)}`;
