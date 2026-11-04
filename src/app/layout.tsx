@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
+import { UserMenu } from "@/features/auth/components/user-menu";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,7 +25,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <header className="mx-auto flex min-h-13 w-full max-w-3xl items-center justify-end gap-2 px-4 pt-4">
+          <Suspense>
+            <UserMenu />
+          </Suspense>
+        </header>
+        {children}
+      </body>
     </html>
   );
 }
