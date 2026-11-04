@@ -54,8 +54,8 @@ account can never read or modify my applications.
 
 As a job seeker, I want to sign up and sign in, so that my applications are private and available only to me.
 
-- A user can register and sign in; signing out ends the session (auth library
-  and method are decided in week 2, see Open questions)
+- A user can register with name, email and password, and sign in; signing out
+  ends the session (Better Auth with database sessions, see the decision log)
 - Unauthenticated users are redirected to the sign-in page
 - After sign-in, every page and action shows only the current user's data
 - Every action on another user's application that exists at the current
@@ -198,8 +198,15 @@ As a job seeker, I want to archive applications that are no longer relevant, so 
 ## 5. Data model (draft)
 
 ```text
-User(id, email, ...auth fields): exact shape depends on the auth library
-  chosen in week 2
+User(id, name, email, emailVerified, image?, createdAt, updatedAt)
+Session(id, userId, token, expiresAt, ipAddress?, userAgent?, createdAt,
+  updatedAt)
+Account(id, userId, accountId, providerId, password?, accessToken?,
+  refreshToken?, idToken?, accessTokenExpiresAt?, refreshTokenExpiresAt?,
+  scope?, createdAt, updatedAt)
+  - the password hash lives here, with `providerId` "credential"
+Verification(id, identifier, value, expiresAt, createdAt, updatedAt)
+  - required by Better Auth; unused until email verification or password reset
 Application(id, userId, company, role, url?, notes?, location?, level?,
   stack String[], salaryMin Int?, salaryMax Int?, salaryCurrency?, status,
   archivedAt?, createdAt, updatedAt)
@@ -217,14 +224,15 @@ Application that has already been checked for ownership.
 | ------- | ----------------------------------------------------------------------------------------------------------------------- |
 | UI      | Next.js (App Router), Server Components by default, Tailwind, responsive down to 360px, accessible forms                |
 | Logic   | Server Actions with Zod validation on the server                                                                        |
-| Data    | Postgres on Neon via Prisma: User (+ auth library models), Application, StatusChange                                    |
-| Access  | Auth (library chosen in week 2) + owner check on every request through a data access layer                              |
+| Data    | Postgres on Neon via Prisma: User, Session, Account, Verification, Application, StatusChange                            |
+| Access  | Better Auth (email + password, database sessions) + owner check on every request through a data access layer            |
 | AI      | Claude API, called from server code only (M6)                                                                           |
 | Quality | Vitest (unit), Playwright (e2e); from M7: CI and error monitoring                                                       |
 | Deploy  | From M7: Vercel, preview deployment for every PR, each preview uses its own Neon branch (never the production database) |
 
-Code layout: `src/features/applications/` with `components/`, `actions.ts`,
-`schemas.ts`, `queries.ts`.
+Code layout: `src/features/applications/` and `src/features/auth/`, each with
+`components/`, `actions.ts`, `schemas.ts`, `queries.ts`. The Better Auth instance
+lives in `src/lib/auth.ts`.
 
 ## 7. Non-functional
 
@@ -256,10 +264,10 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
 
 ## 9. Open questions
 
-- Auth library (Better Auth or Auth.js) and method (email + password or OAuth);
-  if email + password, are password reset and email verification in scope?
-  (decide in week 2, day 2)
 - Should the create form allow choosing an initial status other than Wishlist?
+- How is sign-in rate limited before the public deploy (M7)? Better Auth's
+  limiter does not apply to `auth.api` calls from Server Actions, so failed
+  attempts are currently unlimited
 
 ## 10. Decision log
 
@@ -333,6 +341,36 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
   stored after "delete". US-8 archive already covers hiding an application
   while keeping its history. An accidental delete cannot be undone, so the
   US-4 confirmation is the only safeguard
+- 2026-11-04: auth is Better Auth (1.7.16 or newer) with email + password.
+  Auth.js was the rejected alternative: Better Auth has built-in email + password
+  and a Prisma adapter, so the app needs no hand-written credentials code. OAuth
+  was rejected because email + password needs no third-party app setup. Password
+  reset and email verification are out of scope
+- 2026-11-04: sessions are stored in the database and the cookie cache stays off.
+  With the cookie cache, a revoked session could stay active until the cached
+  cookie expires. The cost is one session query per request
+- 2026-11-04: `/api/auth/[...all]` is not mounted, unlike the Better Auth Next.js
+  guide. Forms use Server Actions that call `auth.api`. Mounting it would expose
+  REST endpoints such as `/update-user` and `/change-password` that bypass the
+  Zod schemas. Mount it only if OAuth or the client SDK is ever needed
+- 2026-11-04: session refresh is off (`disableSessionRefresh`), so a session ends
+  7 days after sign-in, even for an active user. The session is read during
+  render, where cookies can't be written: a refresh would extend the row but not
+  the cookie, and could throw during render. The rejected alternative was the
+  default sliding session
+- 2026-11-04: the demo user is kept until the day 3 wipe. The Better Auth
+  migration adds `User.name` and `User.updatedAt` as nullable, backfills the row
+  and then sets NOT NULL. Rejected: a permanent `@default("")` on `name`, which
+  would hide a missing name, and a nullable `name`, which Better Auth requires
+- 2026-11-04: Prisma models for Better Auth are written by hand from its core
+  schema rather than with `npx auth@latest generate`, so the existing `User` model
+  and table name stay as they are
+- 2026-11-04: auth errors are matched on `error.body.code`, not the status:
+  Better Auth also uses 422 for a failed user insert and 401 for a failed session
+  insert, which are not "email taken" or "wrong password"
+- 2026-11-04: sign-up shows a field error for a taken email, which reveals that
+  the email is registered. Sign-in does not: an unknown email and a wrong
+  password show the same message
 
 ## 11. End-to-end verification
 
