@@ -115,7 +115,17 @@ export async function signInAction(
   redirect("/");
 }
 
+// No form state: a failure is unexpected, so it is rethrown to the error boundary.
+// Better Auth catches its own database errors here and still clears the cookie,
+// so this catches only failures outside those.
 export async function signOutAction() {
-  await auth.api.signOut({ headers: await headers() });
+  try {
+    await auth.api.signOut({ headers: await headers() });
+  } catch (error) {
+    console.error("Failed to sign out", error);
+    throw error;
+  }
+
+  // redirect throws, so it stays outside the try/catch.
   redirect("/sign-in");
 }
