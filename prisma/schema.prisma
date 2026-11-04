@@ -46,6 +46,7 @@ model Application {
   statusChanges  StatusChange[]
 
   @@index([userId, updatedAt])
+  @@index([userId, status])
 }
 
 // No userId: always accessed through an Application already checked for ownership.
