@@ -20,7 +20,7 @@ A task is done only when `npm run lint && npm run typecheck` pass.
 
 ## Stack
 
-Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · Prisma + Neon (Postgres) · Zod
+Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · Prisma + Neon (Postgres) · Zod · Better Auth (email + password, database sessions)
 
 - Tailwind runs through a Turbopack CSS loader rule (`@tailwindcss/turbopack`), not PostCSS.
 - `next.config.ts` enables `cacheComponents` and `partialPrefetching`.
@@ -30,7 +30,9 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 - All app code lives in `src/`; `public/` stays at the root. Alias `@/*` → `./src/*`.
 - `src/app` — routes and layouts only (keep thin)
 - `src/features/applications/` — `components/`, `actions.ts`, `schemas.ts`, `queries.ts`
+- `src/features/auth/` — same layout: sign-up, sign-in, sign-out, `getSession()`
 - `src/lib/db.ts` — the single Prisma client instance
+- `src/lib/auth.ts` — the Better Auth instance (no `/api/auth` route handler: forms call `auth.api` from Server Actions)
 
 ## Conventions
 
@@ -55,6 +57,6 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 
 ## Not built yet (don't invent these)
 
-- Auth: the demo-user stub (`src/lib/current-user.ts`) until M2, real auth comes in M2
+- Auth: sign-up, sign-in and sign-out work, but pages and actions still act as the demo user: `getCurrentUserId()` (`src/lib/current-user.ts`) stays a stub, and there is no route protection or `proxy.ts` until M2 day 3
 - Tests: no test framework until M3, don't add one
 - Hooks: only `.claude/hooks/block-env-access.mjs` (added ahead of plan); the rest come in M3

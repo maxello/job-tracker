@@ -1,7 +1,7 @@
 // Run with `npx prisma db seed` (Node strips the types natively; no @/ alias here).
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.ts";
-import { DEMO_USER_EMAIL } from "../src/lib/demo-user.ts";
+import { DEMO_USER_EMAIL, DEMO_USER_NAME } from "../src/lib/demo-user.ts";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is not set");
@@ -12,7 +12,7 @@ try {
   const user = await db.user.upsert({
     where: { email: DEMO_USER_EMAIL },
     update: {},
-    create: { email: DEMO_USER_EMAIL },
+    create: { email: DEMO_USER_EMAIL, name: DEMO_USER_NAME },
   });
   console.log(`Demo user ready: ${user.email} (${user.id})`);
 } finally {
