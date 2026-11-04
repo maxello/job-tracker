@@ -4,18 +4,15 @@ import { isAPIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import type { ActionResult } from "@/lib/action-result";
 import { auth } from "@/lib/auth";
 import { signInSchema, signUpSchema } from "./schemas";
 
 export type AuthFieldName = "name" | "email" | "password";
 
-export type AuthFormState = {
-  // Sent back so the form keeps them after an error. Never the password.
-  values: Partial<Record<"name" | "email", string>>;
-  fieldErrors: Partial<Record<AuthFieldName, string[]>>;
-  // A failure that doesn't belong to one field.
-  message?: string;
-};
+// The values type leaves out the password, so it can't be sent back to the form.
+type SignUpResult = ActionResult<never, AuthFieldName, "name" | "email">;
+type SignInResult = ActionResult<never, AuthFieldName, "email">;
 
 function readString(formData: FormData, name: AuthFieldName) {
   const value = formData.get(name);
@@ -29,9 +26,9 @@ function hasErrorCode(error: unknown, code: string) {
 }
 
 export async function signUpAction(
-  _prevState: AuthFormState,
+  _prevState: SignUpResult | null,
   formData: FormData,
-): Promise<AuthFormState> {
+): Promise<SignUpResult> {
   const name = readString(formData, "name");
   const email = readString(formData, "email");
   const values = { name, email };
@@ -42,7 +39,11 @@ export async function signUpAction(
     password: readString(formData, "password"),
   });
   if (!result.success) {
-    return { values, fieldErrors: z.flattenError(result.error).fieldErrors };
+    return {
+      ok: false,
+      error: { fieldErrors: z.flattenError(result.error).fieldErrors },
+      values,
+    };
   }
 
   try {
@@ -53,15 +54,16 @@ export async function signUpAction(
   } catch (error) {
     if (hasErrorCode(error, "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL")) {
       return {
+        ok: false,
+        error: { fieldErrors: { email: ["This email is already registered"] } },
         values,
-        fieldErrors: { email: ["This email is already registered"] },
       };
     }
     console.error("Failed to sign up", error);
     return {
+      ok: false,
+      error: { message: "Couldn't create the account. Please try again." },
       values,
-      fieldErrors: {},
-      message: "Couldn't create the account. Please try again.",
     };
   }
 
@@ -70,9 +72,9 @@ export async function signUpAction(
 }
 
 export async function signInAction(
-  _prevState: AuthFormState,
+  _prevState: SignInResult | null,
   formData: FormData,
-): Promise<AuthFormState> {
+): Promise<SignInResult> {
   const email = readString(formData, "email");
   const values = { email };
 
@@ -81,7 +83,11 @@ export async function signInAction(
     password: readString(formData, "password"),
   });
   if (!result.success) {
-    return { values, fieldErrors: z.flattenError(result.error).fieldErrors };
+    return {
+      ok: false,
+      error: { fieldErrors: z.flattenError(result.error).fieldErrors },
+      values,
+    };
   }
 
   try {
@@ -93,16 +99,16 @@ export async function signInAction(
     // The same text for an unknown email and a wrong password.
     if (hasErrorCode(error, "INVALID_EMAIL_OR_PASSWORD")) {
       return {
+        ok: false,
+        error: { message: "Invalid email or password." },
         values,
-        fieldErrors: {},
-        message: "Invalid email or password.",
       };
     }
     console.error("Failed to sign in", error);
     return {
+      ok: false,
+      error: { message: "Couldn't sign in. Please try again." },
       values,
-      fieldErrors: {},
-      message: "Couldn't sign in. Please try again.",
     };
   }
 

@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import type { ActionResult } from "@/lib/action-result";
 import { getCurrentUserId } from "@/lib/current-user";
 import {
   changeApplicationStatus,
@@ -26,42 +27,38 @@ const FIELD_NAMES = [
 
 export type ApplicationFieldName = (typeof FIELD_NAMES)[number];
 
-export type CreateApplicationState = {
-  // Raw submitted strings, sent back so the form keeps them after an error.
-  values: Partial<Record<ApplicationFieldName, string>>;
-  fieldErrors: Partial<Record<ApplicationFieldName, string[]>>;
-  // A failure that is not a validation error (e.g. the database is down).
-  message?: string;
-};
+const SAVE_FAILED = "Couldn't save the application. Please try again.";
+const STATUS_FAILED = "Couldn't update the status. Please try again.";
 
 export async function createApplicationAction(
-  _prevState: CreateApplicationState,
+  _prevState: ActionResult<never, ApplicationFieldName> | null,
   formData: FormData,
-): Promise<CreateApplicationState> {
-  // The owner always comes from the server, never from the submitted form.
-  const userId = await getCurrentUserId();
-
-  // Read only the known fields; anything else in FormData is ignored.
-  const values: CreateApplicationState["values"] = {};
+): Promise<ActionResult<never, ApplicationFieldName>> {
+  // Read only the known fields; anything else in FormData is ignored. Raw
+  // submitted strings, sent back so the form keeps them after an error.
+  const values: Partial<Record<ApplicationFieldName, string>> = {};
   for (const name of FIELD_NAMES) {
     const value = formData.get(name);
     if (typeof value === "string") values[name] = value;
   }
 
+  // The owner always comes from the server, never from the submitted form.
+  const userId = await getCurrentUserId();
+
   const result = createApplicationSchema.safeParse(values);
   if (!result.success) {
-    return { values, fieldErrors: z.flattenError(result.error).fieldErrors };
+    return {
+      ok: false,
+      error: { fieldErrors: z.flattenError(result.error).fieldErrors },
+      values,
+    };
   }
 
   try {
     await createApplication(userId, result.data);
   } catch (error) {
     console.error("Failed to create application", error);
-    return {
-      values,
-      fieldErrors: {},
-      message: "Couldn't save the application. Please try again.",
-    };
+    return { ok: false, error: { message: SAVE_FAILED }, values };
   }
 
   // The home list is request-time data (no "use cache"), and redirect streams
@@ -70,13 +67,11 @@ export async function createApplicationAction(
   redirect("/");
 }
 
-export type ChangeStatusState = { error?: string };
-
 // The single entry point for status changes (detail page now, kanban in M5).
 export async function changeStatusAction(
-  _prevState: ChangeStatusState,
+  _prevState: ActionResult<void, "status"> | null,
   formData: FormData,
-): Promise<ChangeStatusState> {
+): Promise<ActionResult<void, "status">> {
   const userId = await getCurrentUserId();
 
   const parsed = changeStatusSchema.safeParse({
@@ -89,7 +84,10 @@ export async function changeStatusAction(
     if (parsed.error.issues.some((issue) => issue.path[0] === "id")) {
       notFound();
     }
-    return { error: "Choose a valid status." };
+    return {
+      ok: false,
+      error: { fieldErrors: { status: ["Choose a valid status."] } },
+    };
   }
 
   let result: ChangeStatusResult;
@@ -101,7 +99,7 @@ export async function changeStatusAction(
     );
   } catch (error) {
     console.error("Failed to change application status", error);
-    return { error: "Couldn't update the status. Please try again." };
+    return { ok: false, error: { message: STATUS_FAILED } };
   }
 
   // Missing or another user's application: 404, never 403.
@@ -112,5 +110,5 @@ export async function changeStatusAction(
   // refresh re-renders it in this response. Also on a no-op, so a page left
   // stale by another tab catches up with the database.
   refresh();
-  return {};
+  return { ok: true, data: undefined };
 }
