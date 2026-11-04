@@ -124,8 +124,9 @@ As a job seeker, I want to edit or delete an application, so that my data stays 
 - All fields can be edited with the same validation as US-1; editing fields
   does not write status history
 - Delete asks for confirmation; after deletion the user returns to the list
-  and the application no longer appears anywhere in the UI (soft or hard
-  delete is decided in week 2, see Open questions)
+  and the application no longer appears anywhere in the UI
+- Delete is a hard delete: the application and its status history are removed
+  permanently
 
 ### US-5 Kanban board (M5)
 
@@ -255,7 +256,6 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
 
 ## 9. Open questions
 
-- Soft delete or hard delete? (decide in week 2, day 1)
 - Auth library (Better Auth or Auth.js) and method (email + password or OAuth);
   if email + password, are password reset and email verification in scope?
   (decide in week 2, day 2)
@@ -319,6 +319,15 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
   instant navigation and partial prefetching for little gain in a private app.
   E2E tests check the not-found UI, not the status code
 - 2026-11-02: empty optional fields on the detail page are shown as "—"
+- 2026-11-04: status history is a separate `StatusChange` table, not a JSON
+  column on Application: the database enforces its types and foreign key, and
+  it stays queryable across applications
+- 2026-11-04: delete is a hard delete; the existing `onDelete: Cascade` removes
+  the status history. Soft delete was rejected: every query would need a
+  `deletedAt` filter, there is no restore UI, and the user's data would stay
+  stored after "delete". US-8 archive already covers hiding an application
+  while keeping its history. An accidental delete cannot be undone, so the
+  US-4 confirmation is the only safeguard
 
 ## 11. End-to-end verification
 
