@@ -33,6 +33,8 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 - `src/features/auth/` — same layout: sign-up, sign-in, sign-out, `getSession()`
 - `src/lib/db.ts` — the single Prisma client instance
 - `src/lib/auth.ts` — the Better Auth instance (no `/api/auth` route handler: forms call `auth.api` from Server Actions)
+- `src/lib/current-user.ts` — `getCurrentUserId()`: validates the session, redirects to `/sign-in` without one. The only source of `userId`
+- `src/proxy.ts` — optimistic redirect on the session cookie only (no database). Never the security check
 
 ## Conventions
 
@@ -48,6 +50,7 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 - Never read or edit `.env` files (`.env.example` is fine)
 - Never run destructive DB commands (`migrate reset`, `--force-reset`) without asking
 - Before installing any new package, stop and ask for confirmation, even if the user requested it: name the package, why it's needed, and a no-dependency alternative (e.g. `Intl.DateTimeFormat`). Install only after an explicit "yes".
+- Every app DB query is scoped to the current user through the DAL, no exceptions: `Application` queries filter by `userId`, and `StatusChange` queries go through an `Application` already checked for ownership. `userId` comes from the session, never from the request
 - Keep diffs small: one task = one change, no unrelated refactors
 - If requirements are ambiguous or conflict with SPEC.md, ask before coding
 - If unsure about a library API (Prisma, Zod, the auth library), check the docs for the installed version (see `package.json`) before writing code; don't guess
@@ -57,6 +60,5 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 
 ## Not built yet (don't invent these)
 
-- Auth: sign-up, sign-in and sign-out work, but pages and actions still act as the demo user: `getCurrentUserId()` (`src/lib/current-user.ts`) stays a stub, and there is no route protection or `proxy.ts` until M2 day 3
 - Tests: no test framework until M3, don't add one
 - Hooks: only `.claude/hooks/block-env-access.mjs` (added ahead of plan); the rest come in M3

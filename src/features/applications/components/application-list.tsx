@@ -1,14 +1,10 @@
 import Link from "next/link";
-import { connection } from "next/server";
 import { getCurrentUserId } from "@/lib/current-user";
 import { listApplications } from "../queries";
 import { STATUS_LABELS } from "../status";
 import { LocalDate } from "./local-date";
 
 export async function ApplicationList() {
-  // The list is per-user, request-time data: keep it out of prerendering
-  // (the M1 stub reads no cookies that would signal this on its own).
-  await connection();
   const userId = await getCurrentUserId();
   const applications = await listApplications(userId);
 
