@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import type { ActionResult } from "@/lib/action-result";
-import { getCurrentUserId } from "@/lib/current-user";
+import { tryGetCurrentUserId } from "@/lib/current-user";
 import {
   changeApplicationStatus,
   createApplication,
@@ -43,7 +43,10 @@ export async function createApplicationAction(
   }
 
   // The owner always comes from the server, never from the submitted form.
-  const userId = await getCurrentUserId();
+  const userId = await tryGetCurrentUserId();
+  if (userId === null) {
+    return { ok: false, error: { message: SAVE_FAILED }, values };
+  }
 
   const result = createApplicationSchema.safeParse(values);
   if (!result.success) {
@@ -72,7 +75,10 @@ export async function changeStatusAction(
   _prevState: ActionResult<void, "status"> | null,
   formData: FormData,
 ): Promise<ActionResult<void, "status">> {
-  const userId = await getCurrentUserId();
+  const userId = await tryGetCurrentUserId();
+  if (userId === null) {
+    return { ok: false, error: { message: STATUS_FAILED } };
+  }
 
   const parsed = changeStatusSchema.safeParse({
     id: formData.get("id"),
