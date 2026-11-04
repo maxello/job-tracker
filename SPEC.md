@@ -399,6 +399,9 @@ lives in `src/lib/auth.ts`.
 - 2026-11-04: `prisma/seed.ts`, its Prisma config entry and
   `src/lib/demo-user.ts` are removed, so nothing can recreate the demo user. This
   supersedes the 2026-11-01 entries on the seed and the demo-user stub
+- 2026-11-04: `getSession()` is wrapped in React `cache()`, so `UserMenu` and the
+  page share one session query per render. It has no effect in Server Actions,
+  which still validate the session on every call
 
 ## 11. End-to-end verification
 
