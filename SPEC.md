@@ -263,7 +263,12 @@ Code layout: `src/features/applications/` with `components/`, `actions.ts`,
 
 ## 10. Decision log
 
-- 2026-10-30: application status is a Prisma enum, not a separate table
+- 2026-10-30: application status is a Prisma enum, not a separate table. The
+  statuses are a fixed list that users cannot change, and the enum gives
+  database-enforced values and generated TypeScript types without a join. The
+  rejected alternative was a `Status` table, which only pays off if statuses are
+  editable, and no user story needs that. The cost: adding a status needs a
+  migration
 - 2026-10-30: all mutations are Server Actions with Zod validation on the server
 - 2026-10-30: feature code lives in `src/features/applications/`
 - 2026-10-30: Server Components by default; `"use client"` only when needed
