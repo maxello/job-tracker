@@ -61,7 +61,11 @@ export async function ApplicationDetails({ id }: { id: string }) {
         </span>
       </header>
 
-      <StatusForm id={application.id} status={application.status} />
+      <StatusForm
+        key={application.status}
+        id={application.id}
+        status={application.status}
+      />
 
       <dl className="grid gap-5 sm:grid-cols-2">
         <div className="sm:col-span-2">
