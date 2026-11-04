@@ -268,6 +268,10 @@ lives in `src/lib/auth.ts`.
 - How is sign-in rate limited before the public deploy (M7)? Better Auth's
   limiter does not apply to `auth.api` calls from Server Actions, so failed
   attempts are currently unlimited
+- How should sign-out end the session when the database fails? `auth.api.signOut`
+  clears the cookie and reports success, but the session row stays valid until it
+  expires (at most 7 days), so a copied cookie keeps working. Decide before the
+  public deploy (M7)
 
 ## 10. Decision log
 
