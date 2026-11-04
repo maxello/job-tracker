@@ -402,6 +402,10 @@ lives in `src/lib/auth.ts`.
 - 2026-11-04: `getSession()` is wrapped in React `cache()`, so `UserMenu` and the
   page share one session query per render. It has no effect in Server Actions,
   which still validate the session on every call
+- 2026-11-04: "Update status" is disabled while the selected status equals the
+  current one. This is UI only: the server keeps the no-op rule, because a stale
+  tab can still send the current status. Without JavaScript the button stays
+  disabled, so status changes need JavaScript
 
 ## 11. End-to-end verification
 
