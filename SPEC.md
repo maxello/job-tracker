@@ -371,6 +371,34 @@ lives in `src/lib/auth.ts`.
 - 2026-11-04: sign-up shows a field error for a taken email, which reveals that
   the email is registered. Sign-in does not: an unknown email and a wrong
   password show the same message
+- 2026-11-04: `src/proxy.ts` is only an optimistic redirect: it checks that the
+  session cookie exists (`getSessionCookie`) and never reads the database. Every
+  page and Server Action validates the session through `getCurrentUserId()`,
+  which redirects to `/sign-in` for a missing, expired or forged session. It
+  never redirects away from `/sign-in` or `/sign-up`, because a stale cookie
+  would cause a loop
+- 2026-11-04: the proxy protects every path by default; only `/sign-in`,
+  `/sign-up` and static files are public, so an unknown URL also goes to
+  `/sign-in` for a visitor with no cookie
+- 2026-11-04: the proxy redirects GET and HEAD only. Server Actions are POSTs: a
+  307 would replay them against `/sign-in` and the client would show an error
+  page. They pass through and redirect from `getCurrentUserId()`
+- 2026-11-04: there is no return-to parameter; sign-in always goes to `/`.
+  Sign-out redirects straight to `/sign-in`: a redirect to `/` would hit the
+  proxy with an empty cookie on the action's internal fetch
+- 2026-11-04: a stale cookie passes the proxy, so the redirect comes from inside
+  `<Suspense>`: HTTP status 200 and a short skeleton before `/sign-in`, the same
+  Cache Components trade-off as the soft 404. Only a visitor with no cookie gets
+  a real 307
+- 2026-11-04: `/applications/new` validates the session inside `<Suspense>`, so
+  the form is no longer in the static shell. The proxy alone would show it to a
+  garbage cookie
+- 2026-11-04: `await connection()` is removed from the list: `getCurrentUserId()`
+  now reads `headers()`, and the docs say `connection()` is only needed when no
+  request-time API is used
+- 2026-11-04: `prisma/seed.ts`, its Prisma config entry and
+  `src/lib/demo-user.ts` are removed, so nothing can recreate the demo user. This
+  supersedes the 2026-11-01 entries on the seed and the demo-user stub
 
 ## 11. End-to-end verification
 

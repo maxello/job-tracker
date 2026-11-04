@@ -33,6 +33,8 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 - `src/features/auth/` — same layout: sign-up, sign-in, sign-out, `getSession()`
 - `src/lib/db.ts` — the single Prisma client instance
 - `src/lib/auth.ts` — the Better Auth instance (no `/api/auth` route handler: forms call `auth.api` from Server Actions)
+- `src/lib/current-user.ts` — `getCurrentUserId()`: validates the session, redirects to `/sign-in` without one. The only source of `userId`
+- `src/proxy.ts` — optimistic redirect on the session cookie only (no database). Never the security check
 
 ## Conventions
 
@@ -58,6 +60,5 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 
 ## Not built yet (don't invent these)
 
-- Auth: sign-up, sign-in and sign-out work, but pages and actions still act as the demo user: `getCurrentUserId()` (`src/lib/current-user.ts`) stays a stub, and there is no route protection or `proxy.ts` until M2 day 3
 - Tests: no test framework until M3, don't add one
 - Hooks: only `.claude/hooks/block-env-access.mjs` (added ahead of plan); the rest come in M3
