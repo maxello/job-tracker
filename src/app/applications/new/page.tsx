@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ApplicationForm } from "@/features/applications/components/application-form";
+import { Suspense } from "react";
+import {
+  NewApplicationForm,
+  NewApplicationFormSkeleton,
+} from "@/features/applications/components/new-application-form";
 
 export const metadata: Metadata = {
   title: "New application",
@@ -18,7 +22,9 @@ export default function NewApplicationPage() {
       <h1 className="mt-2 mb-6 text-2xl font-semibold tracking-tight">
         New application
       </h1>
-      <ApplicationForm />
+      <Suspense fallback={<NewApplicationFormSkeleton />}>
+        <NewApplicationForm />
+      </Suspense>
     </main>
   );
 }

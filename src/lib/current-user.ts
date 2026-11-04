@@ -1,12 +1,10 @@
-import { db } from "@/lib/db";
-import { DEMO_USER_EMAIL } from "@/lib/demo-user";
+import { redirect } from "next/navigation";
+import { getSession } from "@/features/auth/queries";
 
-// M1 stub: every request acts as the seeded demo user. Replaced by real auth in M2.
+// Validates the real session on every call; proxy.ts is only an optimistic
+// redirect. A missing, expired or forged session all end up on /sign-in.
 export async function getCurrentUserId(): Promise<string> {
-  const user = await db.user.findUnique({
-    where: { email: DEMO_USER_EMAIL },
-    select: { id: true },
-  });
-  if (!user) throw new Error("Demo user not found. Run `npx prisma db seed`.");
-  return user.id;
+  const session = await getSession();
+  if (!session) redirect("/sign-in");
+  return session.user.id;
 }
