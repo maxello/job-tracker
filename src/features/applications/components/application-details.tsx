@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentUserId } from "@/lib/current-user";
 import { getApplication } from "../queries";
+import { applicationIdSchema } from "../schemas";
 import { STATUS_LABELS } from "../status";
 import { LocalDate } from "./local-date";
 import { StatusForm } from "./status-form";
@@ -43,7 +44,10 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 export async function ApplicationDetails({ id }: { id: string }) {
   const userId = await getCurrentUserId();
-  const application = await getApplication(userId, id);
+  const parsedId = applicationIdSchema.safeParse(id);
+  if (!parsedId.success) notFound();
+
+  const application = await getApplication(userId, parsedId.data);
   // Missing or another user's application: 404, never 403.
   if (!application) notFound();
 

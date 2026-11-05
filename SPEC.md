@@ -78,8 +78,8 @@ As a job seeker, I want to quickly add an application I've sent, so that I have 
   - location (optional, max 200 chars)
   - level (optional, free text, max 100 chars, e.g. "Junior", "Senior")
   - stack (optional, list of up to 30 tags, each max 50 chars)
-  - salary min / salary max (optional, non-negative integers, annual gross
-    only; if both are set, min ≤ max)
+  - salary min / salary max (optional, non-negative integers up to 2147483647,
+    annual gross only; if both are set, min ≤ max)
   - salary currency (required if any salary value is set, ISO 4217 code, e.g.
     "USD", "EUR", "UAH")
 - Text inputs are trimmed; a whitespace-only value counts as empty
@@ -265,13 +265,21 @@ lives in `src/lib/auth.ts`.
 ## 9. Open questions
 
 - Should the create form allow choosing an initial status other than Wishlist?
-- How is sign-in rate limited before the public deploy (M7)? Better Auth's
-  limiter does not apply to `auth.api` calls from Server Actions, so failed
-  attempts are currently unlimited
+- How are sign-in and sign-up rate limited before the public deploy (M7)? Better
+  Auth's limiter does not apply to `auth.api` calls from Server Actions, so
+  attempts are currently unlimited. Deferred on purpose: design one table for
+  these limits and the M6 parse limit (20 per user per day), in M6 or at the
+  start of M7, and ship it before the deploy
 - How should sign-out end the session when the database fails? `auth.api.signOut`
   clears the cookie and reports success, but the session row stays valid until it
   expires (at most 7 days), so a copied cookie keeps working. Decide before the
   public deploy (M7)
+- Which security headers ship with the public deploy (M7)? HSTS and a CSP with
+  only `frame-ancestors` are expected; neither affects rendering. A `script-src`
+  policy needs a separate decision: nonces require dynamic rendering and are
+  incompatible with Partial Prerendering, which the app uses. The alternative,
+  `'unsafe-inline'`, allows the inline scripts from Next.js and `LocalDate` but
+  adds little XSS protection
 
 ## 10. Decision log
 
@@ -444,6 +452,15 @@ lives in `src/lib/auth.ts`.
   days). Accepted: changing it needs a different sign-out flow
 - 2026-11-04: forms need JavaScript. On partially prerendered pages a form POST
   without JavaScript gets only streaming scripts back, with no HTML form
+- 2026-11-05: salary accepts decimal digits only, up to the Postgres `INTEGER`
+  maximum, so `1e9`, `0x10` and overflow get a field error instead of a coerced
+  value or a generic save failure
+- 2026-11-05: text that reaches the database rejects NUL bytes, which Postgres
+  text can't hold: a field error in forms, the not-found response for an
+  application id
+- 2026-11-05: session cookies are `Secure` whenever `NODE_ENV` is `production`
+  (`advanced.useSecureCookies`), not derived from `BETTER_AUTH_URL`, so an
+  `http://` value can't silently drop the flag
 
 ## 11. End-to-end verification
 

@@ -21,6 +21,11 @@ export const auth = betterAuth({
     // refresh would extend the row but not the cookie.
     disableSessionRefresh: true,
   },
+  advanced: {
+    // Explicit: by default this follows BETTER_AUTH_URL, so an http:// value in
+    // production would silently drop the Secure flag.
+    useSecureCookies: process.env.NODE_ENV === "production",
+  },
   // Must stay last: it copies Set-Cookie headers from auth.api calls in Server
   // Actions to the Next.js response.
   plugins: [nextCookies()],

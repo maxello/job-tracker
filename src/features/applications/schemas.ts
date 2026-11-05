@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Status } from "@/generated/prisma/enums";
+import { hasNoNul, NUL_MESSAGE } from "@/lib/validation";
 
 // Inputs arrive as FormData strings. Text is trimmed; empty or whitespace-only
 // optional values become undefined.
@@ -7,17 +8,31 @@ const emptyToUndefined = (value: unknown) =>
   typeof value === "string" && value.trim() === "" ? undefined : value;
 
 const requiredText = (max: number) =>
-  z.string().trim().min(1, "Required").max(max);
+  z.string().trim().min(1, "Required").max(max).refine(hasNoNul, NUL_MESSAGE);
 
 const optionalText = (max: number) =>
-  z.preprocess(emptyToUndefined, z.string().trim().max(max).optional());
+  z.preprocess(
+    emptyToUndefined,
+    z.string().trim().max(max).refine(hasNoNul, NUL_MESSAGE).optional(),
+  );
 
+// The largest value of the Postgres INTEGER column.
+const MAX_SALARY = 2_147_483_647;
+
+// Digits only: Number() alone would also accept "1e9" and "0x10".
 const optionalSalary = z.preprocess(
   emptyToUndefined,
-  z.coerce
-    .number()
-    .int("Must be a whole number")
-    .nonnegative("Must be 0 or more")
+  z
+    .string()
+    .trim()
+    .regex(/^-?\d+$/, "Must be a whole number")
+    .transform(Number)
+    .pipe(
+      z
+        .number()
+        .nonnegative("Must be 0 or more")
+        .max(MAX_SALARY, `Must be ${MAX_SALARY} or less`),
+    )
     .optional(),
 );
 
@@ -34,7 +49,12 @@ const stack = z.preprocess(
       .filter((item) => item !== "");
   },
   z
-    .array(z.string().max(50, "Each tag must be 50 characters or fewer"))
+    .array(
+      z
+        .string()
+        .max(50, "Each tag must be 50 characters or fewer")
+        .refine(hasNoNul, NUL_MESSAGE),
+    )
     .max(30, "Up to 30 tags"),
 );
 
@@ -48,6 +68,7 @@ export const createApplicationSchema = z
         .string()
         .trim()
         .max(2048)
+        .refine(hasNoNul, NUL_MESSAGE)
         .pipe(
           z.url({
             protocol: /^https?$/,
@@ -99,10 +120,13 @@ export const createApplicationSchema = z
 
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
 
-// Only values of the Prisma Status enum are accepted. The id is not checked for
-// format: the ownership query decides, so any unknown id gets the not-found
-// response like a missing one.
+// The id is not checked for format: the ownership query decides, so any unknown
+// id gets the not-found response like a missing one. Only an id the database
+// can't accept is rejected here, and it gets the same response.
+export const applicationIdSchema = z.string().min(1).refine(hasNoNul);
+
+// Only values of the Prisma Status enum are accepted.
 export const changeStatusSchema = z.object({
-  id: z.string().min(1),
+  id: applicationIdSchema,
   status: z.enum(Status),
 });
