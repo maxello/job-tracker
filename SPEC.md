@@ -256,11 +256,17 @@ lives in `src/lib/auth.ts`.
   accounts); demo data wiped
 - M3 (week 3): edit + delete; Vitest and Playwright set up; unit test for the
   status-change transaction, e2e test for cross-user isolation, unit and e2e
-  tests for M1–M3 stories; hooks enforce lint and typecheck
+  tests for M1–M3 stories; hooks enforce lint and typecheck; signed-in users are
+  redirected away from `/sign-in` and `/sign-up`, covered by an e2e test
 - M4 (week 4): archive application (US-8)
 - M5 (week 5): kanban board + search and filters
 - M6 (week 6): AI job posting parsing + eval script
 - M7–M8 (weeks 7–8): deploy, preview deployments, CI, monitoring, portfolio prep
+  - Required before the public deploy (M7): rate limiting for sign-in and sign-up,
+    the sign-out behavior when the database fails, security headers (see Open
+    questions)
+  - Required by the end of M8: open tabs react when the account changes (see Open
+    questions)
 
 ## 9. Open questions
 
@@ -285,8 +291,8 @@ lives in `src/lib/auth.ts`.
   navigation: a stale tab keeps the old email and the old list, while new actions
   run as the new user. Proposed: a small client component posts the session's
   `userId` through `BroadcastChannel`, and tabs with a different id call
-  `router.refresh()`. Deferred to M8 or after the MVP: the case is rare and data
-  isolation still holds
+  `router.refresh()`. Deferred to M8: the case is rare and data isolation still
+  holds
 - Should a signed-in user be redirected away from `/sign-in` and `/sign-up`?
   Proposed: yes, to `/`, from a server component that reads the real session
   inside `<Suspense>`, so the form stays in the static shell and a failed session
