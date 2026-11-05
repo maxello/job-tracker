@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { hasNoNul, NUL_MESSAGE } from "@/lib/validation";
 
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
@@ -16,7 +17,8 @@ export const signUpSchema = z.object({
     .string()
     .trim()
     .min(1, "Enter your name")
-    .max(100, "Must be 100 characters or fewer"),
+    .max(100, "Must be 100 characters or fewer")
+    .refine(hasNoNul, NUL_MESSAGE),
   email,
   // Not trimmed: spaces are valid password characters.
   password: z

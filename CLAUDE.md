@@ -34,6 +34,7 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 - `src/lib/db.ts` — the single Prisma client instance
 - `src/lib/auth.ts` — the Better Auth instance (no `/api/auth` route handler: forms call `auth.api` from Server Actions)
 - `src/lib/action-result.ts` — `ActionResult`, the shared Server Action response type
+- `src/lib/validation.ts` — `hasNoNul()`, the shared Zod check for text stored in Postgres
 - `src/lib/current-user.ts` — `getCurrentUserId()`: validates the session, redirects to `/sign-in` without one. `tryGetCurrentUserId()` is the same for actions with form state, but returns `null` when the session read fails. The only source of `userId`
 - `src/proxy.ts` — optimistic redirect on the session cookie only (no database). Never the security check
 
