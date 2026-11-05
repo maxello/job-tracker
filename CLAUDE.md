@@ -61,7 +61,7 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 - If unsure about a library API (Prisma, Zod, the auth library), check the docs for the installed version (see `package.json`) before writing code; don't guess
 - Tooling follows the milestones too: hooks come in M3, CI in M7. Don't add them early, even as a fix; propose it instead
 - In a plan, list the assumptions and product decisions you made separately, so I can confirm them
-- In code review, report only what affects correctness or SPEC.md requirements. If a finding relies on library behavior, verify it in the installed version before reporting it
+- In code review, report only what affects correctness or SPEC.md requirements. If a finding relies on library, browser or database behavior, verify it before reporting it (libraries in the installed version), or label it unverified
 
 ## Not built yet (don't invent these)
 

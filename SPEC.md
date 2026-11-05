@@ -460,8 +460,7 @@ lives in `src/lib/auth.ts`.
   application id
 - 2026-11-05: session cookies are `Secure` whenever `NODE_ENV` is `production`
   (`advanced.useSecureCookies`), not derived from `BETTER_AUTH_URL`, so an
-  `http://` value can't silently drop the flag. The cost: after signing in on a
-  local production build over http, the user lands back on `/sign-in`
+  `http://` value can't silently drop the flag
 
 ## 11. End-to-end verification
 
