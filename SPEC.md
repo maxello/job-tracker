@@ -78,8 +78,8 @@ As a job seeker, I want to quickly add an application I've sent, so that I have 
   - location (optional, max 200 chars)
   - level (optional, free text, max 100 chars, e.g. "Junior", "Senior")
   - stack (optional, list of up to 30 tags, each max 50 chars)
-  - salary min / salary max (optional, non-negative integers, annual gross
-    only; if both are set, min ≤ max)
+  - salary min / salary max (optional, non-negative integers up to 2147483647,
+    annual gross only; if both are set, min ≤ max)
   - salary currency (required if any salary value is set, ISO 4217 code, e.g.
     "USD", "EUR", "UAH")
 - Text inputs are trimmed; a whitespace-only value counts as empty
@@ -272,6 +272,12 @@ lives in `src/lib/auth.ts`.
   clears the cookie and reports success, but the session row stays valid until it
   expires (at most 7 days), so a copied cookie keeps working. Decide before the
   public deploy (M7)
+- Which security headers ship with the public deploy (M7)? HSTS and a CSP with
+  only `frame-ancestors` are expected; neither affects rendering. A `script-src`
+  policy needs a separate decision: nonces require dynamic rendering and are
+  incompatible with Partial Prerendering, which the app uses. The alternative,
+  `'unsafe-inline'`, allows the inline scripts from Next.js and `LocalDate` but
+  adds little XSS protection
 
 ## 10. Decision log
 
@@ -444,6 +450,12 @@ lives in `src/lib/auth.ts`.
   days). Accepted: changing it needs a different sign-out flow
 - 2026-11-04: forms need JavaScript. On partially prerendered pages a form POST
   without JavaScript gets only streaming scripts back, with no HTML form
+- 2026-11-05: salary accepts decimal digits only, up to the Postgres `INTEGER`
+  maximum, so `1e9`, `0x10` and overflow get a field error instead of a coerced
+  value or a generic save failure
+- 2026-11-05: text that reaches the database rejects NUL bytes, which Postgres
+  text can't hold: a field error in forms, the not-found response for an
+  application id
 
 ## 11. End-to-end verification
 
