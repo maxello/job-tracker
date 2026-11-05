@@ -28,18 +28,22 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 ## Structure
 
 - All app code lives in `src/`; `public/` stays at the root. Alias `@/*` → `./src/*`.
-- `src/app` — routes and layouts only (keep thin)
+- `src/app` — routes and layouts only (keep thin). Pages and the header live in the `(main)` route group, so `src/app/error.tsx` covers the header too; keep the root layout free of anything that can throw
 - `src/features/applications/` — `components/`, `actions.ts`, `schemas.ts`, `queries.ts`
 - `src/features/auth/` — same layout: sign-up, sign-in, sign-out, `getSession()`
 - `src/lib/db.ts` — the single Prisma client instance
 - `src/lib/auth.ts` — the Better Auth instance (no `/api/auth` route handler: forms call `auth.api` from Server Actions)
-- `src/lib/current-user.ts` — `getCurrentUserId()`: validates the session, redirects to `/sign-in` without one. The only source of `userId`
+- `src/lib/action-result.ts` — `ActionResult`, the shared Server Action response type
+- `src/lib/current-user.ts` — `getCurrentUserId()`: validates the session, redirects to `/sign-in` without one. `tryGetCurrentUserId()` is the same for actions with form state, but returns `null` when the session read fails. The only source of `userId`
 - `src/proxy.ts` — optimistic redirect on the session cookie only (no database). Never the security check
 
 ## Conventions
 
 - Server Components by default; `"use client"` only for state, effects or browser APIs
 - All mutations are Server Actions; validate input with Zod on the server
+- Server Actions with form state return `ActionResult` (`useActionState` starts from `null`; actions ending in `redirect()` use `ActionResult<never, …>`). Never send a password back in `values`
+- Expected failures are returned; unexpected ones are thrown to `error.tsx`. Users see generic messages only; real errors go to server logs
+- `redirect()` and `notFound()` throw: keep them outside try/catch
 - Tailwind only, no component libraries
 - Files: kebab-case; React components: PascalCase
 - Commits: Conventional Commits. Don't add `Co-Authored-By` trailers.

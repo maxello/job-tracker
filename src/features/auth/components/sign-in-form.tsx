@@ -1,16 +1,12 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { signInAction, type AuthFormState } from "../actions";
+import { signInAction } from "../actions";
 import { AuthField } from "./auth-field";
 
-const initialState: AuthFormState = { values: {}, fieldErrors: {} };
-
 export function SignInForm() {
-  const [state, formAction, pending] = useActionState(
-    signInAction,
-    initialState,
-  );
+  const [state, formAction, pending] = useActionState(signInAction, null);
+  const failure = state?.ok === false ? state : undefined;
   const formRef = useRef<HTMLFormElement>(null);
 
   // After a failed submit, move focus to the first invalid field.
@@ -33,23 +29,23 @@ export function SignInForm() {
         label="Email"
         type="email"
         autoComplete="email"
-        defaultValue={state.values.email}
-        error={state.fieldErrors.email?.[0]}
+        defaultValue={failure?.values?.email}
+        error={failure?.error.fieldErrors?.email?.[0]}
       />
       <AuthField
         name="password"
         label="Password"
         type="password"
         autoComplete="current-password"
-        error={state.fieldErrors.password?.[0]}
+        error={failure?.error.fieldErrors?.password?.[0]}
       />
 
-      {state.message && (
+      {failure?.error.message && (
         <p
           role="alert"
           className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300"
         >
-          {state.message}
+          {failure.error.message}
         </p>
       )}
 

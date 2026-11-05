@@ -268,6 +268,10 @@ lives in `src/lib/auth.ts`.
 - How is sign-in rate limited before the public deploy (M7)? Better Auth's
   limiter does not apply to `auth.api` calls from Server Actions, so failed
   attempts are currently unlimited
+- How should sign-out end the session when the database fails? `auth.api.signOut`
+  clears the cookie and reports success, but the session row stays valid until it
+  expires (at most 7 days), so a copied cookie keeps working. Decide before the
+  public deploy (M7)
 
 ## 10. Decision log
 
@@ -406,6 +410,40 @@ lives in `src/lib/auth.ts`.
   current one. This is UI only: the server keeps the no-op rule, because a stale
   tab can still send the current status. Without JavaScript the button stays
   disabled, so status changes need JavaScript
+- 2026-11-04: every Server Action with form state returns one type,
+  `ActionResult` in `src/lib/action-result.ts`: `{ ok: true, data }` or
+  `{ ok: false, error, values? }`, where `error` holds an optional `message` and
+  `fieldErrors`. `values` sits beside `error` because submitted values aren't an
+  error. Its type excludes the password, so sending one back is a type error.
+  The `useActionState` initial state is `null`, because nothing submitted is
+  neither a success nor a failure
+- 2026-11-04: actions that end in `redirect()` use `ActionResult<never, …>`. They
+  only ever return failures; success is the redirect
+- 2026-11-04: expected failures (validation, a failed save) are returned as
+  `ActionResult`. Unexpected ones are thrown to `src/app/error.tsx`, which shows a
+  generic message and a retry and never shows the error or its digest. Real
+  errors go only to server logs
+- 2026-11-04: the header lives in the `src/app/(main)` route group, not the root
+  layout, so `app/error.tsx` covers it. A form action's error reaches the nearest
+  boundary above the form, and `error.tsx` doesn't catch errors from the layout at
+  its own level: in the root layout, a failed sign-out or session read skipped
+  `error.tsx` and showed Next's built-in error page (confirmed in a production
+  build). The rejected alternative was `global-error.tsx`, which replaces the
+  whole document. The root layout now has nothing that can throw at runtime, so
+  `global-error.tsx` isn't needed. The cost: an unmatched URL shows the default
+  404 without the header
+- 2026-11-04: `createApplicationAction` and `changeStatusAction` read the session
+  through `tryGetCurrentUserId()`, which returns `null` when the read fails and
+  still redirects when there is no session. In an outage the session read fails
+  first; without this the action would throw and the form would lose its values.
+  `src/lib/current-user.ts` stays the only source of `userId`
+- 2026-11-04: `signOutAction` has no form state: it logs a failure and rethrows it
+  to `error.tsx`. `auth.api.signOut` catches its own database errors, clears the
+  cookie and returns success, so during an outage the user lands on `/sign-in` and
+  the catch doesn't run. The session row stays valid until it expires (at most 7
+  days). Accepted: changing it needs a different sign-out flow
+- 2026-11-04: forms need JavaScript. On partially prerendered pages a form POST
+  without JavaScript gets only streaming scripts back, with no HTML form
 
 ## 11. End-to-end verification
 

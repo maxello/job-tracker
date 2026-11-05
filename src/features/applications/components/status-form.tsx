@@ -2,10 +2,8 @@
 
 import { useActionState, useState } from "react";
 import type { Status } from "@/generated/prisma/enums";
-import { changeStatusAction, type ChangeStatusState } from "../actions";
+import { changeStatusAction } from "../actions";
 import { STATUS_LABELS } from "../status";
-
-const initialState: ChangeStatusState = {};
 
 type Props = {
   id: string;
@@ -17,12 +15,10 @@ type Props = {
 // Render with key={status}, so the selection resets when refresh() delivers a
 // new status.
 export function StatusForm({ id, status }: Props) {
-  const [state, formAction, pending] = useActionState(
-    changeStatusAction,
-    initialState,
-  );
+  const [state, formAction, pending] = useActionState(changeStatusAction, null);
   const [selected, setSelected] = useState(status);
-  const error = state.error;
+  const failure = state?.ok === false ? state.error : undefined;
+  const error = failure?.fieldErrors?.status?.[0] ?? failure?.message;
 
   return (
     <form action={formAction} className="flex flex-col gap-1">

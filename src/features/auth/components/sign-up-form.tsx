@@ -1,17 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { signUpAction, type AuthFormState } from "../actions";
+import { signUpAction } from "../actions";
 import { PASSWORD_MIN_LENGTH } from "../schemas";
 import { AuthField } from "./auth-field";
 
-const initialState: AuthFormState = { values: {}, fieldErrors: {} };
-
 export function SignUpForm() {
-  const [state, formAction, pending] = useActionState(
-    signUpAction,
-    initialState,
-  );
+  const [state, formAction, pending] = useActionState(signUpAction, null);
+  const failure = state?.ok === false ? state : undefined;
   const formRef = useRef<HTMLFormElement>(null);
 
   // After a failed submit, move focus to the first invalid field.
@@ -34,16 +30,16 @@ export function SignUpForm() {
         label="Name"
         type="text"
         autoComplete="name"
-        defaultValue={state.values.name}
-        error={state.fieldErrors.name?.[0]}
+        defaultValue={failure?.values?.name}
+        error={failure?.error.fieldErrors?.name?.[0]}
       />
       <AuthField
         name="email"
         label="Email"
         type="email"
         autoComplete="email"
-        defaultValue={state.values.email}
-        error={state.fieldErrors.email?.[0]}
+        defaultValue={failure?.values?.email}
+        error={failure?.error.fieldErrors?.email?.[0]}
       />
       <AuthField
         name="password"
@@ -51,15 +47,15 @@ export function SignUpForm() {
         type="password"
         autoComplete="new-password"
         hint={`At least ${PASSWORD_MIN_LENGTH} characters`}
-        error={state.fieldErrors.password?.[0]}
+        error={failure?.error.fieldErrors?.password?.[0]}
       />
 
-      {state.message && (
+      {failure?.error.message && (
         <p
           role="alert"
           className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300"
         >
-          {state.message}
+          {failure.error.message}
         </p>
       )}
 

@@ -2,13 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef, type ReactNode } from "react";
-import {
-  createApplicationAction,
-  type ApplicationFieldName,
-  type CreateApplicationState,
-} from "../actions";
-
-const initialState: CreateApplicationState = { values: {}, fieldErrors: {} };
+import { createApplicationAction, type ApplicationFieldName } from "../actions";
 
 const CURRENCY_SUGGESTIONS = ["USD", "EUR", "UAH", "GBP", "PLN"];
 
@@ -18,8 +12,9 @@ const controlClass =
 export function ApplicationForm() {
   const [state, formAction, pending] = useActionState(
     createApplicationAction,
-    initialState,
+    null,
   );
+  const failure = state?.ok === false ? state : undefined;
   const formRef = useRef<HTMLFormElement>(null);
 
   // After a failed submit, move focus to the first invalid field.
@@ -32,7 +27,7 @@ export function ApplicationForm() {
   // Shared props for every control: id/name, the value to restore after an
   // error, and the error/hint wiring for assistive technology.
   function control(name: ApplicationFieldName, hint = false) {
-    const invalid = Boolean(state.fieldErrors[name]?.length);
+    const invalid = Boolean(failure?.error.fieldErrors?.[name]?.length);
     const describedBy = [
       hint ? `${name}-hint` : null,
       invalid ? `${name}-error` : null,
@@ -42,7 +37,7 @@ export function ApplicationForm() {
     return {
       id: name,
       name,
-      defaultValue: state.values[name] ?? "",
+      defaultValue: failure?.values?.[name] ?? "",
       "aria-invalid": invalid,
       "aria-describedby": describedBy || undefined,
       className: controlClass,
@@ -55,7 +50,7 @@ export function ApplicationForm() {
     input: ReactNode,
     options: { required?: boolean; hint?: string } = {},
   ) {
-    const error = state.fieldErrors[name]?.[0];
+    const error = failure?.error.fieldErrors?.[name]?.[0];
     return (
       <div className="flex min-w-0 flex-col gap-1">
         <label htmlFor={name} className="text-sm font-medium">
@@ -185,12 +180,12 @@ export function ApplicationForm() {
 
       {field("notes", "Notes", <textarea rows={5} {...control("notes")} />)}
 
-      {state.message && (
+      {failure?.error.message && (
         <p
           role="alert"
           className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300"
         >
-          {state.message}
+          {failure.error.message}
         </p>
       )}
 
