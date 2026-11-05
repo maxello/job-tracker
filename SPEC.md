@@ -265,9 +265,11 @@ lives in `src/lib/auth.ts`.
 ## 9. Open questions
 
 - Should the create form allow choosing an initial status other than Wishlist?
-- How is sign-in rate limited before the public deploy (M7)? Better Auth's
-  limiter does not apply to `auth.api` calls from Server Actions, so failed
-  attempts are currently unlimited
+- How are sign-in and sign-up rate limited before the public deploy (M7)? Better
+  Auth's limiter does not apply to `auth.api` calls from Server Actions, so
+  attempts are currently unlimited. Deferred on purpose: design one table for
+  these limits and the M6 parse limit (20 per user per day), in M6 or at the
+  start of M7, and ship it before the deploy
 - How should sign-out end the session when the database fails? `auth.api.signOut`
   clears the cookie and reports success, but the session row stays valid until it
   expires (at most 7 days), so a copied cookie keeps working. Decide before the
@@ -456,6 +458,10 @@ lives in `src/lib/auth.ts`.
 - 2026-11-05: text that reaches the database rejects NUL bytes, which Postgres
   text can't hold: a field error in forms, the not-found response for an
   application id
+- 2026-11-05: session cookies are `Secure` whenever `NODE_ENV` is `production`
+  (`advanced.useSecureCookies`), not derived from `BETTER_AUTH_URL`, so an
+  `http://` value can't silently drop the flag. The cost: after signing in on a
+  local production build over http, the user lands back on `/sign-in`
 
 ## 11. End-to-end verification
 
