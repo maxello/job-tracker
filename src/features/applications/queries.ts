@@ -69,7 +69,10 @@ export async function changeApplicationStatus(
     // Same status is a no-op: no update, so @updatedAt doesn't change.
     if (current === to) return "unchanged";
 
-    await tx.application.update({ where: { id }, data: { status: to } });
+    await tx.application.update({
+      where: { id, userId },
+      data: { status: to },
+    });
     await tx.statusChange.create({
       data: { applicationId: id, from: current, to },
     });
