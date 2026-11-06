@@ -56,6 +56,10 @@ As a job seeker, I want to sign up and sign in, so that my applications are priv
 
 - A user can register with name, email and password, and sign in; signing out
   ends the session (Better Auth with database sessions, see the decision log)
+- Registration fields:
+  - name (required, up to 100 chars, trimmed)
+  - email (required, up to 254 chars, valid format, trimmed and lowercased)
+  - password (required, 8–128 chars, not trimmed)
 - Unauthenticated users are redirected to the sign-in page
 - After sign-in, every page and action shows only the current user's data
 - Every action on another user's application that exists at the current
@@ -80,8 +84,9 @@ As a job seeker, I want to quickly add an application I've sent, so that I have 
   - stack (optional, list of up to 30 tags, each max 50 chars)
   - salary min / salary max (optional, non-negative integers up to 2147483647,
     annual gross only; if both are set, min ≤ max)
-  - salary currency (required if any salary value is set, ISO 4217 code, e.g.
-    "USD", "EUR", "UAH")
+  - salary currency (required if any salary value is set, three letters in the
+    ISO 4217 format, e.g. "USD", "EUR", "UAH"; only the format is checked, not
+    the list of assigned codes)
 - Text inputs are trimmed; a whitespace-only value counts as empty
 - Validation runs on the server; field errors are shown next to the fields
 - A new application gets status Wishlist, and a history record
@@ -479,6 +484,14 @@ lives in `src/lib/auth.ts`.
 - 2026-11-05: session cookies are `Secure` whenever `NODE_ENV` is `production`
   (`advanced.useSecureCookies`), not derived from `BETTER_AUTH_URL`, so an
   `http://` value can't silently drop the flag
+- 2026-11-06: salary currency is checked for the three-letter format only, not
+  against the ISO 4217 list, so an unassigned code such as `ZZZ` is accepted. This
+  narrows "any ISO 4217 code" in the 2026-11-02 currency entry
+- 2026-11-06: the M3 unit test for the status-change transaction runs against a
+  mocked `db`. It shows that a no-op writes nothing, what gets written, and that
+  errors reach `$transaction`. It does not prove rollback, the `FOR UPDATE` lock,
+  or `changedAt` and `updatedAt`; these need a real database and are checked once
+  the test database exists (M3, week 3 day 3)
 
 ## 11. End-to-end verification
 

@@ -14,13 +14,15 @@ npm run lint
 npm run typecheck
 npm run format
 npm run format:check
+npm test
+npm run test:watch
 ```
 
-A task is done only when `npm run lint && npm run typecheck` pass.
+A task is done only when `npm run lint && npm run typecheck && npm test` pass.
 
 ## Stack
 
-Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · Prisma + Neon (Postgres) · Zod · Better Auth (email + password, database sessions)
+Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · Prisma + Neon (Postgres) · Zod · Better Auth (email + password, database sessions) · Vitest
 
 - Tailwind runs through a Turbopack CSS loader rule (`@tailwindcss/turbopack`), not PostCSS.
 - `next.config.ts` enables `cacheComponents` and `partialPrefetching`.
@@ -65,5 +67,5 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 
 ## Not built yet (don't invent these)
 
-- Tests: no test framework until M3, don't add one
+- E2E tests: no Playwright yet (week 3, day 3), don't add it
 - Hooks: only `.claude/hooks/block-env-access.mjs` (added ahead of plan); the rest come in M3
