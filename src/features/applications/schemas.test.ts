@@ -276,6 +276,36 @@ describe("createApplicationSchema", () => {
   });
 });
 
+// The edit form reuses the US-1 schema; these are the two contracts
+// updateApplication relies on.
+describe("createApplicationSchema as the US-4 update input", () => {
+  it("US-4: cleared optional fields parse to undefined and a cleared stack to []", () => {
+    const data = expectValid({
+      url: "",
+      notes: "  ",
+      location: "",
+      level: "",
+      stack: "",
+      salaryMin: "",
+      salaryMax: "",
+      salaryCurrency: "",
+    });
+
+    expect(data).toEqual({ ...required, stack: [] });
+  });
+
+  it("US-4: status, owner and archive fields are stripped from the input", () => {
+    const data = expectValid({
+      status: "OFFER",
+      userId: "user-b",
+      archivedAt: "2026-11-06",
+      createdAt: "2026-11-06",
+    });
+
+    expect(data).toEqual({ ...required, stack: [] });
+  });
+});
+
 describe("changeStatusSchema", () => {
   const id = "application-1";
 

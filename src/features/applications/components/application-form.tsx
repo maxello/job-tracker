@@ -2,18 +2,34 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef, type ReactNode } from "react";
-import { createApplicationAction, type ApplicationFieldName } from "../actions";
+import type { ActionResult } from "@/lib/action-result";
+import type { ApplicationFieldName } from "../actions";
+import type { ApplicationFormValues } from "../form-values";
 
 const CURRENCY_SUGGESTIONS = ["USD", "EUR", "UAH", "GBP", "PLN"];
 
 const controlClass =
   "w-full min-w-0 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 aria-invalid:border-red-600 dark:border-zinc-700 dark:bg-zinc-950 dark:focus-visible:outline-zinc-100 dark:aria-invalid:border-red-400";
 
-export function ApplicationForm() {
-  const [state, formAction, pending] = useActionState(
-    createApplicationAction,
-    null,
-  );
+type FormResult = ActionResult<never, ApplicationFieldName>;
+
+type Props = {
+  action: (prev: FormResult | null, formData: FormData) => Promise<FormResult>;
+  // Edit only: the application being edited and its stored values.
+  id?: string;
+  initialValues?: ApplicationFormValues;
+  submitLabel: string;
+  cancelHref: string;
+};
+
+export function ApplicationForm({
+  action,
+  id,
+  initialValues,
+  submitLabel,
+  cancelHref,
+}: Props) {
+  const [state, formAction, pending] = useActionState(action, null);
   const failure = state?.ok === false ? state : undefined;
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -37,7 +53,8 @@ export function ApplicationForm() {
     return {
       id: name,
       name,
-      defaultValue: failure?.values?.[name] ?? "",
+      // ??, so a field cleared by the user stays empty after an error elsewhere.
+      defaultValue: failure?.values?.[name] ?? initialValues?.[name] ?? "",
       "aria-invalid": invalid,
       "aria-describedby": describedBy || undefined,
       className: controlClass,
@@ -91,6 +108,8 @@ export function ApplicationForm() {
       noValidate
       className="flex flex-col gap-5"
     >
+      {id !== undefined && <input type="hidden" name="id" value={id} />}
+
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         Fields marked <span aria-hidden="true">*</span>
         <span className="sr-only">as required</span> are required.
@@ -195,10 +214,10 @@ export function ApplicationForm() {
           disabled={pending}
           className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300 dark:focus-visible:outline-zinc-100"
         >
-          {pending ? "Saving…" : "Save application"}
+          {pending ? "Saving…" : submitLabel}
         </button>
         <Link
-          href="/"
+          href={cancelHref}
           className="rounded-md px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900"
         >
           Cancel

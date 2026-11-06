@@ -1,10 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Status } from "@/generated/prisma/enums";
-import { changeApplicationStatus, createApplication } from "./queries";
+import {
+  changeApplicationStatus,
+  createApplication,
+  deleteApplication,
+  updateApplication,
+} from "./queries";
 
 const { db, tx } = vi.hoisted(() => {
   const client = () => ({
-    application: { create: vi.fn(), update: vi.fn() },
+    application: {
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      deleteMany: vi.fn(),
+    },
     statusChange: { create: vi.fn() },
   });
   return {
@@ -192,5 +202,150 @@ describe("changeApplicationStatus", () => {
     ).resolves.toBe("not-found");
 
     expectNothingWritten();
+  });
+});
+
+// The fake applies the `where` it receives: without the query's own `userId`
+// condition another user's row would match and the US-0 tests would fail.
+function matchesStoredApplication(where: { id?: string; userId?: string }) {
+  const matchesUser = !("userId" in where) || where.userId === OWNER;
+  return where.id === APPLICATION_ID && matchesUser;
+}
+
+function givenStoredApplication() {
+  const count = async ({ where }: { where: { id?: string } }) => ({
+    count: matchesStoredApplication(where) ? 1 : 0,
+  });
+  db.application.updateMany.mockImplementation(count);
+  db.application.deleteMany.mockImplementation(count);
+}
+
+describe("updateApplication", () => {
+  const required = { company: "Acme", role: "Engineer", stack: [] };
+  const full = {
+    company: "Acme",
+    role: "Engineer",
+    url: "https://example.com/jobs/1",
+    notes: "Referred by a friend",
+    location: "Kyiv",
+    level: "Senior",
+    stack: ["React", "Node"],
+    salaryMin: 1000,
+    salaryMax: 2000,
+    salaryCurrency: "USD",
+  };
+
+  const writtenData = () => db.application.updateMany.mock.calls[0]?.[0].data;
+
+  beforeEach(givenStoredApplication);
+
+  it("US-4: all fields are saved", async () => {
+    await expect(updateApplication(OWNER, APPLICATION_ID, full)).resolves.toBe(
+      "updated",
+    );
+
+    expect(db.application.updateMany).toHaveBeenCalledExactlyOnceWith({
+      where: { id: APPLICATION_ID, userId: OWNER },
+      data: full,
+    });
+  });
+
+  // Prisma skips undefined, so a cleared field must be written as null.
+  it.each([
+    "url",
+    "notes",
+    "location",
+    "level",
+    "salaryMin",
+    "salaryMax",
+    "salaryCurrency",
+  ])("US-4: clearing %s writes null", async (field) => {
+    await updateApplication(OWNER, APPLICATION_ID, required);
+
+    expect(writtenData()).toHaveProperty(field, null);
+  });
+
+  it("US-4: clearing the stack writes an empty list", async () => {
+    await updateApplication(OWNER, APPLICATION_ID, required);
+
+    expect(writtenData().stack).toEqual([]);
+  });
+
+  it("US-4: a salary of 0 is kept, not cleared", async () => {
+    await updateApplication(OWNER, APPLICATION_ID, {
+      ...required,
+      salaryMin: 0,
+      salaryMax: 0,
+      salaryCurrency: "USD",
+    });
+
+    expect(writtenData()).toMatchObject({ salaryMin: 0, salaryMax: 0 });
+  });
+
+  it("US-4: status, owner and archive state are not part of the update", async () => {
+    // A forged field that got past the types must still not reach the database.
+    const forged = {
+      ...full,
+      status: "OFFER",
+      userId: OTHER_USER,
+      archivedAt: null,
+    };
+
+    await updateApplication(OWNER, APPLICATION_ID, forged);
+
+    expect(Object.keys(writtenData()).sort()).toEqual(Object.keys(full).sort());
+  });
+
+  it("US-4: editing fields does not write status history", async () => {
+    await updateApplication(OWNER, APPLICATION_ID, full);
+
+    expect(db.statusChange.create).not.toHaveBeenCalled();
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("US-8: an archived application stays editable", async () => {
+    await updateApplication(OWNER, APPLICATION_ID, full);
+
+    expect(
+      db.application.updateMany.mock.calls[0]?.[0].where,
+    ).not.toHaveProperty("archivedAt");
+  });
+
+  it("US-0: editing another user's application gets not-found", async () => {
+    await expect(
+      updateApplication(OTHER_USER, APPLICATION_ID, full),
+    ).resolves.toBe("not-found");
+  });
+
+  it("US-0: an id that does not exist gets the same not-found response", async () => {
+    await expect(
+      updateApplication(OWNER, "no-such-application", full),
+    ).resolves.toBe("not-found");
+  });
+});
+
+describe("deleteApplication", () => {
+  beforeEach(givenStoredApplication);
+
+  it("US-4: delete removes the user's application", async () => {
+    await expect(deleteApplication(OWNER, APPLICATION_ID)).resolves.toBe(
+      "deleted",
+    );
+
+    expect(db.application.deleteMany).toHaveBeenCalledExactlyOnceWith({
+      where: { id: APPLICATION_ID, userId: OWNER },
+    });
+  });
+
+  it("US-0: deleting another user's application gets not-found", async () => {
+    await expect(deleteApplication(OTHER_USER, APPLICATION_ID)).resolves.toBe(
+      "not-found",
+    );
+  });
+
+  it("US-0: an id that does not exist gets the same not-found response", async () => {
+    await expect(deleteApplication(OWNER, "no-such-application")).resolves.toBe(
+      "not-found",
+    );
   });
 });

@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentUserId } from "@/lib/current-user";
 import { getApplication } from "../queries";
 import { applicationIdSchema } from "../schemas";
 import { STATUS_LABELS } from "../status";
+import { DeleteApplication } from "./delete-application";
 import { LocalDate } from "./local-date";
 import { StatusForm } from "./status-form";
 
@@ -63,6 +65,18 @@ export async function ApplicationDetails({ id }: { id: string }) {
         <span className="mt-3 inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
           {STATUS_LABELS[application.status]}
         </span>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Link
+            href={`/applications/${application.id}/edit`}
+            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+          >
+            Edit
+          </Link>
+          <DeleteApplication
+            id={application.id}
+            name={`${application.role} at ${application.company}`}
+          />
+        </div>
       </header>
 
       <StatusForm
