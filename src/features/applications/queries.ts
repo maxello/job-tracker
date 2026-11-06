@@ -47,6 +47,43 @@ export async function getApplication(userId: string, id: string) {
   });
 }
 
+// Replaces the editable fields. updateMany and deleteMany keep the ownership
+// check in one statement and report a miss as count 0, where update and delete
+// would throw P2025.
+export async function updateApplication(
+  userId: string,
+  id: string,
+  input: CreateApplicationInput,
+): Promise<"updated" | "not-found"> {
+  const { count } = await db.application.updateMany({
+    where: { id, userId },
+    // Listed by hand, so status and the owner can't get in. Prisma skips
+    // undefined, so a cleared optional field has to be written as null.
+    data: {
+      company: input.company,
+      role: input.role,
+      url: input.url ?? null,
+      notes: input.notes ?? null,
+      location: input.location ?? null,
+      level: input.level ?? null,
+      stack: input.stack,
+      salaryMin: input.salaryMin ?? null,
+      salaryMax: input.salaryMax ?? null,
+      salaryCurrency: input.salaryCurrency ?? null,
+    } satisfies Record<keyof CreateApplicationInput, unknown>,
+  });
+  return count === 0 ? "not-found" : "updated";
+}
+
+// Hard delete: onDelete: Cascade removes the status history.
+export async function deleteApplication(
+  userId: string,
+  id: string,
+): Promise<"deleted" | "not-found"> {
+  const { count } = await db.application.deleteMany({ where: { id, userId } });
+  return count === 0 ? "not-found" : "deleted";
+}
+
 export type ChangeStatusResult = "changed" | "unchanged" | "not-found";
 
 // The only place a status changes (detail page now, kanban in M5).

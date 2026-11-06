@@ -111,7 +111,8 @@ Statuses: Wishlist, Applied, Interview, Offer, Rejected
 
 - In M1 the status is changed on a minimal detail page: read-only fields, a
   status select and the status history in chronological order (oldest first).
-  US-4 (M3) adds editing and deleting to this page
+  US-4 (M3) adds deleting to this page and editing on `/applications/[id]/edit`,
+  linked from it
 - Any transition between two different statuses is allowed, in any direction
 - Setting the current status again (e.g. Applied → Applied) is a no-op: no
   history record is written and `updatedAt` does not change
@@ -126,9 +127,11 @@ As a job seeker, I want to edit or delete an application, so that my data stays 
 
 - Extends the M1 detail page (US-3), which already shows all fields and the
   status history including the initial Wishlist record
-- All fields can be edited with the same validation as US-1; editing fields
-  does not write status history
-- Delete asks for confirmation; after deletion the user returns to the list
+- All fields can be edited on `/applications/[id]/edit`, linked from the detail
+  page, with the same validation as US-1; editing fields does not write status
+  history
+- Delete asks for confirmation in a native `<dialog>`; after deletion the user
+  returns to the list
   and the application no longer appears anywhere in the UI
 - Delete is a hard delete: the application and its status history are removed
   permanently
@@ -492,6 +495,29 @@ lives in `src/lib/auth.ts`.
   errors reach `$transaction`. It does not prove rollback, the `FOR UPDATE` lock,
   or `changedAt` and `updatedAt`; these need a real database and are checked once
   the test database exists (M3, week 3 day 3)
+- 2026-11-06: editing lives on a separate route, `/applications/[id]/edit`, opened
+  from an Edit link on the detail page; delete stays on the detail page. The
+  rejected alternative was `?edit=1` on the detail page, which keeps the status
+  form and history visible while editing. This narrows "adds editing to this
+  page" in US-3 and US-4
+- 2026-11-06: delete is confirmed in a native `<dialog>` opened with `showModal()`,
+  with no library. The form sits inside the closed dialog, so it can't be submitted
+  before hydration. The rejected alternatives were `window.confirm`, whose form is
+  exposed in the server HTML, and an inline two-step button
+- 2026-11-06: edit and delete use `updateMany` and `deleteMany` with
+  `where: { id, userId }`, so ownership is checked in one statement and a miss is
+  `count: 0`. `update` and `delete` throw `P2025` instead. `updateApplication` lists
+  its columns by hand and writes a cleared optional field as `null`, because
+  Prisma skips `undefined`
+- 2026-11-06: saving the edit form without changes still changes `updatedAt`. The
+  US-3 no-op rule covers status only, and skipping the write would need a read and
+  a comparison
+- 2026-11-06: the edit and delete actions call `refresh()` before `redirect()`:
+  `redirect()` alone keeps the client cache, so Back could show old or deleted
+  data. This differs from the create action, which only redirects
+- 2026-11-06: the real-database checks from the entry above also cover US-4: a
+  cleared field is stored as `NULL`, the status isn't touched by an edit, `updatedAt`
+  changes, and delete cascades to the status history
 
 ## 11. End-to-end verification
 

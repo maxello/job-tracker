@@ -8,9 +8,15 @@ import { tryGetCurrentUserId } from "@/lib/current-user";
 import {
   changeApplicationStatus,
   createApplication,
+  deleteApplication,
+  updateApplication,
   type ChangeStatusResult,
 } from "./queries";
-import { changeStatusSchema, createApplicationSchema } from "./schemas";
+import {
+  applicationIdSchema,
+  changeStatusSchema,
+  createApplicationSchema,
+} from "./schemas";
 
 const FIELD_NAMES = [
   "company",
@@ -29,18 +35,24 @@ export type ApplicationFieldName = (typeof FIELD_NAMES)[number];
 
 const SAVE_FAILED = "Couldn't save the application. Please try again.";
 const STATUS_FAILED = "Couldn't update the status. Please try again.";
+const DELETE_FAILED = "Couldn't delete the application. Please try again.";
 
-export async function createApplicationAction(
-  _prevState: ActionResult<never, ApplicationFieldName> | null,
-  formData: FormData,
-): Promise<ActionResult<never, ApplicationFieldName>> {
-  // Read only the known fields; anything else in FormData is ignored. Raw
-  // submitted strings, sent back so the form keeps them after an error.
+// Read only the known fields; anything else in FormData is ignored. Raw
+// submitted strings, sent back so the form keeps them after an error.
+function readValues(formData: FormData) {
   const values: Partial<Record<ApplicationFieldName, string>> = {};
   for (const name of FIELD_NAMES) {
     const value = formData.get(name);
     if (typeof value === "string") values[name] = value;
   }
+  return values;
+}
+
+export async function createApplicationAction(
+  _prevState: ActionResult<never, ApplicationFieldName> | null,
+  formData: FormData,
+): Promise<ActionResult<never, ApplicationFieldName>> {
+  const values = readValues(formData);
 
   // The owner always comes from the server, never from the submitted form.
   const userId = await tryGetCurrentUserId();
@@ -67,6 +79,74 @@ export async function createApplicationAction(
   // The home list is request-time data (no "use cache"), and redirect streams
   // a fresh render of "/" in the action response, so no revalidation needed.
   // redirect throws, so it stays outside the try/catch.
+  redirect("/");
+}
+
+export async function updateApplicationAction(
+  _prevState: ActionResult<never, ApplicationFieldName> | null,
+  formData: FormData,
+): Promise<ActionResult<never, ApplicationFieldName>> {
+  const values = readValues(formData);
+
+  const userId = await tryGetCurrentUserId();
+  if (userId === null) {
+    return { ok: false, error: { message: SAVE_FAILED }, values };
+  }
+
+  // No usable id: not found, like an id that doesn't exist.
+  const id = applicationIdSchema.safeParse(formData.get("id"));
+  if (!id.success) notFound();
+
+  const result = createApplicationSchema.safeParse(values);
+  if (!result.success) {
+    return {
+      ok: false,
+      error: { fieldErrors: z.flattenError(result.error).fieldErrors },
+      values,
+    };
+  }
+
+  let outcome: Awaited<ReturnType<typeof updateApplication>>;
+  try {
+    outcome = await updateApplication(userId, id.data, result.data);
+  } catch (error) {
+    console.error("Failed to update application", error);
+    return { ok: false, error: { message: SAVE_FAILED }, values };
+  }
+
+  // Missing or another user's application: 404, never 403.
+  if (outcome === "not-found") notFound();
+
+  // redirect alone keeps the client cache, so Back could show the old data.
+  refresh();
+  redirect(`/applications/${id.data}`);
+}
+
+export async function deleteApplicationAction(
+  _prevState: ActionResult<never> | null,
+  formData: FormData,
+): Promise<ActionResult<never>> {
+  const userId = await tryGetCurrentUserId();
+  if (userId === null) {
+    return { ok: false, error: { message: DELETE_FAILED } };
+  }
+
+  const id = applicationIdSchema.safeParse(formData.get("id"));
+  if (!id.success) notFound();
+
+  let outcome: Awaited<ReturnType<typeof deleteApplication>>;
+  try {
+    outcome = await deleteApplication(userId, id.data);
+  } catch (error) {
+    console.error("Failed to delete application", error);
+    return { ok: false, error: { message: DELETE_FAILED } };
+  }
+
+  // Missing or another user's application: 404, never 403.
+  if (outcome === "not-found") notFound();
+
+  // refresh clears the client cache, so Back can't show the deleted application.
+  refresh();
   redirect("/");
 }
 

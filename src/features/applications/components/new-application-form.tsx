@@ -1,4 +1,5 @@
 import { getCurrentUserId } from "@/lib/current-user";
+import { createApplicationAction } from "../actions";
 import { ApplicationForm } from "./application-form";
 
 // The form itself holds no user data, but the page must still validate the
@@ -6,7 +7,13 @@ import { ApplicationForm } from "./application-form";
 // must render inside <Suspense>.
 export async function NewApplicationForm() {
   await getCurrentUserId();
-  return <ApplicationForm />;
+  return (
+    <ApplicationForm
+      action={createApplicationAction}
+      submitLabel="Save application"
+      cancelHref="/"
+    />
+  );
 }
 
 export function NewApplicationFormSkeleton() {
