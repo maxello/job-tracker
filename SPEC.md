@@ -487,6 +487,11 @@ lives in `src/lib/auth.ts`.
 - 2026-11-06: salary currency is checked for the three-letter format only, not
   against the ISO 4217 list, so an unassigned code such as `ZZZ` is accepted. This
   narrows "any ISO 4217 code" in the 2026-11-02 currency entry
+- 2026-11-06: the M3 unit test for the status-change transaction runs against a
+  mocked `db`. It shows that a no-op writes nothing, what gets written, and that
+  errors reach `$transaction`. It does not prove rollback, the `FOR UPDATE` lock,
+  or `changedAt` and `updatedAt`; these need a real database and are checked once
+  the test database exists (M3, week 3 day 3)
 
 ## 11. End-to-end verification
 
