@@ -540,6 +540,8 @@ lives in `src/lib/auth.ts`.
   they bypass Better Auth
 - 2026-11-08: the stale-cookie e2e test (M3) must use the production cookie name
   `__Secure-better-auth.session_token`
+- 2026-11-08: cross-user isolation e2e tests use two fresh users per test, so
+  the seeded USER_B was removed; the seed creates only USER_A
 
 ## 11. End-to-end verification
 
