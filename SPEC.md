@@ -518,6 +518,28 @@ lives in `src/lib/auth.ts`.
 - 2026-11-06: the real-database checks from the entry above also cover US-4: a
   cleared field is stored as `NULL`, the status isn't touched by an edit, `updatedAt`
   changes, and delete cascades to the status history
+- 2026-11-08: e2e tests run with Playwright against `next build` + `next start`
+  on `http://localhost:3100`, Chromium only. Production mode tests the behavior
+  users get: the PPR shell, the soft 404, and `Secure` `__Secure-` session
+  cookies, which Chromium accepts on `http://localhost`. The rejected alternative
+  was `next dev`, which drops `Secure`, compiles on demand and adds dev-only
+  behavior. The cost is a full build on every run
+- 2026-11-08: e2e tests use a separate database, `job_tracker_e2e`. `.env.test` is
+  loaded only by `e2e/env.ts`, which overrides `DATABASE_URL`,
+  `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` from the file and refuses to run
+  unless the database name is `job_tracker_e2e`. The reset SQL checks
+  `current_database()` again. No command names the file, so the dev `.env` can't
+  be used
+- 2026-11-08: every e2e run applies migrations (`prisma migrate deploy` in the
+  webServer command, because Playwright starts the webServer before
+  `globalSetup`), then global setup truncates all tables, and a Playwright setup
+  project re-creates two users (A and B) through the real sign-up form.
+  In-process seeding with `auth.api` was rejected: Playwright's loader can't
+  import the generated ESM Prisma client (`import.meta`), and switching the repo
+  to `"type": "module"` is too wide. Raw password hashes were rejected because
+  they bypass Better Auth
+- 2026-11-08: the stale-cookie e2e test (M3) must use the production cookie name
+  `__Secure-better-auth.session_token`
 
 ## 11. End-to-end verification
 

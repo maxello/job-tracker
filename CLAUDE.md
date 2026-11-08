@@ -16,6 +16,7 @@ npm run format
 npm run format:check
 npm test
 npm run test:watch
+npm run e2e        # Playwright: build + start on :3100 against job_tracker_e2e
 ```
 
 A task is done only when `npm run lint && npm run typecheck && npm test` pass.
@@ -68,5 +69,4 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 
 ## Not built yet (don't invent these)
 
-- E2E tests: no Playwright yet (week 3, day 3), don't add it
 - Hooks: only `.claude/hooks/block-env-access.mjs` (added ahead of plan); the rest come in M3
