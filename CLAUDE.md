@@ -70,4 +70,4 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 
 ## Not built yet (don't invent these)
 
-- Hooks: only `.claude/hooks/block-env-access.mjs` (added ahead of plan); the rest come in M3
+- Hooks: only `.claude/hooks/block-env-access.mjs` (added ahead of plan) and `.claude/hooks/format-lint.mjs` (PostToolUse: Prettier + ESLint on the edited file); the rest come in M3
