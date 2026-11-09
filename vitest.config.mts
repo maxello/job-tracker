@@ -7,7 +7,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    // Playwright specs run with `npm run e2e`, not Vitest.
-    exclude: [...configDefaults.exclude, "e2e/**"],
+    // Playwright specs run with `npm run e2e`, real-database tests with
+    // `npm run test:db`.
+    exclude: [...configDefaults.exclude, "e2e/**", "**/*.db.test.ts"],
   },
 });

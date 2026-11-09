@@ -537,6 +537,15 @@ lives in `src/lib/auth.ts`.
   `__Secure-better-auth.session_token`
 - 2026-11-08: cross-user isolation e2e tests use two fresh users per test, so
   the seeded USER_B was removed; the seed creates only USER_A
+- 2026-11-09: the real-database checks from the 2026-11-06 entries live in
+  `*.db.test.ts` and run with `npm run test:db`, a separate Vitest config that
+  is not part of `npm test`. They call the DAL against `job_tracker_e2e`, with
+  the env loaded only through `e2e/env.ts` (same guard), and apply migrations
+  first. Each test creates its own raw `User` row and data, with no truncate.
+  Rollback is injected by a test-only trigger, created and dropped by the test,
+  that rejects history inserts for a marker company. The lock check holds the
+  row in a third transaction until both calls are blocked on it. `test:db` must
+  not run alongside `npm run e2e`, whose setup truncates every table
 - 2026-11-09: a signed-in user who opens `/sign-in` or `/sign-up` is redirected
   to `/` by `RedirectIfSignedIn`, a server component that reads the real session
   inside `<Suspense>`. The form stays in the static shell, and a failed session

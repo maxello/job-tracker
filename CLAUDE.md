@@ -16,6 +16,7 @@ npm run format
 npm run format:check
 npm test
 npm run test:watch
+npm run test:db    # Vitest against job_tracker_e2e (*.db.test.ts); never alongside e2e
 npm run e2e        # Playwright: build + start on :3100 against job_tracker_e2e
 ```
 
