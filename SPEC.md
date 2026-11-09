@@ -301,11 +301,6 @@ lives in `src/lib/auth.ts`.
   `userId` through `BroadcastChannel`, and tabs with a different id call
   `router.refresh()`. Deferred to M8: the case is rare and data isolation still
   holds
-- Should a signed-in user be redirected away from `/sign-in` and `/sign-up`?
-  Proposed: yes, to `/`, from a server component that reads the real session
-  inside `<Suspense>`, so the form stays in the static shell and a failed session
-  read still shows the form. Not in the proxy: a stale cookie would cause a loop.
-  Deferred to M3, so an e2e test can cover it, including a stale cookie
 
 ## 10. Decision log
 
@@ -542,6 +537,15 @@ lives in `src/lib/auth.ts`.
   `__Secure-better-auth.session_token`
 - 2026-11-08: cross-user isolation e2e tests use two fresh users per test, so
   the seeded USER_B was removed; the seed creates only USER_A
+- 2026-11-09: a signed-in user who opens `/sign-in` or `/sign-up` is redirected
+  to `/` by `RedirectIfSignedIn`, a server component that reads the real session
+  inside `<Suspense>`. The form stays in the static shell, and a failed session
+  read is logged on the server and still shows the form. The redirect fires
+  mid-stream, so it is client-side (HTTP 200, then `/`), not a 307. Not in the
+  proxy: it only sees that a cookie exists, so a stale cookie would loop between
+  `/sign-in` and `/`. Covered by `e2e/auth-redirect.spec.ts`, including a stale
+  `__Secure-` cookie. This closes the open question on redirecting signed-in
+  users
 
 ## 11. End-to-end verification
 
