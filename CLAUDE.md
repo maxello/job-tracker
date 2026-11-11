@@ -64,10 +64,17 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 - Don't change existing tests to make them pass. If a test looks wrong, stop and ask
 - If requirements are ambiguous or conflict with SPEC.md, ask before coding
 - If unsure about a library API (Prisma, Zod, the auth library), check the docs for the installed version (see `package.json`) before writing code; don't guess
-- Tooling follows the milestones too: hooks come in M3, CI in M7. Don't add them early, even as a fix; propose it instead
+- Tooling follows the milestones too: CI comes in M7. Don't add it early, even as a fix; propose it instead
 - In a plan, list the assumptions and product decisions you made separately, so I can confirm them
 - In code review, report only what affects correctness or SPEC.md requirements. If a finding relies on library, browser or database behavior, verify it before reporting it (libraries in the installed version), or label it unverified
 
-## Not built yet (don't invent these)
+## Hooks
 
-- Hooks: only `.claude/hooks/block-env-access.mjs` (added ahead of plan), `.claude/hooks/format-lint.mjs` (PostToolUse: Prettier + ESLint on the edited file), `.claude/hooks/block-migration-writes.mjs` (PreToolUse: denies Edit/Write/NotebookEdit inside `prisma/migrations/`) and `.claude/hooks/stop-checks.mjs` (Stop: typecheck + unit tests while the tree is dirty; off while `.claude/stop-checks.off` exists, for the TDD red phase); the rest come in M3
+In `.claude/hooks/`, wired in `.claude/settings.json`:
+
+- `block-env-access.mjs` — PreToolUse: blocks reads/edits/commands touching `.env` files (`.env.example` allowed)
+- `block-migration-writes.mjs` — PreToolUse: denies Edit/Write/NotebookEdit inside `prisma/migrations/` (create a new migration instead)
+- `format-lint.mjs` — PostToolUse: Prettier on the edited file, then ESLint; lint errors are reported back
+- `stop-checks.mjs` — Stop: typecheck + unit tests must pass before a turn ends (only while the tree is dirty)
+
+For a TDD red phase, create `.claude/stop-checks.off` to switch stop-checks off; delete it afterwards.
