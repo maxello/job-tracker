@@ -21,6 +21,7 @@ npm run e2e        # Playwright: build + start on :3100 against job_tracker_e2e
 ```
 
 A task is done only when `npm run lint && npm run typecheck && npm test` pass.
+If `npm test` reports "no tests" in every file, run it from `D:\` (Vitest fails from a lowercase drive).
 
 ## Stack
 
