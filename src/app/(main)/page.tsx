@@ -5,7 +5,7 @@ import {
   ApplicationListSkeleton,
 } from "@/features/applications/components/application-list";
 
-export default function Home() {
+export default function Home({ searchParams }: PageProps<"/">) {
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -18,7 +18,7 @@ export default function Home() {
         </Link>
       </header>
       <Suspense fallback={<ApplicationListSkeleton />}>
-        <ApplicationList />
+        <ApplicationList searchParams={searchParams} />
       </Suspense>
     </main>
   );

@@ -21,9 +21,18 @@ export async function createApplication(
 }
 
 // Home page list: non-archived only, newest activity first.
-export async function listApplications(userId: string) {
+// `statuses` filters with IN only when non-empty: Prisma's `in: []` matches
+// nothing, so an empty list means no filter.
+export async function listApplications(
+  userId: string,
+  { statuses = [] }: { statuses?: Status[] } = {},
+) {
   return db.application.findMany({
-    where: { userId, archivedAt: null },
+    where: {
+      userId,
+      archivedAt: null,
+      ...(statuses.length > 0 && { status: { in: statuses } }),
+    },
     // id breaks ties so the order is stable for equal timestamps.
     orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
     select: {

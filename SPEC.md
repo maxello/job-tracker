@@ -565,13 +565,14 @@ lives in `src/lib/auth.ts`.
   the "No applications match your filters" message with a way to clear them.
   Search, the date range and the kanban stay in M5. The URL repeats one key with
   lowercase values (`?status=applied&status=interview`), which a native GET form
-  produces without JavaScript. Values are matched case-insensitively; unknown,
+  produces without JavaScript. Values are trimmed and matched case-insensitively; unknown,
   empty and duplicate values are ignored, and if none is valid, no filter applies.
   There is no redirect to a canonical URL: it would fire mid-stream and add a round
   trip for no gain. The filter is a `next/form` GET to `/` with checkboxes, an
   Apply button and a Clear link, not auto-submit on change (same reason as the
-  2026-11-02 status-select entry). It works without JavaScript, covered by an e2e
-  test with JavaScript disabled. The form reads `searchParams`, so it renders
+  2026-11-02 status-select entry). Like the rest of the page, the filter needs
+  JavaScript: the list and the form stream inside `<Suspense>`, which shows only
+  the skeleton without it (see 2026-11-04). The form reads `searchParams`, so it renders
   inside the list's `<Suspense>` and the header stays in the static shell. The
   checkboxes use `defaultChecked`, so a wrapper element around the form is keyed
   on the selected statuses to re-mount it after Back, Forward or Clear; the key is
