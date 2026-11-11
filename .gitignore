@@ -51,5 +51,8 @@ next-env.d.ts
 # personal Claude Code instructions
 CLAUDE.local.md
 
+# local switch for the Stop hook
+/.claude/stop-checks.off
+
 # prisma generated client
 /src/generated

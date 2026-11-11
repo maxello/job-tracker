@@ -70,4 +70,4 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 
 ## Not built yet (don't invent these)
 
-- Hooks: only `.claude/hooks/block-env-access.mjs` (added ahead of plan), `.claude/hooks/format-lint.mjs` (PostToolUse: Prettier + ESLint on the edited file) and `.claude/hooks/block-migration-writes.mjs` (PreToolUse: denies Edit/Write/NotebookEdit inside `prisma/migrations/`); the rest come in M3
+- Hooks: only `.claude/hooks/block-env-access.mjs` (added ahead of plan), `.claude/hooks/format-lint.mjs` (PostToolUse: Prettier + ESLint on the edited file), `.claude/hooks/block-migration-writes.mjs` (PreToolUse: denies Edit/Write/NotebookEdit inside `prisma/migrations/`) and `.claude/hooks/stop-checks.mjs` (Stop: typecheck + unit tests while the tree is dirty; off while `.claude/stop-checks.off` exists, for the TDD red phase); the rest come in M3
