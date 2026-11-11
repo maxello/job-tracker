@@ -4,6 +4,7 @@ import {
   changeApplicationStatus,
   createApplication,
   deleteApplication,
+  listApplications,
   updateApplication,
 } from "./queries";
 
@@ -11,6 +12,7 @@ const { db, tx } = vi.hoisted(() => {
   const client = () => ({
     application: {
       create: vi.fn(),
+      findMany: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
       deleteMany: vi.fn(),
@@ -89,6 +91,42 @@ describe("createApplication", () => {
     });
     expect(db.statusChange.create).not.toHaveBeenCalled();
     expect(db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("listApplications", () => {
+  const order = [{ updatedAt: "desc" }, { id: "desc" }];
+  const query = () => db.application.findMany.mock.calls[0]?.[0];
+
+  beforeEach(() => {
+    db.application.findMany.mockResolvedValue([]);
+  });
+
+  it("US-6: without statuses the query has no status condition", async () => {
+    await listApplications(OWNER);
+
+    expect(db.application.findMany).toHaveBeenCalledOnce();
+    expect(query().where).toEqual({ userId: OWNER, archivedAt: null });
+  });
+
+  // Prisma's `in: []` matches nothing, so an empty list must mean no filter.
+  it("US-6: an empty statuses list adds no status condition", async () => {
+    await listApplications(OWNER, { statuses: [] });
+
+    expect(db.application.findMany).toHaveBeenCalledOnce();
+    expect(query().where).toEqual({ userId: OWNER, archivedAt: null });
+  });
+
+  it("US-6: statuses filter with IN, keeping the userId scope, the archived exclusion and the US-2 order", async () => {
+    await listApplications(OWNER, { statuses: ["APPLIED", "INTERVIEW"] });
+
+    expect(db.application.findMany).toHaveBeenCalledOnce();
+    expect(query().where).toEqual({
+      userId: OWNER,
+      archivedAt: null,
+      status: { in: ["APPLIED", "INTERVIEW"] },
+    });
+    expect(query().orderBy).toEqual(order);
   });
 });
 

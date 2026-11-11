@@ -157,6 +157,10 @@ As a job seeker, I want to see my applications on a board by status and move the
 
 As a job seeker, I want to search and filter my applications, so that I can quickly find the ones I need.
 
+The status filter (multiple selection, URL state, the empty-result message) is
+pulled forward into M3; search and the date range stay in M5 (see the decision
+log, 2026-11-11).
+
 - Search by company and role: case-insensitive, substring match
 - Filter by status (multiple selection) and by last updated date range
   (from / to, both optional, inclusive, in the user's local timezone)
@@ -265,7 +269,8 @@ lives in `src/lib/auth.ts`.
 - M3 (week 3): edit + delete; Vitest and Playwright set up; unit test for the
   status-change transaction, e2e test for cross-user isolation, unit and e2e
   tests for M1–M3 stories; hooks enforce lint and typecheck; signed-in users are
-  redirected away from `/sign-in` and `/sign-up`, covered by an e2e test
+  redirected away from `/sign-in` and `/sign-up`, covered by an e2e test; the
+  status filter from US-6, pulled forward from M5 (see the decision log)
 - M4 (week 4): archive application (US-8)
 - M5 (week 5): kanban board + search and filters
 - M6 (week 6): AI job posting parsing + eval script
@@ -555,6 +560,29 @@ lives in `src/lib/auth.ts`.
   `/sign-in` and `/`. Covered by `e2e/auth-redirect.spec.ts`, including a stale
   `__Secure-` cookie. This closes the open question on redirecting signed-in
   users
+- 2026-11-11: the status filter from US-6 is pulled forward from M5 into M3 as a
+  course exercise. It covers multiple selection, state in the URL query string and
+  the "No applications match your filters" message with a way to clear them.
+  Search, the date range and the kanban stay in M5. The URL repeats one key with
+  lowercase values (`?status=applied&status=interview`), which a native GET form
+  produces without JavaScript. Values are trimmed and matched case-insensitively; unknown,
+  empty and duplicate values are ignored, and if none is valid, no filter applies.
+  There is no redirect to a canonical URL: it would fire mid-stream and add a round
+  trip for no gain. The filter is a `next/form` GET to `/` with checkboxes, an
+  Apply button and a Clear link, not auto-submit on change (same reason as the
+  2026-11-02 status-select entry). Like the rest of the page, the filter needs
+  JavaScript: the list and the form stream inside `<Suspense>`, which shows only
+  the skeleton without it (see 2026-11-04). The form reads `searchParams`, so it renders
+  inside the list's `<Suspense>` and the header stays in the static shell. The
+  checkboxes use `defaultChecked`, so a wrapper element around the form is keyed
+  on the selected statuses to re-mount it after Back, Forward or Clear; the key is
+  not on `<Form>`, which doesn't support `key` with a string `action`.
+  `listApplications` takes an optional `statuses` list and adds `status IN (…)`
+  only when it is non-empty, because Prisma's `in: []` matches nothing; the
+  `userId` scope, the archived exclusion and the US-2 order are unchanged. With no
+  filter and no rows the list keeps the "Add your first application" call to
+  action. The rejected alternative was a comma-separated value, which needs client
+  code to build
 
 ## 11. End-to-end verification
 
