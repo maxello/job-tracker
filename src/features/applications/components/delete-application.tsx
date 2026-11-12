@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useId, useRef } from "react";
 import { deleteApplicationAction } from "../actions";
 
 type Props = {
@@ -22,6 +22,11 @@ export function DeleteApplication({ id, name }: Props) {
   );
   const dialogRef = useRef<HTMLDialogElement>(null);
   const error = state?.ok === false ? state.error.message : undefined;
+  // Unique per instance: a hidden detail page can stay in the document, and a
+  // shared id could resolve to its description of another application (#26).
+  const baseId = useId();
+  const headingId = `${baseId}-heading`;
+  const descriptionId = `${baseId}-description`;
 
   return (
     <>
@@ -34,15 +39,15 @@ export function DeleteApplication({ id, name }: Props) {
       </button>
       <dialog
         ref={dialogRef}
-        aria-labelledby="delete-heading"
-        aria-describedby="delete-description"
+        aria-labelledby={headingId}
+        aria-describedby={descriptionId}
         className="m-auto w-[calc(100%-2rem)] max-w-md rounded-lg border border-zinc-200 bg-white p-6 text-zinc-900 backdrop:bg-black/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
       >
-        <h2 id="delete-heading" className="text-lg font-semibold">
+        <h2 id={headingId} className="text-lg font-semibold">
           Delete this application?
         </h2>
         <p
-          id="delete-description"
+          id={descriptionId}
           className="mt-2 text-sm break-words text-zinc-600 dark:text-zinc-400"
         >
           The application for {name} and its status history will be removed

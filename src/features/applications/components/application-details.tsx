@@ -55,6 +55,9 @@ export async function ApplicationDetails({ id }: { id: string }) {
   // Missing or another user's application: 404, never 403.
   if (!application) notFound();
   const archived = application.archivedAt !== null;
+  // From the record id, not useId(): on the server its counter restarts with
+  // every RSC request, and a hidden detail page can stay in the document (#26).
+  const historyHeadingId = `history-heading-${application.id}`;
 
   return (
     <div className="flex flex-col gap-8">
@@ -156,8 +159,8 @@ export async function ApplicationDetails({ id }: { id: string }) {
         </Field>
       </dl>
 
-      <section aria-labelledby="history-heading">
-        <h2 id="history-heading" className="mb-3 text-lg font-semibold">
+      <section aria-labelledby={historyHeadingId}>
+        <h2 id={historyHeadingId} className="mb-3 text-lg font-semibold">
           Status history
         </h2>
         <ol className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">

@@ -211,16 +211,8 @@ test("US-8: an archived application can change status and be edited, and stays a
   await expect(archivedBadge(page.getByRole("main"))).toBeVisible();
   await expect(unarchiveButton(page)).toBeVisible();
 
-  // A full load, not a click on Edit: after client-side navigation the hidden
-  // create form (kept in the DOM by Cache Components) shares the edit form's
-  // fixed ids, so every field's accessible name is doubled ("Role Role *").
-  // That duplicate-id bug is tracked and fixed separately.
-  const editLink = page.getByRole("link", { name: "Edit", exact: true });
-  await expect(editLink).toHaveAttribute(
-    "href",
-    `${new URL(detailUrl).pathname}/edit`,
-  );
-  await page.goto(`${detailUrl}/edit`);
+  await page.getByRole("link", { name: "Edit", exact: true }).click();
+  await expect(page).toHaveURL(`${detailUrl}/edit`);
   const role = uniqueName("Staff Engineer");
   await page.getByRole("textbox", { name: "Role", exact: true }).fill(role);
   await page.getByRole("button", { name: "Save changes" }).click();

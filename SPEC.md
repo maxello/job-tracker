@@ -651,6 +651,13 @@ lives in `src/lib/auth.ts`.
   `refresh()` and holds one keyed child form per action; a click sets a flag,
   and an effect on the archived state moves focus only when that flag is set,
   so a page load never takes focus. A failed action clears the flag
+- 2026-11-12: DOM ids are never hard-coded (#26). Cache Components keeps up to
+  3 previous routes per route level in the document, hidden with `<Activity>`,
+  so a fixed id appears twice and labels and ARIA references attach to several
+  elements. Client Components derive ids from `useId()`. Server Components
+  derive them from the record id: `useId()` there restarts its counter on every
+  RSC request (Next sets no `identifierPrefix`), so two routes would get the
+  same ids
 
 ## 11. End-to-end verification
 

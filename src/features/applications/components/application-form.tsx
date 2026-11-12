@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, type ReactNode } from "react";
+import {
+  useActionState,
+  useEffect,
+  useId,
+  useRef,
+  type ReactNode,
+} from "react";
 import type { ActionResult } from "@/lib/action-result";
 import type { ApplicationFieldName } from "../actions";
 import type { ApplicationFormValues } from "../form-values";
@@ -32,6 +38,11 @@ export function ApplicationForm({
   const [state, formAction, pending] = useActionState(action, null);
   const failure = state?.ok === false ? state : undefined;
   const formRef = useRef<HTMLFormElement>(null);
+  // Unique per instance: Cache Components can keep a hidden copy of this form
+  // (create or another edit page) in the document (#26).
+  const idPrefix = useId();
+  const fieldId = (name: string) => `${idPrefix}-${name}`;
+  const currencyListId = fieldId("currency-suggestions");
 
   // After a failed submit, move focus to the first invalid field.
   useEffect(() => {
@@ -45,13 +56,13 @@ export function ApplicationForm({
   function control(name: ApplicationFieldName, hint = false) {
     const invalid = Boolean(failure?.error.fieldErrors?.[name]?.length);
     const describedBy = [
-      hint ? `${name}-hint` : null,
-      invalid ? `${name}-error` : null,
+      hint ? fieldId(`${name}-hint`) : null,
+      invalid ? fieldId(`${name}-error`) : null,
     ]
       .filter(Boolean)
       .join(" ");
     return {
-      id: name,
+      id: fieldId(name),
       name,
       // ??, so a field cleared by the user stays empty after an error elsewhere.
       defaultValue: failure?.values?.[name] ?? initialValues?.[name] ?? "",
@@ -70,7 +81,7 @@ export function ApplicationForm({
     const error = failure?.error.fieldErrors?.[name]?.[0];
     return (
       <div className="flex min-w-0 flex-col gap-1">
-        <label htmlFor={name} className="text-sm font-medium">
+        <label htmlFor={fieldId(name)} className="text-sm font-medium">
           {label}
           {options.required && (
             <span aria-hidden="true" className="text-red-600 dark:text-red-400">
@@ -82,7 +93,7 @@ export function ApplicationForm({
         {input}
         {options.hint && (
           <p
-            id={`${name}-hint`}
+            id={fieldId(`${name}-hint`)}
             className="text-xs text-zinc-500 dark:text-zinc-400"
           >
             {options.hint}
@@ -90,7 +101,7 @@ export function ApplicationForm({
         )}
         {error && (
           <p
-            id={`${name}-error`}
+            id={fieldId(`${name}-error`)}
             className="text-sm text-red-600 dark:text-red-400"
           >
             {error}
@@ -182,7 +193,7 @@ export function ApplicationForm({
             "Currency",
             <input
               type="text"
-              list="currency-suggestions"
+              list={currencyListId}
               maxLength={3}
               autoCapitalize="characters"
               placeholder="USD"
@@ -190,7 +201,7 @@ export function ApplicationForm({
             />,
           )}
         </div>
-        <datalist id="currency-suggestions">
+        <datalist id={currencyListId}>
           {CURRENCY_SUGGESTIONS.map((code) => (
             <option key={code} value={code} />
           ))}
