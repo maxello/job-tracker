@@ -42,3 +42,35 @@ describe("StatusFilterForm", () => {
     },
   );
 });
+
+// Two fieldsets side by side, each with its legend on the border: "Status"
+// with the status boxes, "Archive" with "Show archived".
+function fieldsets(html: string) {
+  return [...html.matchAll(/<fieldset[^>]*>([\s\S]*?)<\/fieldset>/g)].map(
+    ([, body]) => ({
+      legend: body!.match(/<legend[^>]*>([\s\S]*?)<\/legend>/)?.[1],
+      body: body!,
+    }),
+  );
+}
+
+describe("StatusFilterForm groups", () => {
+  it("US-8: a Status fieldset and an Archive fieldset, each named by its legend", () => {
+    const html = renderToStaticMarkup(
+      <StatusFilterForm selected={[]} showArchived={false} />,
+    );
+
+    expect(fieldsets(html).map((f) => f.legend)).toEqual(["Status", "Archive"]);
+  });
+
+  it("US-8: Show archived is in the Archive fieldset, not in Status", () => {
+    const html = renderToStaticMarkup(
+      <StatusFilterForm selected={[]} showArchived={false} />,
+    );
+    const [status, archive] = fieldsets(html);
+
+    expect(status?.body.match(/name="status"/g)).toHaveLength(5);
+    expect(status?.body).not.toContain('name="archived"');
+    expect(archive?.body).toContain('name="archived"');
+  });
+});

@@ -637,11 +637,20 @@ lives in `src/lib/auth.ts`.
   server clock (`new Date()`), like `@updatedAt`
 - 2026-11-12: "Show archived" is read from `archived` in the query string: on
   when any value is `1` after trimming, otherwise ignored with no redirect, like
-  the status filter. The Clear link (`/`) clears both filters. The status
-  checkboxes are now a `role="group"` labelled "Status" instead of a
-  `<fieldset>`, so "Show archived" sits in the same box without being announced
-  as a status. `hasArchivedApplications` runs only when the default list (no
-  filters, archived hidden) comes back empty
+  the status filter. The Clear link (`/`) clears both filters. The filter form
+  has two `<fieldset>`s side by side, each with its legend on the border:
+  "Status" with the status checkboxes and "Archive" with "Show archived", so
+  "Show archived" isn't announced as a status. Clear and Apply follow them,
+  aligned right. The rejected alternative was one box with the status
+  checkboxes as a `role="group"`, which lost the legend on the border.
+  `hasArchivedApplications` runs only when the default list (no filters,
+  archived hidden) comes back empty
+- 2026-11-12: after Archive, focus moves to the Unarchive button, and after
+  Unarchive to the Archive button, so keyboard and screen-reader users don't
+  lose their place when the form swaps. `ArchiveForm` stays mounted across
+  `refresh()` and holds one keyed child form per action; a click sets a flag,
+  and an effect on the archived state moves focus only when that flag is set,
+  so a page load never takes focus. A failed action clears the flag
 
 ## 11. End-to-end verification
 

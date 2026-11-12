@@ -263,3 +263,61 @@ test("US-8: Archive from a stale tab keeps the application archived instead of t
   await expect(unarchiveButton(page)).toBeVisible();
   await expect(archivedBadge(page.getByRole("main"))).toBeVisible();
 });
+
+test("US-8: the filter has a Status group and an Archive group, and Show archived is only in Archive", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const status = page.getByRole("group", { name: "Status", exact: true });
+  const archiveGroup = page.getByRole("group", {
+    name: "Archive",
+    exact: true,
+  });
+  await expect(status).toBeVisible();
+  await expect(archiveGroup).toBeVisible();
+  await expect(
+    status.getByRole("checkbox", { name: "Show archived" }),
+  ).toHaveCount(0);
+  await expect(status.getByRole("checkbox")).toHaveCount(5);
+  await expect(
+    archiveGroup.getByRole("checkbox", { name: "Show archived", exact: true }),
+  ).toBeVisible();
+});
+
+test("US-8: after Archive, focus moves to Unarchive, and after Unarchive back to Archive", async ({
+  page,
+}) => {
+  await createAndOpen(page, uniqueName("Acme"));
+
+  await archiveButton(page).click();
+  await expect(unarchiveButton(page)).toBeFocused();
+
+  await unarchiveButton(page).click();
+  await expect(archiveButton(page)).toBeFocused();
+});
+
+// `not.toBeFocused()` passes at once if it runs before hydration, when a focus
+// bug would only start. Playwright discourages networkidle, but the app has no
+// hydration signal that doesn't move focus itself (the server HTML already
+// matches the hydrated buttons, and the JS-only interactions such as the
+// Delete dialog take focus), so waiting for the network to settle is the
+// readiness check here: by then the JS chunks have loaded and hydrated.
+async function reloadAndWaitForHydration(page: Page) {
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+}
+
+test("US-8: a fresh load of the detail page focuses neither Archive nor Unarchive", async ({
+  page,
+}) => {
+  await createAndOpen(page, uniqueName("Acme"));
+  await reloadAndWaitForHydration(page);
+  await expect(archiveButton(page)).toBeVisible();
+  await expect(archiveButton(page)).not.toBeFocused();
+
+  await archive(page);
+  await reloadAndWaitForHydration(page);
+  await expect(unarchiveButton(page)).toBeVisible();
+  await expect(unarchiveButton(page)).not.toBeFocused();
+});

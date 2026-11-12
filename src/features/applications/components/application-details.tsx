@@ -78,12 +78,8 @@ export async function ApplicationDetails({ id }: { id: string }) {
           >
             Edit
           </Link>
-          {/* Keyed on the state, so it re-mounts with the other action after refresh(). */}
-          <ArchiveForm
-            key={String(archived)}
-            id={application.id}
-            archived={archived}
-          />
+          {/* Not keyed: it stays mounted across refresh() to move focus. */}
+          <ArchiveForm id={application.id} archived={archived} />
           <DeleteApplication
             id={application.id}
             name={`${application.role} at ${application.company}`}
