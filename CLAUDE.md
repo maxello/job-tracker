@@ -38,17 +38,14 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 - `src/features/auth/` — same layout: sign-up, sign-in, sign-out, `getSession()`
 - `src/lib/db.ts` — the single Prisma client instance
 - `src/lib/auth.ts` — the Better Auth instance (no `/api/auth` route handler: forms call `auth.api` from Server Actions)
-- `src/lib/action-result.ts` — `ActionResult`, the shared Server Action response type
-- `src/lib/validation.ts` — `hasNoNul()`, the shared Zod check for text stored in Postgres
 - `src/lib/current-user.ts` — `getCurrentUserId()`: validates the session, redirects to `/sign-in` without one. `tryGetCurrentUserId()` is the same for actions with form state, but returns `null` when the session read fails. The only source of `userId`
 - `src/proxy.ts` — optimistic redirect on the session cookie only (no database). Never the security check
 
 ## Conventions
 
 - Server Components by default; `"use client"` only for state, effects or browser APIs
-- All mutations are Server Actions; validate input with Zod on the server
-- Server Actions with form state return `ActionResult` (`useActionState` starts from `null`; actions ending in `redirect()` use `ActionResult<never, …>`). Never send a password back in `values`
-- Expected failures are returned; unexpected ones are thrown to `error.tsx`. Users see generic messages only; real errors go to server logs
+- All mutations are Server Actions
+- Users see generic error messages only; real errors go to server logs
 - `redirect()` and `notFound()` throw: keep them outside try/catch
 - Tailwind only, no component libraries
 - Files: kebab-case; React components: PascalCase
