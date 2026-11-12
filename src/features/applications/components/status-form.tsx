@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
 import type { Status } from "@/generated/prisma/enums";
 import { changeStatusAction } from "../actions";
 import { STATUS_LABELS } from "../status";
@@ -19,21 +19,25 @@ export function StatusForm({ id, status }: Props) {
   const [selected, setSelected] = useState(status);
   const failure = state?.ok === false ? state.error : undefined;
   const error = failure?.fieldErrors?.status?.[0] ?? failure?.message;
+  // Unique per instance: a hidden detail page can stay in the document (#26).
+  const baseId = useId();
+  const selectId = `${baseId}-status`;
+  const errorId = `${baseId}-error`;
 
   return (
     <form action={formAction} className="flex flex-col gap-1">
       <input type="hidden" name="id" value={id} />
-      <label htmlFor="status" className="text-sm font-medium">
+      <label htmlFor={selectId} className="text-sm font-medium">
         Status
       </label>
       <div className="flex flex-wrap items-center gap-3">
         <select
-          id="status"
+          id={selectId}
           name="status"
           value={selected}
           onChange={(event) => setSelected(event.target.value as Status)}
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? "status-error" : undefined}
+          aria-describedby={error ? errorId : undefined}
           className="min-w-0 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 aria-invalid:border-red-600 dark:border-zinc-700 dark:bg-zinc-950 dark:focus-visible:outline-zinc-100 dark:aria-invalid:border-red-400"
         >
           {Object.entries(STATUS_LABELS).map(([value, label]) => (
@@ -52,7 +56,7 @@ export function StatusForm({ id, status }: Props) {
       </div>
       {error && (
         <p
-          id="status-error"
+          id={errorId}
           role="alert"
           className="text-sm text-red-600 dark:text-red-400"
         >
