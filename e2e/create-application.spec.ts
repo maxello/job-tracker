@@ -82,7 +82,7 @@ test("US-1: a whitespace-only company counts as empty and shows a field error", 
 
   const company = page.getByRole("textbox", { name: "Company", exact: true });
   await expect(company).toHaveAttribute("aria-invalid", "true");
-  await expect(company).toHaveAccessibleDescription("Required");
+  await expect(company).toHaveAccessibleDescription("Company is required");
   await expect(
     page.getByRole("textbox", { name: "Role", exact: true }),
   ).toHaveAttribute("aria-invalid", "false");

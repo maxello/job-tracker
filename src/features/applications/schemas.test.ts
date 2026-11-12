@@ -16,6 +16,10 @@ function expectOnlyErrorOn(field: string, fields: Record<string, unknown>) {
   expect(result.error?.issues.map((issue) => issue.path[0])).toEqual([field]);
 }
 
+function errorMessages(fields: Record<string, unknown>) {
+  return parse(fields).error?.issues.map((issue) => issue.message);
+}
+
 function expectValid(fields: Record<string, unknown>) {
   const result = parse(fields);
   expect(result.error?.issues).toBeUndefined();
@@ -42,6 +46,22 @@ describe("createApplicationSchema", () => {
     it(`US-1: ${field} rejects more than 200 chars`, () => {
       expectOnlyErrorOn(field, { [field]: "a".repeat(201) });
     });
+  });
+
+  describe("required-field messages", () => {
+    it.each([
+      ["company", "Company", "empty", ""],
+      ["company", "Company", "whitespace-only", "   "],
+      ["role", "Role", "empty", ""],
+      ["role", "Role", "whitespace-only", "   "],
+    ])(
+      "US-1: an empty %s error names the field (%s, %s)",
+      (field, label, _kind, value) => {
+        expect(errorMessages({ [field]: value })).toEqual([
+          `${label} is required`,
+        ]);
+      },
+    );
   });
 
   describe("job URL", () => {
@@ -185,6 +205,12 @@ describe("createApplicationSchema", () => {
       ["a salary of 0", { salaryMin: "0" }],
     ])("US-1: salary currency is required with %s", (_label, salary) => {
       expectOnlyErrorOn("salaryCurrency", salary);
+    });
+
+    it("US-1: a missing currency error names the field", () => {
+      expect(errorMessages({ salaryMin: "1000" })).toEqual([
+        "Currency is required when a salary is set",
+      ]);
     });
 
     it("US-1: salary currency is not required without a salary", () => {
