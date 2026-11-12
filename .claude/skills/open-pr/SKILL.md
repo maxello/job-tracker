@@ -14,6 +14,7 @@ Issue: $ARGUMENTS (may be empty)
 
 - Branch: !`git branch --show-current`
 - Uncommitted: !`git status --short`
+- Stop-checks marker (empty if absent): !`git status --short --ignored -- .claude/stop-checks.off`
 - Commits not on main: !`git log --oneline main..HEAD`
 - Changed files vs main: !`git diff --stat main...HEAD`
 - Existing PR: !`gh pr view --json url,state || true`
@@ -27,7 +28,7 @@ Run every command with the Bash tool, never PowerShell: `allowed-tools` lists Ba
 Stop and tell me if:
 
 - the branch is `main` or empty (detached HEAD): ask me to create a branch;
-- `.claude/stop-checks.off` exists;
+- `.claude/stop-checks.off` exists (the marker line in Current state is not empty);
 - there is nothing to ship (no uncommitted changes and no commits ahead of main).
 
 ## 2. Issue
