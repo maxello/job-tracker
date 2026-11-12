@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  archiveApplicationAction,
   createApplicationAction,
   deleteApplicationAction,
+  unarchiveApplicationAction,
   updateApplicationAction,
 } from "./actions";
 
@@ -9,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   createApplication: vi.fn(),
   updateApplication: vi.fn(),
   deleteApplication: vi.fn(),
+  archiveApplication: vi.fn(),
+  unarchiveApplication: vi.fn(),
   changeApplicationStatus: vi.fn(),
   tryGetCurrentUserId: vi.fn(),
   refresh: vi.fn(),
@@ -20,6 +24,8 @@ vi.mock("./queries", () => ({
   createApplication: mocks.createApplication,
   updateApplication: mocks.updateApplication,
   deleteApplication: mocks.deleteApplication,
+  archiveApplication: mocks.archiveApplication,
+  unarchiveApplication: mocks.unarchiveApplication,
   changeApplicationStatus: mocks.changeApplicationStatus,
 }));
 vi.mock("@/lib/current-user", () => ({
@@ -276,5 +282,98 @@ describe("deleteApplicationAction", () => {
       error: { message: DELETE_FAILED },
     });
     expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+});
+
+// Archive and unarchive are separate intents with the same shape (SPEC.md
+// decision log, 2026-11-12).
+describe.each([
+  {
+    name: "archiveApplicationAction",
+    action: archiveApplicationAction,
+    dal: mocks.archiveApplication,
+    done: "archived",
+    failed: "Couldn't archive the application. Please try again.",
+  },
+  {
+    name: "unarchiveApplicationAction",
+    action: unarchiveApplicationAction,
+    dal: mocks.unarchiveApplication,
+    done: "unarchived",
+    failed: "Couldn't unarchive the application. Please try again.",
+  },
+])("$name", ({ action, dal, done, failed }) => {
+  const submit = (fields: Record<string, string>) =>
+    action(null, form(fields));
+
+  beforeEach(() => {
+    dal.mockResolvedValue(done);
+  });
+
+  it("US-8: the session user's application is changed and the page refreshes in place", async () => {
+    await expect(submit({ id: ID })).resolves.toEqual({
+      ok: true,
+      data: undefined,
+    });
+
+    expect(dal).toHaveBeenCalledExactlyOnceWith(OWNER, ID);
+    expect(mocks.refresh).toHaveBeenCalledOnce();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+
+  it("US-0: the owner comes from the session, and a forged userId is ignored", async () => {
+    await submit({ id: ID, userId: "user-b" });
+
+    expect(dal).toHaveBeenCalledExactlyOnceWith(OWNER, ID);
+  });
+
+  it("US-8: a no-op still succeeds and refreshes, so a stale tab catches up", async () => {
+    dal.mockResolvedValue("unchanged");
+
+    await expect(submit({ id: ID })).resolves.toEqual({
+      ok: true,
+      data: undefined,
+    });
+    expect(mocks.refresh).toHaveBeenCalledOnce();
+  });
+
+  it("US-0: a missing or foreign application gets the not-found response", async () => {
+    dal.mockResolvedValue("not-found");
+
+    await expect(submit({ id: ID })).rejects.toBeInstanceOf(NotFoundSignal);
+
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["missing", {}],
+    ["empty", { id: "" }],
+    ["with a NUL byte", { id: "a\0b" }],
+  ])("US-0: an id that is %s gets the not-found response", async (_, id) => {
+    await expect(submit(id)).rejects.toBeInstanceOf(NotFoundSignal);
+
+    expect(dal).not.toHaveBeenCalled();
+  });
+
+  it("US-8: a failed session read returns a generic message", async () => {
+    mocks.tryGetCurrentUserId.mockResolvedValue(null);
+
+    await expect(submit({ id: ID })).resolves.toEqual({
+      ok: false,
+      error: { message: failed },
+    });
+    expect(dal).not.toHaveBeenCalled();
+  });
+
+  it("US-8: a failed write returns a generic message, logs the real error and never returns it", async () => {
+    const error = new Error("connection refused");
+    dal.mockRejectedValue(error);
+
+    await expect(submit({ id: ID })).resolves.toEqual({
+      ok: false,
+      error: { message: failed },
+    });
+    expect(console.error).toHaveBeenCalledWith(expect.any(String), error);
+    expect(mocks.refresh).not.toHaveBeenCalled();
   });
 });

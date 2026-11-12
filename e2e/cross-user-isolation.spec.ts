@@ -251,3 +251,57 @@ test("US-0: a delete with another user's id swapped in gets the not-found respon
     owner.getByRole("heading", { name: ownerCompany }),
   ).toBeVisible();
 });
+
+test("US-0: an archive with another user's id swapped in gets the not-found response and changes nothing", async () => {
+  const ownId = await createAndOpen(intruder, uniqueName("Hooli"));
+
+  const archive = intruder.getByRole("button", {
+    name: "Archive",
+    exact: true,
+  });
+  await swapId(intruder.locator("form").filter({ has: archive }), ownerId);
+  await submitAndExpectNotFound(intruder, archive, ownId);
+  const afterAction = await intruder.getByRole("main").innerText();
+
+  await intruder.goto(`/applications/${missingId()}`);
+  await expectNotFound(intruder);
+  expect(afterAction).toBe(await intruder.getByRole("main").innerText());
+
+  await owner.goto("/");
+  await expect(owner.getByRole("link", { name: ownerCompany })).toBeVisible();
+  await owner.goto(`/applications/${ownerId}`);
+  await expect(
+    owner.getByRole("button", { name: "Archive", exact: true }),
+  ).toBeVisible();
+  await expect(owner.getByText("Archived", { exact: true })).toHaveCount(0);
+});
+
+test("US-0: an unarchive with another user's id swapped in gets the not-found response and changes nothing", async () => {
+  await owner.getByRole("button", { name: "Archive", exact: true }).click();
+  await expect(
+    owner.getByRole("button", { name: "Unarchive", exact: true }),
+  ).toBeVisible();
+
+  const ownId = await createAndOpen(intruder, uniqueName("Pied Piper"));
+  await intruder.getByRole("button", { name: "Archive", exact: true }).click();
+  const unarchive = intruder.getByRole("button", {
+    name: "Unarchive",
+    exact: true,
+  });
+  await expect(unarchive).toBeVisible();
+  await swapId(intruder.locator("form").filter({ has: unarchive }), ownerId);
+  await submitAndExpectNotFound(intruder, unarchive, ownId);
+  const afterAction = await intruder.getByRole("main").innerText();
+
+  await intruder.goto(`/applications/${missingId()}`);
+  await expectNotFound(intruder);
+  expect(afterAction).toBe(await intruder.getByRole("main").innerText());
+
+  await owner.goto("/");
+  await expect(owner.getByRole("link", { name: ownerCompany })).toHaveCount(0);
+  await owner.goto(`/applications/${ownerId}`);
+  await expect(
+    owner.getByRole("button", { name: "Unarchive", exact: true }),
+  ).toBeVisible();
+  await expect(owner.getByText("Archived", { exact: true })).toBeVisible();
+});

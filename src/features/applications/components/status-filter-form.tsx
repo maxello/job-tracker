@@ -1,20 +1,35 @@
 import Form from "next/form";
 import Link from "next/link";
 import { Status } from "@/generated/prisma/enums";
+import { SHOW_ARCHIVED_VALUE } from "../archived-filter";
 import { STATUS_LABELS } from "../status";
 import { statusFilterValue } from "../status-filter";
 
-// GET form to `/`: the checked boxes become repeated `status` keys.
+// GET form to `/`: the checked boxes become repeated `status` keys, and "Show
+// archived" adds `archived=1` (US-8).
 // Checkboxes use defaultChecked, so the wrapper is keyed on the selection to
 // re-mount the form after Back, Forward or Clear (`<Form>` with a string
 // action doesn't support `key`). See the SPEC.md decision log, 2026-11-11.
-export function StatusFilterForm({ selected }: { selected: Status[] }) {
-  const key = [...selected].sort().join(",");
+// Two fieldsets side by side, each named by its legend on the border: "Status"
+// and "Archive", so "Show archived" isn't announced as a status. Clear and
+// Apply follow them (SPEC.md decision log, 2026-11-12).
+const fieldsetClass =
+  "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800";
+
+export function StatusFilterForm({
+  selected,
+  showArchived,
+}: {
+  selected: Status[];
+  showArchived: boolean;
+}) {
+  const key =
+    [...selected].sort().join(",") + (showArchived ? "|archived" : "");
 
   return (
     <div key={key} className="mb-4">
-      <Form action="/">
-        <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+      <Form action="/" className="flex flex-wrap items-end gap-3">
+        <fieldset className={fieldsetClass}>
           <legend className="px-1 text-sm font-medium">Status</legend>
           {Object.values(Status).map((status) => (
             <label key={status} className="flex items-center gap-2 text-sm">
@@ -28,21 +43,34 @@ export function StatusFilterForm({ selected }: { selected: Status[] }) {
               {STATUS_LABELS[status]}
             </label>
           ))}
-          <div className="ml-auto flex items-center gap-3">
-            <Link
-              href="/"
-              className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"
-            >
-              Clear
-            </Link>
-            <button
-              type="submit"
-              className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-            >
-              Apply
-            </button>
-          </div>
         </fieldset>
+        <fieldset className={fieldsetClass}>
+          <legend className="px-1 text-sm font-medium">Archive</legend>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="archived"
+              value={SHOW_ARCHIVED_VALUE}
+              defaultChecked={showArchived}
+              className="size-4"
+            />
+            Show archived
+          </label>
+        </fieldset>
+        <div className="ml-auto flex items-center gap-3 py-3">
+          <Link
+            href="/"
+            className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"
+          >
+            Clear
+          </Link>
+          <button
+            type="submit"
+            className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          >
+            Apply
+          </button>
+        </div>
       </Form>
     </div>
   );
