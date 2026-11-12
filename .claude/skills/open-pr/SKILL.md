@@ -3,7 +3,7 @@ name: open-pr
 description: "Open a pull request for the current branch: run the checks, commit, push the branch and create the PR with gh. Never pushes to main or merges."
 argument-hint: "[issue number, optional]"
 disable-model-invocation: true
-allowed-tools: Bash(git branch *) Bash(git status *) Bash(git log *) Bash(git diff *) Bash(git add *) Bash(git commit *) Bash(git push -u origin *) Bash(gh issue view *) Bash(gh pr view *) Bash(gh pr create *) Bash(npm run lint) Bash(npm run typecheck) Bash(cd D:/Projects/job-tracker && npm test) Bash(cd D:/Projects/job-tracker && npm run test:db) Bash(npm run e2e)
+allowed-tools: Bash(git branch *) Bash(git status *) Bash(git log *) Bash(git diff *) Bash(git add *) Bash(git commit *) Bash(git push -u origin *) Bash(gh issue view *) Bash(gh pr view *) Bash(gh pr create *) Bash(gh pr comment *) Bash(npm run lint) Bash(npm run typecheck) Bash(cd D:/Projects/job-tracker && npm test) Bash(cd D:/Projects/job-tracker && npm run test:db) Bash(npm run e2e)
 ---
 
 # Open a pull request for the current branch
@@ -49,7 +49,7 @@ If there are uncommitted changes: stage the files by name (never `git add -A` or
 
 ## 6. Pull request
 
-If a PR already exists, the push has updated it: report its URL and stop. Otherwise run `gh pr create --base main`:
+If a PR already exists, the push has updated it. Read it with `gh pr view <number> --comments`, then add a comment with `gh pr comment <number> --body-file -`: the commits not yet covered by the description or an earlier comment, what they change, and the checks with their results. Then list the parts of the PR description that are now out of date; don't edit the description. Report the PR URL and stop. Otherwise run `gh pr create --base main`:
 
 - Title: a Conventional Commit summary of the branch (the commit subject if there is one commit).
 - Body sections: `## What` (what changed and why, by area), `## Verification` (each check run with its result and test counts; any manual checks I still need to do), `## Notes` (follow-ups, known limits; omit if none). Add `Closes #<number>` if an issue was given. End with `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
