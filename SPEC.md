@@ -658,6 +658,19 @@ lives in `src/lib/auth.ts`.
   derive them from the record id: `useId()` there restarts its counter on every
   RSC request (Next sets no `identifierPrefix`), so two routes would get the
   same ids
+- 2026-11-13: from `lg` (1024px) the filter form is a sticky column left of
+  the list (#27); this supersedes the layout part of the 2026-11-12 "Show
+  archived" entry on desktop. The "Status" and "Archive" fieldsets stack, one
+  checkbox per line, with Clear and Apply below them, aligned right. The
+  column has a fixed width (11rem) and aligns to the start of the row, so it
+  sticks instead of stretching to the list's height; the list cell is
+  `minmax(0,1fr)` so long names still truncate. Below `lg` the layout is
+  unchanged and nothing is sticky. The page stays `max-w-3xl`, not wider
+  (product decision; checked by hand that the list is still readable). Markup
+  order, tab order, the GET form and the keyed re-mount are unchanged, and the
+  skeleton mirrors both layouts. The whole column, including Apply, must fit a
+  1024×700 viewport, also when M5 adds search and the date range. The layout
+  is covered by `e2e/filter-layout.spec.ts`; sticky is checked by hand
 
 ## 11. End-to-end verification
 

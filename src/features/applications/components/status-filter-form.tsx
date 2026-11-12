@@ -10,11 +10,13 @@ import { statusFilterValue } from "../status-filter";
 // Checkboxes use defaultChecked, so the wrapper is keyed on the selection to
 // re-mount the form after Back, Forward or Clear (`<Form>` with a string
 // action doesn't support `key`). See the SPEC.md decision log, 2026-11-11.
-// Two fieldsets side by side, each named by its legend on the border: "Status"
-// and "Archive", so "Show archived" isn't announced as a status. Clear and
-// Apply follow them (SPEC.md decision log, 2026-11-12).
+// Two fieldsets, each named by its legend on the border: "Status" and
+// "Archive", so "Show archived" isn't announced as a status. Clear and Apply
+// follow them (SPEC.md decision log, 2026-11-12). Below `lg` the fieldsets sit
+// side by side; from `lg` they stack in the list's left column, one checkbox
+// per line (2026-11-13). The column and its spacing come from ApplicationList.
 const fieldsetClass =
-  "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800";
+  "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-zinc-200 px-4 py-3 lg:flex-col lg:items-start dark:border-zinc-800";
 
 export function StatusFilterForm({
   selected,
@@ -27,8 +29,11 @@ export function StatusFilterForm({
     [...selected].sort().join(",") + (showArchived ? "|archived" : "");
 
   return (
-    <div key={key} className="mb-4">
-      <Form action="/" className="flex flex-wrap items-end gap-3">
+    <div key={key}>
+      <Form
+        action="/"
+        className="flex flex-wrap items-end gap-3 lg:flex-col lg:flex-nowrap lg:items-stretch"
+      >
         <fieldset className={fieldsetClass}>
           <legend className="px-1 text-sm font-medium">Status</legend>
           {Object.values(Status).map((status) => (

@@ -11,6 +11,15 @@ import { StatusFilterForm } from "./status-filter-form";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
+// From `lg`, the filter form is a sticky column left of the list; below it,
+// the form sits above the list (SPEC.md decision log, 2026-11-13).
+// `items-start` keeps the column at its own height so it can stick, and
+// `minmax(0,1fr)` lets long names truncate instead of widening the grid. The
+// column has a fixed width, so the skeleton matches it without measuring text.
+const listLayout =
+  "lg:grid lg:grid-cols-[11rem_minmax(0,1fr)] lg:items-start lg:gap-6";
+const filterColumn = "mb-4 lg:sticky lg:top-4 lg:mb-0";
+
 // Reads searchParams inside the page's <Suspense>, so the header stays in the
 // static shell (SPEC.md decision log, 2026-11-11).
 export async function ApplicationList({
@@ -22,10 +31,12 @@ export async function ApplicationList({
   const statuses = parseStatusFilter(params.status);
   const showArchived = parseShowArchived(params.archived);
   return (
-    <>
-      <StatusFilterForm selected={statuses} showArchived={showArchived} />
+    <div className={listLayout}>
+      <div className={filterColumn}>
+        <StatusFilterForm selected={statuses} showArchived={showArchived} />
+      </div>
       <Results statuses={statuses} showArchived={showArchived} />
-    </>
+    </div>
   );
 }
 
@@ -126,8 +137,10 @@ async function Results({
 
 export function ApplicationListSkeleton() {
   return (
-    <>
-      <StatusFilterSkeleton />
+    <div className={listLayout}>
+      <div className={filterColumn}>
+        <StatusFilterSkeleton />
+      </div>
       <ul
         aria-busy="true"
         aria-label="Loading applications"
@@ -140,15 +153,15 @@ export function ApplicationListSkeleton() {
           </li>
         ))}
       </ul>
-    </>
+    </div>
   );
 }
 
-// Mirrors StatusFilterForm's box model (same fieldsets/legends/gaps) so the
-// filter doesn't pop in above the list. Widths are the rendered text widths
-// of each label at text-sm in the body font (Arial, globals.css), in px: the
-// real filter fits one desktop row with only ~2px to spare, so wider
-// placeholders would wrap Clear and Apply.
+// Mirrors StatusFilterForm's box model (same fieldsets/legends/gaps, at both
+// breakpoints) so the filter doesn't pop in next to the list. Widths are the
+// rendered text widths of each label at text-sm in the body font (Arial,
+// globals.css), in px: below `lg` the real filter fits one row with only ~2px
+// to spare, so wider placeholders would wrap Clear and Apply.
 const FILTER_LABEL_WIDTHS = [
   "w-[48px]", // Wishlist
   "w-[47px]", // Applied
@@ -160,9 +173,12 @@ const FILTER_LABEL_WIDTHS = [
 function StatusFilterSkeleton() {
   const pulse = "animate-pulse rounded bg-zinc-200 dark:bg-zinc-800";
   const fieldset =
-    "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800";
+    "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-zinc-200 px-4 py-3 lg:flex-col lg:items-start dark:border-zinc-800";
   return (
-    <div aria-hidden="true" className="mb-4 flex flex-wrap items-end gap-3">
+    <div
+      aria-hidden="true"
+      className="flex flex-wrap items-end gap-3 lg:flex-col lg:flex-nowrap lg:items-stretch"
+    >
       <fieldset className={fieldset}>
         <legend className="px-1 py-0.5">
           <div className={`h-4 w-[40px] ${pulse}`} />
