@@ -7,8 +7,13 @@ import { hasNoNul, NUL_MESSAGE } from "@/lib/validation";
 const emptyToUndefined = (value: unknown) =>
   typeof value === "string" && value.trim() === "" ? undefined : value;
 
-const requiredText = (max: number) =>
-  z.string().trim().min(1, "Required").max(max).refine(hasNoNul, NUL_MESSAGE);
+const requiredText = (label: string, max: number) =>
+  z
+    .string()
+    .trim()
+    .min(1, `${label} is required`)
+    .max(max)
+    .refine(hasNoNul, NUL_MESSAGE);
 
 const optionalText = (max: number) =>
   z.preprocess(
@@ -60,8 +65,8 @@ const stack = z.preprocess(
 
 export const createApplicationSchema = z
   .object({
-    company: requiredText(200),
-    role: requiredText(200),
+    company: requiredText("Company", 200),
+    role: requiredText("Role", 200),
     url: z.preprocess(
       emptyToUndefined,
       z
@@ -113,7 +118,7 @@ export const createApplicationSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["salaryCurrency"],
-        message: "Required when a salary is set",
+        message: "Currency is required when a salary is set",
       });
     }
   });
