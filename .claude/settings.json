@@ -23,7 +23,11 @@
       "Bash(*migrate reset*)",
       "Bash(*--force-reset*)",
       "PowerShell(*migrate reset*)",
-      "PowerShell(*--force-reset*)"
+      "PowerShell(*--force-reset*)",
+      "Bash(git push * main*)",
+      "PowerShell(git push * main*)",
+      "Bash(gh pr merge*)",
+      "PowerShell(gh pr merge*)"
     ]
   },
   "hooks": {
