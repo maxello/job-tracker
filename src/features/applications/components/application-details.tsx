@@ -5,6 +5,8 @@ import { getCurrentUserId } from "@/lib/current-user";
 import { getApplication } from "../queries";
 import { applicationIdSchema } from "../schemas";
 import { STATUS_LABELS } from "../status";
+import { ArchiveForm } from "./archive-form";
+import { ArchivedBadge } from "./archived-badge";
 import { DeleteApplication } from "./delete-application";
 import { LocalDate } from "./local-date";
 import { StatusForm } from "./status-form";
@@ -52,6 +54,7 @@ export async function ApplicationDetails({ id }: { id: string }) {
   const application = await getApplication(userId, parsedId.data);
   // Missing or another user's application: 404, never 403.
   if (!application) notFound();
+  const archived = application.archivedAt !== null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -62,16 +65,25 @@ export async function ApplicationDetails({ id }: { id: string }) {
         <p className="mt-1 break-words text-zinc-600 dark:text-zinc-400">
           {application.role}
         </p>
-        <span className="mt-3 inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-          {STATUS_LABELS[application.status]}
-        </span>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+            {STATUS_LABELS[application.status]}
+          </span>
+          {archived && <ArchivedBadge />}
+        </div>
+        <div className="mt-4 flex flex-wrap items-start gap-3">
           <Link
             href={`/applications/${application.id}/edit`}
             className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
           >
             Edit
           </Link>
+          {/* Keyed on the state, so it re-mounts with the other action after refresh(). */}
+          <ArchiveForm
+            key={String(archived)}
+            id={application.id}
+            archived={archived}
+          />
           <DeleteApplication
             id={application.id}
             name={`${application.role} at ${application.company}`}

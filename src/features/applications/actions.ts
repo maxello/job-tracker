@@ -6,9 +6,11 @@ import { z } from "zod";
 import type { ActionResult } from "@/lib/action-result";
 import { tryGetCurrentUserId } from "@/lib/current-user";
 import {
+  archiveApplication,
   changeApplicationStatus,
   createApplication,
   deleteApplication,
+  unarchiveApplication,
   updateApplication,
   type ChangeStatusResult,
 } from "./queries";
@@ -36,6 +38,9 @@ export type ApplicationFieldName = (typeof FIELD_NAMES)[number];
 const SAVE_FAILED = "Couldn't save the application. Please try again.";
 const STATUS_FAILED = "Couldn't update the status. Please try again.";
 const DELETE_FAILED = "Couldn't delete the application. Please try again.";
+const ARCHIVE_FAILED = "Couldn't archive the application. Please try again.";
+const UNARCHIVE_FAILED =
+  "Couldn't unarchive the application. Please try again.";
 
 // Read only the known fields; anything else in FormData is ignored. Raw
 // submitted strings, sent back so the form keeps them after an error.
@@ -148,6 +153,64 @@ export async function deleteApplicationAction(
   // refresh clears the client cache, so Back can't show the deleted application.
   refresh();
   redirect("/");
+}
+
+// Archive and unarchive are separate actions, never a toggle: a stale tab can
+// only ask for the state its button shows (SPEC.md decision log, 2026-11-12).
+async function setArchived(
+  formData: FormData,
+  write: typeof archiveApplication | typeof unarchiveApplication,
+  failed: string,
+  logMessage: string,
+): Promise<ActionResult<void>> {
+  const userId = await tryGetCurrentUserId();
+  if (userId === null) {
+    return { ok: false, error: { message: failed } };
+  }
+
+  // No usable id: not found, like an id that doesn't exist.
+  const id = applicationIdSchema.safeParse(formData.get("id"));
+  if (!id.success) notFound();
+
+  let outcome: Awaited<ReturnType<typeof write>>;
+  try {
+    outcome = await write(userId, id.data);
+  } catch (error) {
+    console.error(logMessage, error);
+    return { ok: false, error: { message: failed } };
+  }
+
+  // Missing or another user's application: 404, never 403.
+  if (outcome === "not-found") notFound();
+
+  // The detail page is request-time data; refresh re-renders it in this
+  // response. Also on a no-op, so a stale tab catches up with the database.
+  refresh();
+  return { ok: true, data: undefined };
+}
+
+export async function archiveApplicationAction(
+  _prevState: ActionResult<void> | null,
+  formData: FormData,
+): Promise<ActionResult<void>> {
+  return setArchived(
+    formData,
+    archiveApplication,
+    ARCHIVE_FAILED,
+    "Failed to archive application",
+  );
+}
+
+export async function unarchiveApplicationAction(
+  _prevState: ActionResult<void> | null,
+  formData: FormData,
+): Promise<ActionResult<void>> {
+  return setArchived(
+    formData,
+    unarchiveApplication,
+    UNARCHIVE_FAILED,
+    "Failed to unarchive application",
+  );
 }
 
 // The single entry point for status changes (detail page now, kanban in M5).

@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Status } from "@/generated/prisma/enums";
 import {
+  archiveApplication,
   changeApplicationStatus,
   createApplication,
   deleteApplication,
+  hasArchivedApplications,
   listApplications,
+  unarchiveApplication,
   updateApplication,
 } from "./queries";
 
@@ -13,6 +16,7 @@ const { db, tx } = vi.hoisted(() => {
     application: {
       create: vi.fn(),
       findMany: vi.fn(),
+      findFirst: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
       deleteMany: vi.fn(),
@@ -128,6 +132,32 @@ describe("listApplications", () => {
     });
     expect(query().orderBy).toEqual(order);
   });
+
+  it("US-8: Show archived drops the archive condition, keeping the userId scope and the US-2 order", async () => {
+    await listApplications(OWNER, { includeArchived: true });
+
+    expect(db.application.findMany).toHaveBeenCalledOnce();
+    expect(query().where).toEqual({ userId: OWNER });
+    expect(query().orderBy).toEqual(order);
+  });
+
+  it("US-8: Show archived combines with the status filter", async () => {
+    await listApplications(OWNER, {
+      statuses: ["APPLIED"],
+      includeArchived: true,
+    });
+
+    expect(query().where).toEqual({
+      userId: OWNER,
+      status: { in: ["APPLIED"] },
+    });
+  });
+
+  it("US-8: rows carry archivedAt, so archived ones can be marked", async () => {
+    await listApplications(OWNER, { includeArchived: true });
+
+    expect(query().select).toHaveProperty("archivedAt", true);
+  });
 });
 
 describe("changeApplicationStatus", () => {
@@ -240,6 +270,16 @@ describe("changeApplicationStatus", () => {
     ).resolves.toBe("not-found");
 
     expectNothingWritten();
+  });
+
+  it("US-8: a status change writes only the status, so an archived application stays archived", async () => {
+    givenApplication("WISHLIST");
+
+    await changeApplicationStatus(OWNER, APPLICATION_ID, "APPLIED");
+
+    expect(tx.application.update.mock.calls[0]?.[0].data).toEqual({
+      status: "APPLIED",
+    });
   });
 });
 
@@ -375,6 +415,14 @@ describe("deleteApplication", () => {
     });
   });
 
+  it("US-8: an archived application can be deleted", async () => {
+    await deleteApplication(OWNER, APPLICATION_ID);
+
+    expect(
+      db.application.deleteMany.mock.calls[0]?.[0].where,
+    ).not.toHaveProperty("archivedAt");
+  });
+
   it("US-0: deleting another user's application gets not-found", async () => {
     await expect(deleteApplication(OTHER_USER, APPLICATION_ID)).resolves.toBe(
       "not-found",
@@ -385,5 +433,145 @@ describe("deleteApplication", () => {
     await expect(deleteApplication(OWNER, "no-such-application")).resolves.toBe(
       "not-found",
     );
+  });
+});
+
+// One stored application of OWNER with the given archive state. The fake
+// applies the whole `where` it receives, including the archive condition, so a
+// write without that condition would also hit an application already in the
+// target state, and one without `userId` would hit another user's row.
+type ArchiveCondition = null | { not: null } | undefined;
+
+function givenArchiveState(archived: boolean) {
+  const matches = (where: {
+    id?: string;
+    userId?: string;
+    archivedAt?: ArchiveCondition;
+  }) => {
+    if (!matchesStoredApplication(where)) return false;
+    if (where.archivedAt === undefined) return true;
+    if (where.archivedAt === null) return !archived;
+    if (where.archivedAt.not === null) return archived;
+    throw new Error("unexpected archivedAt condition");
+  };
+  db.application.updateMany.mockImplementation(
+    async ({ where }: { where: Parameters<typeof matches>[0] }) => ({
+      count: matches(where) ? 1 : 0,
+    }),
+  );
+  db.application.findFirst.mockImplementation(
+    async ({ where }: { where: Parameters<typeof matches>[0] }) =>
+      matches(where) ? { id: APPLICATION_ID } : null,
+  );
+}
+
+function expectNoHistoryOrStatusWrite() {
+  expect(db.statusChange.create).not.toHaveBeenCalled();
+  expect(db.application.update).not.toHaveBeenCalled();
+  expect(db.$transaction).not.toHaveBeenCalled();
+}
+
+describe("archiveApplication", () => {
+  it("US-8: archiving sets only archivedAt on the user's active application", async () => {
+    givenArchiveState(false);
+
+    await expect(archiveApplication(OWNER, APPLICATION_ID)).resolves.toBe(
+      "archived",
+    );
+
+    expect(db.application.updateMany).toHaveBeenCalledExactlyOnceWith({
+      where: { id: APPLICATION_ID, userId: OWNER, archivedAt: null },
+      data: { archivedAt: expect.any(Date) },
+    });
+    expectNoHistoryOrStatusWrite();
+  });
+
+  it("US-8: archiving an archived application is a no-op", async () => {
+    givenArchiveState(true);
+
+    await expect(archiveApplication(OWNER, APPLICATION_ID)).resolves.toBe(
+      "unchanged",
+    );
+
+    // The conditional update matched nothing, and nothing else is written.
+    expect(db.application.updateMany).toHaveBeenCalledOnce();
+    expectNoHistoryOrStatusWrite();
+  });
+
+  it("US-0: archiving another user's application gets not-found", async () => {
+    givenArchiveState(false);
+
+    await expect(archiveApplication(OTHER_USER, APPLICATION_ID)).resolves.toBe(
+      "not-found",
+    );
+  });
+
+  it("US-0: archiving an id that does not exist gets the same not-found response", async () => {
+    givenArchiveState(false);
+
+    await expect(
+      archiveApplication(OWNER, "no-such-application"),
+    ).resolves.toBe("not-found");
+  });
+});
+
+describe("unarchiveApplication", () => {
+  it("US-8: unarchiving clears only archivedAt on the user's archived application", async () => {
+    givenArchiveState(true);
+
+    await expect(unarchiveApplication(OWNER, APPLICATION_ID)).resolves.toBe(
+      "unarchived",
+    );
+
+    expect(db.application.updateMany).toHaveBeenCalledExactlyOnceWith({
+      where: { id: APPLICATION_ID, userId: OWNER, archivedAt: { not: null } },
+      data: { archivedAt: null },
+    });
+    expectNoHistoryOrStatusWrite();
+  });
+
+  it("US-8: unarchiving an active application is a no-op", async () => {
+    givenArchiveState(false);
+
+    await expect(unarchiveApplication(OWNER, APPLICATION_ID)).resolves.toBe(
+      "unchanged",
+    );
+
+    expect(db.application.updateMany).toHaveBeenCalledOnce();
+    expectNoHistoryOrStatusWrite();
+  });
+
+  it("US-0: unarchiving another user's application gets not-found", async () => {
+    givenArchiveState(true);
+
+    await expect(
+      unarchiveApplication(OTHER_USER, APPLICATION_ID),
+    ).resolves.toBe("not-found");
+  });
+
+  it("US-0: unarchiving an id that does not exist gets the same not-found response", async () => {
+    givenArchiveState(true);
+
+    await expect(
+      unarchiveApplication(OWNER, "no-such-application"),
+    ).resolves.toBe("not-found");
+  });
+});
+
+describe("hasArchivedApplications", () => {
+  const query = () => db.application.findFirst.mock.calls[0]?.[0];
+
+  it("US-8: true when the user has an archived application", async () => {
+    db.application.findFirst.mockResolvedValue({ id: APPLICATION_ID });
+
+    await expect(hasArchivedApplications(OWNER)).resolves.toBe(true);
+
+    expect(query().where).toEqual({ userId: OWNER, archivedAt: { not: null } });
+  });
+
+  it("US-8: false when the user has none", async () => {
+    db.application.findFirst.mockResolvedValue(null);
+
+    await expect(hasArchivedApplications(OWNER)).resolves.toBe(false);
   });
 });

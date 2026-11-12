@@ -622,6 +622,26 @@ lives in `src/lib/auth.ts`.
   archived", instead of the "Add your first application" call to action
 - 2026-11-12: US-8 in M4 covers the list and the detail page. Excluding archived
   applications from the board and search belongs to US-5 and US-6 (M5)
+- 2026-11-12: archive and unarchive are two Server Actions,
+  `archiveApplicationAction` and `unarchiveApplicationAction`, not one action
+  with an intent field: the id is the only submitted field, so a forged request
+  can't turn one into the other. Both read the session through
+  `tryGetCurrentUserId()`, answer a missing or foreign id with `notFound()`, and
+  call `refresh()` on success, also on a no-op, so a stale tab catches up. The
+  DAL writes with `updateMany` where `{ id, userId }` plus the opposite archive
+  state (`archivedAt: null` to archive, `{ not: null }` to unarchive), so a
+  repeat matches nothing and `@updatedAt` doesn't change. When nothing matched,
+  an owner-scoped `findFirst` tells "already in that state" from "not found".
+  The two statements are not a transaction: a concurrent change between them can
+  only change that label, never the data. `archivedAt` is set from the app
+  server clock (`new Date()`), like `@updatedAt`
+- 2026-11-12: "Show archived" is read from `archived` in the query string: on
+  when any value is `1` after trimming, otherwise ignored with no redirect, like
+  the status filter. The Clear link (`/`) clears both filters. The status
+  checkboxes are now a `role="group"` labelled "Status" instead of a
+  `<fieldset>`, so "Show archived" sits in the same box without being announced
+  as a status. `hasArchivedApplications` runs only when the default list (no
+  filters, archived hidden) comes back empty
 
 ## 11. End-to-end verification
 

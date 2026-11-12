@@ -2,10 +2,14 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import {
+  archiveApplication,
   changeApplicationStatus,
   createApplication,
   deleteApplication,
   getApplication,
+  hasArchivedApplications,
+  listApplications,
+  unarchiveApplication,
   updateApplication,
 } from "./queries";
 
@@ -245,6 +249,128 @@ describe("updateApplication and deleteApplication (real database)", () => {
 
     expect(await getApplication(userId, id)).toBeNull();
     expect(await historyOf(id)).toEqual([]);
+  });
+});
+
+describe("archive and unarchive (real database)", () => {
+  const input = { company: "Acme", role: "Engineer", stack: [] };
+
+  it("US-8: archive sets archivedAt and changes updatedAt, leaves status and history alone, and repeating it changes nothing", async () => {
+    const userId = await createUser();
+    const created = await createApplication(userId, input);
+
+    await expect(archiveApplication(userId, created.id)).resolves.toBe(
+      "archived",
+    );
+
+    const archived = await readApplication(userId, created.id);
+    expect(archived.archivedAt).toBeInstanceOf(Date);
+    expect(archived.updatedAt.getTime()).toBeGreaterThan(
+      created.updatedAt.getTime(),
+    );
+    expect(archived.status).toBe("WISHLIST");
+    expect(archived.statusChanges).toHaveLength(1);
+
+    await expect(archiveApplication(userId, created.id)).resolves.toBe(
+      "unchanged",
+    );
+
+    const again = await readApplication(userId, created.id);
+    expect(again.archivedAt).toEqual(archived.archivedAt);
+    expect(again.updatedAt).toEqual(archived.updatedAt);
+  });
+
+  it("US-8: unarchive clears archivedAt and changes updatedAt, and repeating it changes nothing", async () => {
+    const userId = await createUser();
+    const { id } = await createApplication(userId, input);
+    await archiveApplication(userId, id);
+    const archived = await readApplication(userId, id);
+
+    await expect(unarchiveApplication(userId, id)).resolves.toBe("unarchived");
+
+    const active = await readApplication(userId, id);
+    expect(active.archivedAt).toBeNull();
+    expect(active.updatedAt.getTime()).toBeGreaterThan(
+      archived.updatedAt.getTime(),
+    );
+
+    await expect(unarchiveApplication(userId, id)).resolves.toBe("unchanged");
+
+    const again = await readApplication(userId, id);
+    expect(again.archivedAt).toBeNull();
+    expect(again.updatedAt).toEqual(active.updatedAt);
+  });
+
+  it("US-0: another user's application can't be archived or unarchived", async () => {
+    const owner = await createUser();
+    const intruder = await createUser();
+    const active = await createApplication(owner, input);
+    const archived = await createApplication(owner, input);
+    await archiveApplication(owner, archived.id);
+
+    await expect(archiveApplication(intruder, active.id)).resolves.toBe(
+      "not-found",
+    );
+    await expect(unarchiveApplication(intruder, archived.id)).resolves.toBe(
+      "not-found",
+    );
+
+    expect((await readApplication(owner, active.id)).archivedAt).toBeNull();
+    expect(
+      (await readApplication(owner, archived.id)).archivedAt,
+    ).toBeInstanceOf(Date);
+  });
+
+  it("US-8: the list hides archived rows by default and shows them with Show archived, in last-updated order and only the user's own", async () => {
+    const userId = await createUser();
+    const otherUserId = await createUser();
+    const active = await createApplication(userId, input);
+    const archived = await createApplication(userId, input);
+    await archiveApplication(userId, archived.id);
+    const foreign = await createApplication(otherUserId, input);
+    await archiveApplication(otherUserId, foreign.id);
+
+    const byDefault = await listApplications(userId);
+    expect(byDefault.map((a) => a.id)).toEqual([active.id]);
+
+    // Archiving changed updatedAt last, so the archived row comes first.
+    const withArchived = await listApplications(userId, {
+      includeArchived: true,
+    });
+    expect(withArchived.map((a) => a.id)).toEqual([archived.id, active.id]);
+    expect(withArchived[0]?.archivedAt).toBeInstanceOf(Date);
+    expect(withArchived[1]?.archivedAt).toBeNull();
+  });
+
+  it("US-8: hasArchivedApplications reflects only the user's own archived rows", async () => {
+    const userId = await createUser();
+    const otherUserId = await createUser();
+    const { id } = await createApplication(userId, input);
+    const foreign = await createApplication(otherUserId, input);
+    await archiveApplication(otherUserId, foreign.id);
+
+    await expect(hasArchivedApplications(userId)).resolves.toBe(false);
+
+    await archiveApplication(userId, id);
+
+    await expect(hasArchivedApplications(userId)).resolves.toBe(true);
+  });
+
+  it("US-8: a status change on an archived application writes history and keeps it archived", async () => {
+    const userId = await createUser();
+    const { id } = await createApplication(userId, input);
+    await archiveApplication(userId, id);
+    const archived = await readApplication(userId, id);
+    expect(archived.archivedAt).toBeInstanceOf(Date);
+
+    await expect(changeApplicationStatus(userId, id, "APPLIED")).resolves.toBe(
+      "changed",
+    );
+
+    const after = await readApplication(userId, id);
+    expect(after.status).toBe("APPLIED");
+    expect(after.statusChanges).toHaveLength(2);
+    expect(after.archivedAt).toEqual(archived.archivedAt);
   });
 });
 

@@ -20,17 +20,21 @@ export async function createApplication(
   });
 }
 
-// Home page list: non-archived only, newest activity first.
+// Home page list, newest activity first: non-archived only, unless "Show
+// archived" is on, which shows active and archived together (US-8).
 // `statuses` filters with IN only when non-empty: Prisma's `in: []` matches
 // nothing, so an empty list means no filter.
 export async function listApplications(
   userId: string,
-  { statuses = [] }: { statuses?: Status[] } = {},
+  {
+    statuses = [],
+    includeArchived = false,
+  }: { statuses?: Status[]; includeArchived?: boolean } = {},
 ) {
   return db.application.findMany({
     where: {
       userId,
-      archivedAt: null,
+      ...(!includeArchived && { archivedAt: null }),
       ...(statuses.length > 0 && { status: { in: statuses } }),
     },
     // id breaks ties so the order is stable for equal timestamps.
@@ -40,6 +44,7 @@ export async function listApplications(
       company: true,
       role: true,
       status: true,
+      archivedAt: true,
       updatedAt: true,
     },
   });
@@ -91,6 +96,54 @@ export async function deleteApplication(
 ): Promise<"deleted" | "not-found"> {
   const { count } = await db.application.deleteMany({ where: { id, userId } });
   return count === 0 ? "not-found" : "deleted";
+}
+
+// Archive and unarchive are separate intents, never a toggle (US-8). The write
+// only matches the other state, so repeating the current one is a no-op and
+// @updatedAt doesn't change. When nothing matched, an owner-scoped read tells
+// "already in that state" from "not found". The two statements aren't a
+// transaction: a change in between can only change that label, not the data.
+async function setArchivedAt(
+  userId: string,
+  id: string,
+  archive: boolean,
+): Promise<"changed" | "unchanged" | "not-found"> {
+  const { count } = await db.application.updateMany({
+    where: { id, userId, archivedAt: archive ? null : { not: null } },
+    data: { archivedAt: archive ? new Date() : null },
+  });
+  if (count > 0) return "changed";
+
+  const existing = await db.application.findFirst({
+    where: { id, userId },
+    select: { id: true },
+  });
+  return existing ? "unchanged" : "not-found";
+}
+
+export async function archiveApplication(
+  userId: string,
+  id: string,
+): Promise<"archived" | "unchanged" | "not-found"> {
+  const result = await setArchivedAt(userId, id, true);
+  return result === "changed" ? "archived" : result;
+}
+
+export async function unarchiveApplication(
+  userId: string,
+  id: string,
+): Promise<"unarchived" | "unchanged" | "not-found"> {
+  const result = await setArchivedAt(userId, id, false);
+  return result === "changed" ? "unarchived" : result;
+}
+
+// For the list's "All your applications are archived" empty state.
+export async function hasArchivedApplications(userId: string) {
+  const archived = await db.application.findFirst({
+    where: { userId, archivedAt: { not: null } },
+    select: { id: true },
+  });
+  return archived !== null;
 }
 
 export type ChangeStatusResult = "changed" | "unchanged" | "not-found";

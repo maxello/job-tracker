@@ -1,33 +1,62 @@
 import Form from "next/form";
 import Link from "next/link";
 import { Status } from "@/generated/prisma/enums";
+import { SHOW_ARCHIVED_VALUE } from "../archived-filter";
 import { STATUS_LABELS } from "../status";
 import { statusFilterValue } from "../status-filter";
 
-// GET form to `/`: the checked boxes become repeated `status` keys.
+// GET form to `/`: the checked boxes become repeated `status` keys, and "Show
+// archived" adds `archived=1` (US-8).
 // Checkboxes use defaultChecked, so the wrapper is keyed on the selection to
 // re-mount the form after Back, Forward or Clear (`<Form>` with a string
 // action doesn't support `key`). See the SPEC.md decision log, 2026-11-11.
-export function StatusFilterForm({ selected }: { selected: Status[] }) {
-  const key = [...selected].sort().join(",");
+// The status boxes are a labelled group of their own, so "Show archived" isn't
+// announced as part of Status.
+export function StatusFilterForm({
+  selected,
+  showArchived,
+}: {
+  selected: Status[];
+  showArchived: boolean;
+}) {
+  const key =
+    [...selected].sort().join(",") + (showArchived ? "|archived" : "");
 
   return (
     <div key={key} className="mb-4">
       <Form action="/">
-        <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800">
-          <legend className="px-1 text-sm font-medium">Status</legend>
-          {Object.values(Status).map((status) => (
-            <label key={status} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="status"
-                value={statusFilterValue(status)}
-                defaultChecked={selected.includes(status)}
-                className="size-4"
-              />
-              {STATUS_LABELS[status]}
-            </label>
-          ))}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+          <div
+            role="group"
+            aria-labelledby="status-filter-label"
+            className="flex flex-wrap items-center gap-x-4 gap-y-2"
+          >
+            <span id="status-filter-label" className="text-sm font-medium">
+              Status
+            </span>
+            {Object.values(Status).map((status) => (
+              <label key={status} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="status"
+                  value={statusFilterValue(status)}
+                  defaultChecked={selected.includes(status)}
+                  className="size-4"
+                />
+                {STATUS_LABELS[status]}
+              </label>
+            ))}
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="archived"
+              value={SHOW_ARCHIVED_VALUE}
+              defaultChecked={showArchived}
+              className="size-4"
+            />
+            Show archived
+          </label>
           <div className="ml-auto flex items-center gap-3">
             <Link
               href="/"
@@ -42,7 +71,7 @@ export function StatusFilterForm({ selected }: { selected: Status[] }) {
               Apply
             </button>
           </div>
-        </fieldset>
+        </div>
       </Form>
     </div>
   );
