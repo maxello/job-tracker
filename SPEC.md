@@ -165,6 +165,8 @@ log, 2026-11-11).
 - Filter by status (multiple selection) and by last updated date range
   (from / to, both optional, inclusive, in the user's local timezone)
 - Search and filters can be combined (AND)
+- Archived applications are excluded from search results unless "Show
+  archived" is on (US-8)
 - Search and filter state is stored in the URL query string, so it survives a
   reload and can be bookmarked
 - An empty result shows "No applications match your filters" with a way to
@@ -199,12 +201,29 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
 
 As a job seeker, I want to archive applications that are no longer relevant, so that my list and board stay focused without losing their history.
 
-- An application can be archived from the detail page and unarchived from it
+- An application can be archived from the detail page and unarchived from it,
+  with plain "Archive" and "Unarchive" buttons and no confirmation (it is
+  reversible). Afterwards the user stays on the detail page, which refreshes
+  (like a status change)
+- Archive and unarchive are separate intents, never a toggle. Archiving an
+  archived application, or unarchiving an active one (e.g. from a stale tab),
+  is a no-op: `archivedAt` and `updatedAt` don't change
 - Archiving does not change the status and does not write status history
+- An archived application's detail page shows an "Archived" badge (no date)
+  and stays accessible and editable: the edit form, status changes (history as
+  usual; a status change does not unarchive) and delete all work
 - Archived applications are hidden from the list, kanban board and search
-  results by default; a "Show archived" toggle in the list shows them, marked
-  as archived
-- An archived application's detail page stays accessible and editable
+  results by default. In M4 this covers the list; the board and search exclude
+  them from M5 (US-5, US-6)
+- "Show archived" is a checkbox in the list's filter form, stored in the URL
+  (`?archived=1`) and applied with Apply, like the status filter, and combined
+  with it. It shows active and archived applications together, in the US-2
+  order (last updated, newest first). Archived rows get an "Archived" badge
+  next to the status badge, with no date
+- Empty states: a user with no applications sees "No applications yet" (US-2);
+  a user whose applications are all archived sees "All your applications are
+  archived" with a link that turns on "Show archived"; filters that match
+  nothing show "No applications match your filters"
 - Archive and unarchive follow the same ownership rules as US-0
 
 ## 5. Data model (draft)
@@ -583,6 +602,26 @@ lives in `src/lib/auth.ts`.
   filter and no rows the list keeps the "Add your first application" call to
   action. The rejected alternative was a comma-separated value, which needs client
   code to build
+- 2026-11-12: US-8 archive. "Show archived" shows active and archived
+  applications together, not archived only, because the list stays one place to
+  see everything. It is a checkbox in the existing GET filter form
+  (`?archived=1`, applied with Apply, combined with the status filter), so it
+  survives a reload and needs no client code; the rejected alternative was a
+  separate link that switches it immediately. Archived rows keep the US-2 order
+  and get an "Archived" badge, with no date, in the list and on the detail page
+- 2026-11-12: archive and unarchive are plain buttons with no confirmation,
+  because both are reversible, and the user stays on the detail page (refresh,
+  like a status change). They are separate intents, not a toggle, so a stale tab
+  can't flip the state the wrong way; repeating the current state is a no-op
+  that leaves `archivedAt` and `updatedAt` unchanged (same idea as the US-3
+  status no-op)
+- 2026-11-12: an archived application can still be edited, change status (with
+  history as usual; it stays archived) and be deleted
+- 2026-11-12: when all of a user's applications are archived, the default list
+  shows "All your applications are archived" with a link that turns on "Show
+  archived", instead of the "Add your first application" call to action
+- 2026-11-12: US-8 in M4 covers the list and the detail page. Excluding archived
+  applications from the board and search belongs to US-5 and US-6 (M5)
 
 ## 11. End-to-end verification
 
@@ -597,8 +636,9 @@ lives in `src/lib/auth.ts`.
   unarchive (M4). The response is the same as for an id that does not exist
 - (from M3) Edit an application and reload: changes persist; delete it: it is
   gone from the list and its URL shows the not-found UI
-- (from M4) Archive an application: it disappears from the list, board and
-  search, appears with "Show archived", and unarchive restores it
+- (from M4) Archive an application: it disappears from the list, appears with
+  "Show archived" marked as archived, and unarchive restores it. (from M5) It is
+  also hidden from the board and search
 - (from M5) Move a card on the board by drag-and-drop and by keyboard: status
   and history update in both cases; search + status + date filters combine and
   survive a reload
