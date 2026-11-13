@@ -38,7 +38,7 @@ Follow CLAUDE.md throughout (rules, commands, Conventional Commits, Vitest drive
 
 ## 5. Evidence and commit
 
-- Show the output of `npm run lint && npm run typecheck && npm test`, `npm run test:db` if there are db tests, and `npm run e2e` when the story has UI (not at the same time as test:db).
+- Show the output of `npm run lint && npm run typecheck && npm test`, `npm run test:db` if there are db tests, and `npm run e2e -- <changed specs>` when the story has UI (not at the same time as test:db; the full suite runs in `/open-pr`).
 - List every plan item and section 11 item for the milestone that no test covers, as a manual checklist for me.
 - Commit (Conventional Commits). Don't push or open a PR.
 - **STOP.**
