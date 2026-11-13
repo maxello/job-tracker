@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 # New feature: $ARGUMENTS
 
-Follow CLAUDE.md throughout (rules, commands, Conventional Commits, Vitest drive note). Each step ends with **STOP**: wait for my reply before the next step.
+Follow CLAUDE.md throughout (rules, commands, Conventional Commits, Vitest drive note). Each step ends with **STOP**: wait for my reply before the next step. Any deviation from the approved plan (a different element, file, approach or test) means **STOP** and ask before doing it; recording it in the decision log isn't approval.
 
 ## 1. Understand
 
@@ -28,6 +28,8 @@ Follow CLAUDE.md throughout (rules, commands, Conventional Commits, Vitest drive
 - Create `.claude/stop-checks.off`.
 - Write only the tests. Add stubs where needed so each test fails on an assertion, not on a build or import error.
 - Run them and show each failure and why it is the right one. Name any test that is already green.
+- For each already-green test, name the specific wrong implementation step 4 will use to prove it can fail. "Remove the feature" isn't enough if the test can still pass that way (e.g. `null` == `null`).
+- For e2e tests, here and in step 4, follow the `e2e` skill: every assertion must fail once, not only the first.
 - **STOP** for review. From here on, don't change a test without asking.
 
 ## 4. Implement
