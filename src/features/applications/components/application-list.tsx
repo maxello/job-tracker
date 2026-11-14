@@ -159,14 +159,14 @@ export function ApplicationListSkeleton() {
 
 // Mirrors StatusFilterForm's box model (same fieldsets/legends/gaps, at both
 // breakpoints) so the filter doesn't pop in next to the list. Widths are the
-// rendered text widths of each label at text-sm in the body font (Arial,
-// globals.css), in px: below `lg` the real filter fits one row with only ~2px
-// to spare, so wider placeholders would wrap Clear and Apply.
+// rendered text widths of each label at text-sm in the body font (Archivo,
+// layout.tsx), in px, rounded down: below `lg` the real filter fits one row
+// with under 1px to spare, so wider placeholders would wrap Clear and Apply.
 const FILTER_LABEL_WIDTHS = [
   "w-[48px]", // Wishlist
   "w-[47px]", // Applied
   "w-[56px]", // Interview
-  "w-[31px]", // Offer
+  "w-[30px]", // Offer
   "w-[55px]", // Rejected
 ];
 
@@ -192,11 +192,11 @@ function StatusFilterSkeleton() {
       </fieldset>
       <fieldset className={fieldset}>
         <legend className="px-1 py-0.5">
-          <div className={`h-4 w-[47px] ${pulse}`} />
+          <div className={`h-4 w-[48px] ${pulse}`} />
         </legend>
         <div className="flex h-5 items-center gap-2">
           <div className={`size-4 ${pulse}`} />
-          <div className={`h-4 w-[92px] ${pulse}`} />
+          <div className={`h-4 w-[91px] ${pulse}`} />
         </div>
       </fieldset>
       <div className="ml-auto flex items-center gap-3 py-3">
@@ -204,7 +204,7 @@ function StatusFilterSkeleton() {
         <div className="flex h-5 w-[33px] items-center">
           <div className={`h-4 w-full ${pulse}`} />
         </div>
-        <div className="h-8 w-[59px] animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-800" />
+        <div className="h-8 w-[60px] animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-800" />
       </div>
     </div>
   );

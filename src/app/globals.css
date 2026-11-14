@@ -1,26 +1,243 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Design tokens: the "Signal" direction (docs/design-brief.md). Light values
+ * live in @theme; the dark theme overrides the same variables below, so
+ * utilities switch with the system preference and components need no `dark:`.
+ * Colour is spent on status only; everything else is neutral and one ink.
+ *
+ * Ratios are WCAG contrast, light / dark: 4.5:1 for text, 3:1 for control
+ * boundaries, states and the focus ring.
+ */
+@theme {
+  /* Neutrals */
+  --color-bg: #edf0f4;
+  --color-surface: #ffffff;
+  /* Dividers only, decorative (1.31 / 1.32 on surface): never a control boundary */
+  --color-line: #dce1e8;
+  /* On bg 15.90 / 15.81, surface 18.18 / 14.45, row-hover 16.79 / 13.05,
+     offer-tint 16.13 / 12.80, offer-tint-hover 15.17 / 11.21 */
+  --color-text: #0e1621;
+  /* On bg 6.23 / 7.95, surface 7.12 / 7.27, row-hover 6.58 / 6.56,
+     offer-tint 6.32 / 6.44, offer-tint-hover 5.94 / 5.64 */
+  --color-muted: #4d5969;
+  /* Control boundary: on surface 4.35 / 3.98, bg 3.80 / 4.36, row-hover 4.01 / 3.60 */
+  --color-control: #6f7a8b;
+  --color-row-hover: #f4f6f9;
+  /* Focus ring: on bg 13.52 / 15.81, surface 15.45 / 14.45 */
+  --color-focus: #1b2533;
+
+  /* Ink: primary buttons. Face on bg 13.52 / 15.81, surface 15.45 / 14.45 */
+  --color-ink: #1b2533;
+  --color-ink-hover: #2f3b4d;
+  /* Lip vs face 1.29 / 2.38, so --shadow-lip separates them with a hairline */
+  --color-ink-lip: #05090f;
+  /* Label: on ink 15.45 / 15.17, ink-hover 11.33 / 11.21 */
+  --color-on-ink: #ffffff;
+  /* Check mark on a checked (status-filled) checkbox: on wishlist 5.22 / 6.98,
+     applied 4.84 / 6.79, interview 4.27 / 9.11, offer 4.41 / 9.77,
+     rejected 3.39 / 4.05 */
+  --color-on-check: #ffffff;
+
+  /*
+   * Status: edge / badge background / badge text.
+   * Edges (and checkbox fills) on surface: wishlist 5.22 / 6.38, applied
+   * 4.84 / 6.21, interview 4.27 / 8.33, offer 4.41 / 8.93, rejected
+   * 3.39 / 3.71. On row-hover the lowest is rejected, 3.13 / 3.35. Rejected
+   * on bg is 2.96 in light, so edges sit on surface, never on bg.
+   * Badge text on badge: wishlist 7.15 / 9.28, applied 6.79 / 8.64,
+   * interview 6.56 / 8.63, offer 5.41 / 8.12, rejected 6.11 / 6.82.
+   */
+  --color-wishlist: #7a4fe0;
+  --color-wishlist-badge: #f0eafd;
+  --color-wishlist-badge-text: #5a2db8;
+  --color-applied: #2a6fd6;
+  --color-applied-badge: #e5eefc;
+  --color-applied-badge-text: #1c4f9c;
+  --color-interview: #b46800;
+  --color-interview-badge: #fcefd7;
+  --color-interview-badge-text: #7e4800;
+  --color-offer: #0b8a4e;
+  --color-offer-badge: #0b7a45;
+  --color-offer-badge-text: #ffffff;
+  /* Offer edge on its tint 3.92 / 7.92, on tint-hover 3.68 / 6.93 */
+  --color-offer-tint: #e6f5ec;
+  --color-offer-tint-hover: #d9f0e3;
+  --color-rejected: #848c9a;
+  --color-rejected-badge: #eef0f3;
+  --color-rejected-badge-text: #515a68;
+
+  /* Layout */
+  --container-page: 70rem; /* 1120px */
+
+  /* Type: Archivo is variable width; headings, logo and legends are expanded */
+  --font-stretch-display: 118%;
+
+  /*
+   * Button lip: a 1px hairline in the page background, then the lip below
+   * it. The hairline separates lip from face even where their colours are
+   * close (1.29:1 in the light theme). Both sit outside the border box, so
+   * the label is centred on the face.
+   */
+  --shadow-lip: 0 1px 0 var(--color-bg), 0 4px 0 var(--color-ink-lip);
+  --shadow-lip-pressed: 0 1px 0 var(--color-bg), 0 1px 0 var(--color-ink-lip);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-martian-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --color-bg: #0c1118;
+    --color-surface: #141b25;
+    --color-line: #263141;
+    --color-text: #e6ebf2;
+    --color-muted: #9da9ba;
+    --color-control: #6e7a8d;
+    --color-row-hover: #1b2431;
+    --color-focus: #e6ebf2;
+
+    --color-ink: #e6ebf2;
+    --color-ink-hover: #c3ccd8;
+    --color-ink-lip: #8e9aad;
+    --color-on-ink: #0e1621;
+    --color-on-check: #0c1118;
+
+    --color-wishlist: #a88bfa;
+    --color-wishlist-badge: #2a2148;
+    --color-wishlist-badge-text: #d3c4fd;
+    --color-applied: #5c9cf5;
+    --color-applied-badge: #172a4b;
+    --color-applied-badge-text: #adcbfa;
+    --color-interview: #eda634;
+    --color-interview-badge: #3a2a0d;
+    --color-interview-badge-text: #f5c56c;
+    --color-offer: #3cd383;
+    --color-offer-badge: #3cd383;
+    --color-offer-badge-text: #052916;
+    --color-offer-tint: #0f2a1d;
+    --color-offer-tint-hover: #143524;
+    --color-rejected: #6a7585;
+    --color-rejected-badge: #222b37;
+    --color-rejected-badge-text: #aab4c2;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@utility font-display {
+  font-stretch: var(--font-stretch-display);
+}
+
+/*
+ * Primary button: ink face with a lip that presses down. The transparent
+ * border becomes visible in forced-colors mode, where box-shadow is dropped.
+ */
+@utility button-ink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background-color: var(--color-ink);
+  color: var(--color-on-ink);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-lip);
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--color-ink-hover);
+  }
+  &:active {
+    /* Moves down by the lip's height minus the 1px it keeps when pressed. */
+    translate: 0 3px;
+    box-shadow: var(--shadow-lip-pressed);
+  }
+  &:focus-visible {
+    /* Clears the 4px lip below the face. */
+    outline: 2px solid var(--color-focus);
+    outline-offset: 5px;
+  }
+}
+
+/* Secondary button: surface face, a control-coloured border. */
+@utility button-quiet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-control);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--color-row-hover);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * Native checkbox, restyled. The colour comes from currentColor (set with
+ * `text-<status>` on the input): a stripe inside the box when unchecked, the
+ * whole box filled when checked. --check-stripe: transparent drops the stripe
+ * for a box that isn't a status. Forced-colors mode gets the native control
+ * back, since it would force the fill away and hide the state.
+ */
+@utility check {
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  flex-shrink: 0;
+  /* 18px box (size-4.5); skeletons use the same size. */
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  /* Control boundary: 4.35 / 3.98 on surface. */
+  border: 1.5px solid var(--color-control);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  background-image: linear-gradient(
+    var(--check-stripe, currentColor),
+    var(--check-stripe, currentColor)
+  );
+  background-repeat: no-repeat;
+  background-position: left center;
+  /* The unchecked stripe: wide enough to read as the status colour. */
+  background-size: 4px 100%;
+  cursor: pointer;
+
+  &::before {
+    content: "";
+    width: 0.75rem;
+    height: 0.75rem;
+    background-color: var(--color-on-check);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6.2 4.8 9 10 3' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    visibility: hidden;
+  }
+  &:checked {
+    border-color: currentColor;
+    background-color: currentColor;
+    background-size: 100% 100%;
+  }
+  &:checked::before {
+    visibility: visible;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  @media (forced-colors: active) {
+    appearance: auto;
+    background: none;
+    &::before {
+      display: none;
+    }
+  }
 }
