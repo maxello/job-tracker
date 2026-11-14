@@ -1,6 +1,6 @@
 ---
 name: server-actions
-description: Conventions for Server Actions in this project (ActionResult, Zod validation, user id and ownership, error handling, refreshing data). Use when writing or changing a Server Action, a form that submits to one with useActionState, a mutation, or the Zod schema an action validates with. Not for styling, read-only pages or queries, or tests unrelated to actions.
+description: "Conventions for Server Actions in this project (ActionResult, Zod validation, user id and ownership, error handling, refreshing data). Use when planning, writing or changing a Server Action, a form that submits to one with useActionState (including adding or removing a form field), a mutation, or the Zod schema an action validates with. Not for styling, read-only pages or queries, or tests unrelated to actions."
 user-invocable: false
 ---
 
