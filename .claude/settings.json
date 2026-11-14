@@ -4,7 +4,13 @@
       "Bash(npm run lint)",
       "Bash(npm run typecheck)",
       "Bash(git status)",
-      "Bash(git diff *)"
+      "Bash(git diff *)",
+      "Bash(npm run e2e)",
+      "Bash(npm run e2e *)",
+      "Bash(npx playwright test *)",
+      "PowerShell(npm run e2e)",
+      "PowerShell(npm run e2e *)",
+      "PowerShell(npx playwright test *)"
     ],
     "deny": [
       "Read(./**/.env)",
