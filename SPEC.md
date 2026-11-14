@@ -14,6 +14,8 @@ Goals:
 - A full, timestamped history of status changes per application
 - Fast entry: a short form, or paste a job posting and let AI fill in the fields
 - Private data: each user sees only their own applications
+- A distinct, consistent visual identity: one set of design tokens, light and
+  dark themes, responsive from 360px, motion that respects reduced motion
 
 Non-goals (MVP):
 
@@ -671,6 +673,10 @@ lives in `src/lib/auth.ts`.
   skeleton mirrors both layouts. The whole column, including Apply, must fit a
   1024×700 viewport, also when M5 adds search and the date range. The layout
   is covered by `e2e/filter-layout.spec.ts`; sticky is checked by hand
+- 2026-11-14: the visual identity (design tokens, fonts, restyle of the
+  existing screens) ships before M5, so the kanban is built in the final style;
+  motion (view transitions, micro-interactions) comes after the kanban works,
+  because it depends on the final DOM and must be checked against drag-and-drop
 
 ## 11. End-to-end verification
 
