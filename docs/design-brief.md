@@ -55,10 +55,10 @@ application stands; everything else is neutral grey and one ink.
   the logo and legends) and Martian Mono for dates, counts and the email.
 - **Layout:** the page is up to 1120px wide; from 1024px the filter is a
   sticky 14rem column left of the list.
-- **Buttons:** ink face with a darker bottom lip that presses down. Open: in
-  the light theme the lip merges with the face, so the label looks off
-  centre. The lip must read as a separate edge, or the label must be
-  centred on the whole button.
+- **Buttons:** ink face with a darker bottom lip that presses down. In the
+  light theme lip and face are close (1.29:1), so a 1px hairline in the page
+  background separates them; both sit outside the button's box, so the label
+  is centred on the face.
 - **Checkboxes:** native inputs styled with `appearance: none`, not hidden
   inputs with a drawn box.
 
