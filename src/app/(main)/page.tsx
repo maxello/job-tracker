@@ -7,13 +7,12 @@ import {
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Applications</h1>
-        <Link
-          href="/applications/new"
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-        >
+    <main className="mx-auto w-full max-w-page px-4 py-8">
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-3 pb-1">
+        <h1 className="font-display text-2xl font-bold tracking-tight">
+          Applications
+        </h1>
+        <Link href="/applications/new" className="button-ink px-4 py-2 text-sm">
           New application
         </Link>
       </header>
