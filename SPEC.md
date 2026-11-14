@@ -173,6 +173,16 @@ log, 2026-11-11).
   reload and can be bookmarked
 - An empty result shows "No applications match your filters" with a way to
   clear them
+- Status counts: each status checkbox shows how many of my applications have
+  that status. The counts respect only "Show archived": search, the selected
+  statuses and the date range don't change them. A status with none shows 0
+- A pipeline bar above the list shows the same counts as segments in the
+  status colours, one per status with at least one application. The bar is
+  decorative (hidden from assistive technology); a text legend next to it
+  gives each status with its count. With no applications at all, the empty
+  state shows instead of the bar
+- The loading skeleton includes the bar and the counts, so the layout doesn't
+  shift when they load
 
 ### US-7 AI job posting parsing (M6)
 
@@ -677,6 +687,16 @@ lives in `src/lib/auth.ts`.
   existing screens) ships before M5, so the kanban is built in the final style;
   motion (view transitions, micro-interactions) comes after the kanban works,
   because it depends on the final DOM and must be checked against drag-and-drop
+- 2026-11-14: the visual direction is "Signal" (`docs/design-brief.md`):
+  colour is used only for status (a coloured edge on every row, the text badge
+  stays), Archivo and Martian Mono. The rejected candidates and why are in the
+  brief. The theme follows the system preference only; there is no toggle
+- 2026-11-14: the page widens from `max-w-3xl` to 1120px and, from `lg`, the
+  filter column from 11rem to 14rem; this supersedes those two parts of the
+  2026-11-13 entry. Clear and Apply sit at the bottom of the column on one
+  line, Clear left and Apply right. Unchanged: markup order, tab order, the
+  sticky column, the stacked fieldsets, and the whole column fitting a
+  1024×700 viewport
 
 ## 11. End-to-end verification
 
