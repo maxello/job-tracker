@@ -7,39 +7,23 @@ Web app to track job applications (statuses, notes, history), built milestone by
 
 ## Commands
 
-```bash
-npm run dev
-npm run build
-npm run lint
-npm run typecheck
-npm run format
-npm run format:check
-npm test
-npm run test:watch
-npm run test:db    # Vitest against job_tracker_e2e (*.db.test.ts); never alongside e2e
-npm run e2e        # Playwright: build + start on :3100 against job_tracker_e2e
-```
-
-A task is done only when `npm run lint && npm run typecheck && npm test` pass.
-If `npm test` reports "no tests" in every file, run it from `D:\` (Vitest fails from a lowercase drive).
+- A task is done only when `npm run lint && npm run typecheck && npm test` pass.
+- If `npm test` reports "no tests" in every file, run it from `D:\` (Vitest fails from a lowercase drive).
+- Never run `npm run test:db` alongside `npm run e2e`: both use `job_tracker_e2e`.
 
 ## Stack
 
-Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · Prisma + Neon (Postgres) · Zod · Better Auth (email + password, database sessions) · Vitest
-
 - Tailwind runs through a Turbopack CSS loader rule (`@tailwindcss/turbopack`), not PostCSS.
 - `next.config.ts` enables `cacheComponents` and `partialPrefetching`.
+- Better Auth uses database sessions. There is no `/api/auth` route handler: forms call `auth.api` from Server Actions.
 
 ## Structure
 
-- All app code lives in `src/`; `public/` stays at the root. Alias `@/*` → `./src/*`.
-- `src/app` — routes and layouts only (keep thin). Pages and the header live in the `(main)` route group, so `src/app/error.tsx` covers the header too; keep the root layout free of anything that can throw
-- `src/features/applications/` — `components/`, `actions.ts`, `schemas.ts`, `queries.ts`
-- `src/features/auth/` — same layout: sign-up, sign-in, sign-out, `getSession()`
-- `src/lib/db.ts` — the single Prisma client instance
-- `src/lib/auth.ts` — the Better Auth instance (no `/api/auth` route handler: forms call `auth.api` from Server Actions)
-- `src/lib/current-user.ts` — `getCurrentUserId()`: validates the session, redirects to `/sign-in` without one. `tryGetCurrentUserId()` is the same for actions with form state, but returns `null` when the session read fails. The only source of `userId`
-- `src/proxy.ts` — optimistic redirect on the session cookie only (no database). Never the security check
+- `src/app` holds routes and layouts only; logic goes in `src/features/<feature>/` (`components/`, `actions.ts`, `schemas.ts`, `queries.ts`)
+- Pages and the header live in the `(main)` route group, so `src/app/error.tsx` covers the header too; keep the root layout free of anything that can throw
+- `src/lib/db.ts` is the single Prisma client instance
+- `src/lib/current-user.ts` is the only source of `userId`
+- `src/proxy.ts` is an optimistic redirect on the session cookie only (no database). Never the security check
 
 ## Conventions
 
@@ -54,7 +38,7 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 
 ## Rules
 
-- Never read or edit `.env` files (`.env.example` is fine)
+- Never read or edit `.env` files: they hold secrets (`.env.example` is fine)
 - Never run destructive DB commands (`migrate reset`, `--force-reset`) without asking
 - Before installing any new package, stop and ask for confirmation, even if the user requested it: name the package, why it's needed, and a no-dependency alternative (e.g. `Intl.DateTimeFormat`). Install only after an explicit "yes".
 - Every app DB query is scoped to the current user through the DAL, no exceptions: `Application` queries filter by `userId`, and `StatusChange` queries go through an `Application` already checked for ownership. `userId` comes from the session, never from the request
@@ -68,11 +52,4 @@ Next.js 16.4 (App Router) · React 19.3 · TypeScript strict · Tailwind v4 · P
 
 ## Hooks
 
-In `.claude/hooks/`, wired in `.claude/settings.json`:
-
-- `block-env-access.mjs` — PreToolUse: blocks reads/edits/commands touching `.env` files (`.env.example` allowed)
-- `block-migration-writes.mjs` — PreToolUse: denies Edit/Write/NotebookEdit inside `prisma/migrations/` (create a new migration instead)
-- `format-lint.mjs` — PostToolUse: Prettier on the edited file, then ESLint; lint errors are reported back
-- `stop-checks.mjs` — Stop: typecheck + unit tests must pass before a turn ends (only while the tree is dirty)
-
-For a TDD red phase, create `.claude/stop-checks.off` to switch stop-checks off; delete it afterwards.
+Hooks live in `.claude/hooks/`, wired in `.claude/settings.json`; each one explains itself when it blocks. For a TDD red phase, create `.claude/stop-checks.off` to switch stop-checks off; delete it afterwards.
