@@ -102,6 +102,8 @@ the badge, never on whole rows except Offer.
 
 - **Header:** logo (a mark, with or without the name "Job Tracker"), auth
   links when signed out, the user's email and sign-out when signed in.
+  Below 640px the email and sign-out move into an account menu (a circle with
+  the email's initial); from 640px they're inline.
 - **Application list** with the filter form: "Status" and "Archive"
   fieldsets with checkboxes, a "Clear" link and an "Apply" button; a sticky
   column left of the list from 1024px, above the list below it; an
