@@ -697,6 +697,16 @@ lives in `src/lib/auth.ts`.
   line, Clear left and Apply right. Unchanged: markup order, tab order, the
   sticky column, the stacked fieldsets, and the whole column fitting a
   1024×700 viewport
+- 2026-11-14: the header shows the logo (five status-coloured bars and "Job
+  Tracker", not a link). Signed in, below `sm` (640px) the email and Sign out
+  move into an account menu; from `sm` they stay inline. The trigger is a 44px
+  circle with the email's first letter, accessible name "Account menu". The
+  menu uses the Popover API (`popovertarget`, `popover="auto"`) with no client
+  JS. Its id is a fixed `account-menu`, an exception to the 2026-11-12 "DOM ids
+  are never hard-coded" entry, allowed only in `src/app/(main)/layout.tsx`,
+  which renders once per document; pages and their components still follow
+  #26. Signed out, Sign in and Sign up stay inline at every width. Covered by
+  `e2e/account-menu.spec.ts`
 
 ## 11. End-to-end verification
 
