@@ -932,6 +932,21 @@ lives in `src/lib/auth.ts`.
   text instead of the label (a placeholder is not a label, and the column has
   no vertical room for helper text), using the last `q` value, and collapsing
   internal whitespace
+- 2026-11-16: search runs through Prisma's `contains` with
+  `mode: "insensitive"` (ILIKE) on company OR role, ANDed with the `userId`
+  scope and the other filters. Checked against the e2e database (Neon,
+  PostgreSQL 18.7) before planning: Prisma 7.10.1 does not escape `%` and `_`
+  (`100%` matched "100x Remote"), and `\` is ILIKE's escape character (`k\s`
+  didn't find "back\slash"), so the DAL escapes all three with a backslash.
+  The database's `C.UTF-8` locale matches Cyrillic case-insensitively
+  (`ПРИВІТ` finds "Привіт"); this was checked on the e2e database only, **to
+  verify on the production database at the M7 deploy**. The db tests
+  (`queries.db.test.ts`, "search") pin all of this. The filter form's wrapper
+  key is `JSON.stringify([sortedStatuses, showArchived, search ?? null])`.
+  Rejected: raw SQL (the escaping is three characters, and raw SQL would
+  bypass the typed `where` and its `userId` scope), and a separator-joined
+  string key (`q` is user text, so `?archived=1` and `?q=archived` could
+  collide on "|archived" and Back between them wouldn't re-mount the form)
 
 ## 11. End-to-end verification
 

@@ -1,4 +1,4 @@
-import type { Status } from "@/generated/prisma/enums";
+﻿import type { Status } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
 import type { CreateApplicationInput } from "./schemas";
 
@@ -20,22 +20,39 @@ export async function createApplication(
   });
 }
 
+// Prisma 7.10.1 passes `contains` to ILIKE without escaping `%` and `_`, and
+// `\` is ILIKE's escape character, so all three are escaped to match
+// literally (checked against Postgres, SPEC.md decision log, 2026-11-16).
+function escapeLike(text: string) {
+  return text.replace(/[\\%_]/g, "\\$&");
+}
+
 // Home page list, newest activity first: non-archived only, unless "Show
 // archived" is on, which shows active and archived together (US-8).
 // `statuses` filters with IN only when non-empty: Prisma's `in: []` matches
-// nothing, so an empty list means no filter.
+// nothing, so an empty list means no filter. `search` (US-6) is one
+// case-insensitive substring of company OR role; the OR sits beside the
+// `userId` scope, so it is ANDed with it and every other condition.
 export async function listApplications(
   userId: string,
   {
     statuses = [],
     includeArchived = false,
-  }: { statuses?: Status[]; includeArchived?: boolean } = {},
+    search,
+  }: { statuses?: Status[]; includeArchived?: boolean; search?: string } = {},
 ) {
+  const contains = search === undefined ? undefined : escapeLike(search);
   return db.application.findMany({
     where: {
       userId,
       ...(!includeArchived && { archivedAt: null }),
       ...(statuses.length > 0 && { status: { in: statuses } }),
+      ...(contains !== undefined && {
+        OR: [
+          { company: { contains, mode: "insensitive" } },
+          { role: { contains, mode: "insensitive" } },
+        ],
+      }),
     },
     // id breaks ties so the order is stable for equal timestamps.
     orderBy: [{ updatedAt: "desc" }, { id: "desc" }],

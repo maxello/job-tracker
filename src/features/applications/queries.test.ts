@@ -158,6 +158,48 @@ describe("listApplications", () => {
 
     expect(query().select).toHaveProperty("archivedAt", true);
   });
+
+  const searchOn = (contains: string) => ({
+    OR: [
+      { company: { contains, mode: "insensitive" } },
+      { role: { contains, mode: "insensitive" } },
+    ],
+  });
+
+  it("Q1 US-6: search matches company OR role case-insensitively, keeping the userId scope, the archived exclusion and the US-2 order", async () => {
+    await listApplications(OWNER, { search: "acme" });
+
+    expect(db.application.findMany).toHaveBeenCalledOnce();
+    expect(query().where).toEqual({
+      userId: OWNER,
+      archivedAt: null,
+      ...searchOn("acme"),
+    });
+    expect(query().orderBy).toEqual(order);
+  });
+
+  // Prisma 7.10.1 doesn't escape LIKE wildcards, and `\` is LIKE's escape
+  // character (probe, see the SPEC.md decision log).
+  it("Q2 US-6: %, _ and \\ in the search are escaped so they match literally", async () => {
+    await listApplications(OWNER, { search: "50%_a\\b" });
+
+    expect(query().where).toEqual({
+      userId: OWNER,
+      archivedAt: null,
+      ...searchOn("50\\%\\_a\\\\b"),
+    });
+  });
+
+  it("Q3 US-6: search combines with the status filter (AND)", async () => {
+    await listApplications(OWNER, { search: "acme", statuses: ["APPLIED"] });
+
+    expect(query().where).toEqual({
+      userId: OWNER,
+      archivedAt: null,
+      status: { in: ["APPLIED"] },
+      ...searchOn("acme"),
+    });
+  });
 });
 
 describe("changeApplicationStatus", () => {
