@@ -67,7 +67,9 @@ As a job seeker, I want to sign up and sign in, so that my applications are priv
 - Every action on another user's application that exists at the current
   milestone (via UI or by swapping the id in a request) gets the not-found
   response and changes nothing: open and change status from M2, edit and
-  delete from M3, archive and unarchive from M4
+  delete from M3, archive and unarchive from M4, moving a card on the board
+  from M5 (where the not-found response is the "This application no longer
+  exists" message, the same as for a missing id)
 - Data created under the M1 demo-user stub is wiped when M2 ships (it is dev
   data only; no migration)
 
@@ -103,7 +105,8 @@ As a job seeker, I want to see all my applications in one list, so that I know a
 - Each row shows company, role, status and last updated date
 - Sorted by last updated, newest first
 - Archived applications are hidden by default (see US-8)
-- Empty state with a call to action: "Add your first application"
+- Empty state: "No applications yet." with an "Add your first application"
+  button; the order of empty states is in US-6
 - Each row links to the application detail page
 
 ### US-3 Change status (M1)
@@ -142,18 +145,60 @@ As a job seeker, I want to edit or delete an application, so that my data stays 
 
 As a job seeker, I want to see my applications on a board by status and move them between columns, so that I can track and update my pipeline visually.
 
-- One column per status; archived applications are not shown
+- The board lives at `/board`. Both `/` and `/board` show a view switcher
+  above the content: a `<nav aria-label="Views">` with two links, "List" (`/`)
+  and "Board" (`/board`), with `aria-current="page"` on the current one,
+  visible at every width. The links are plain `/` and `/board`: list filters
+  are not carried over. The header doesn't change. From `lg`, on `/` the
+  switcher sits above the list column, not above the whole grid, so it doesn't
+  push the filter column down
+- One column per status; archived applications are never shown on the board.
+  The board has no filters in M5: it shows all non-archived applications
 - Cards within a column are ordered by last updated, newest first (no manual
   ordering)
+- The five columns are always shown, also when empty, because they are drop
+  targets. Each column header shows its count (e.g. "Applied · 3"). The board
+  has no pipeline bar
+- When the user has no non-archived applications, the board shows the same
+  empty state as US-6 states 2 and 3 instead of the columns; for state 2 the
+  link goes to `/?archived=1`, because the board has no "Show archived"
+- A card shows company, role and last updated. The company name links to the
+  detail page; the card itself is not a link
 - Cards can be moved between columns with drag-and-drop
-- Keyboard and screen-reader alternative: each card has a status select (or the
-  DnD library's keyboard mode) that performs the same move
-- Dropping a card into its own column is a no-op (same rule as US-3)
+- Keyboard and screen-reader alternative: each card has a status select and a
+  "Move" button that perform the same move, with the same rules as the detail
+  page (US-3): no auto-submit, and the button is disabled while the selected
+  status equals the current one. The select and the button have accessible
+  names that include the application (company and role), and their ids derive
+  from the record id (#26)
+- Dropping a card into the column it is shown in sends no request: for the
+  user it isn't a move, the same as the disabled "Move" button. The
+  server-side no-op from US-3 stays for stale tabs
 - Each move changes the status and writes a history record (same rules as US-3)
-- The move is shown optimistically; if the server action fails, the card returns
-  to its previous column and an error message is shown
-- Below 768px the board scrolls horizontally with one column per screen width
-  (scroll snap); the page itself does not scroll horizontally
+- A moved card is placed first in its new column (the move updates `updatedAt`
+  and the order is newest first), so it doesn't jump after the refresh
+- The move is shown optimistically
+- If the application no longer exists or belongs to another user (one
+  response for both, never "forbidden"), the card disappears from the board
+  after a refresh and the message "This application no longer exists" is shown
+- On any other failure the card returns to its previous column and a generic
+  error message is shown
+- Messages appear in one live region above the board and stay until the next
+  move
+- The board and the detail page still go through one server action and one
+  data access layer function (US-3), and the detail page keeps its not-found
+  UI. The action must not answer the board with `notFound()`, which would
+  replace the whole board with the not-found UI; how the action reports
+  not-found is decided in the M5 plan
+- Columns have a minimum width. When the five columns don't fit, the board
+  container scrolls horizontally, at any width; the page itself never scrolls
+  horizontally. Below 768px the board shows one column per screen width
+  (scroll snap)
+- (end of M5, motion) With `prefers-reduced-motion`, view transitions and
+  micro-interactions are off or reduced to a fade; dragging a card still
+  follows the pointer. Whether drag-and-drop conflicts with view transitions
+  is checked on the working board and recorded in the decision log (see the
+  2026-11-14 entry)
 
 ### US-6 Search and filters (M5)
 
@@ -164,25 +209,59 @@ pulled forward into M3; search and the date range stay in M5 (see the decision
 log, 2026-11-11).
 
 - Search by company and role: case-insensitive, substring match
+  - One input matches company OR role
+  - The whole trimmed text is one phrase (substring), not separate words
+  - `%` and `_` match literally
+  - Case-insensitive also for non-Latin letters such as Cyrillic
 - Filter by status (multiple selection) and by last updated date range
   (from / to, both optional, inclusive, in the user's local timezone)
+- The filter form adds the browser's IANA time zone
+  (`Intl.DateTimeFormat().resolvedOptions().timeZone`) to the URL as `tz`, and
+  the server computes the day boundaries in that zone. A missing or invalid
+  `tz` falls back to UTC with no error. A bookmark gives the same result
+  anywhere, because the zone is in it
+- URL parameters follow the same rules as `status` and `archived` (values
+  trimmed, invalid ones ignored, no redirect):
+  - `q`: the search text. Ignored when empty or whitespace only, longer than
+    200 characters (the US-1 limit for company and role) or containing a NUL
+    byte
+  - `from` and `to`: `YYYY-MM-DD`, as `<input type="date">` sends them. An
+    invalid date is ignored. Both are inclusive days in the `tz` zone
+  - `from` later than `to` gives an empty result with the usual "No
+    applications match your filters", never a silent swap
+- The Clear link (`/`) resets everything: search, dates, statuses and "Show
+  archived"
+- The whole filter column, including Apply, fits a 1024×700 viewport, with
+  search, the dates and the status counts
 - Search and filters can be combined (AND)
 - Archived applications are excluded from search results unless "Show
   archived" is on (US-8)
 - Search and filter state is stored in the URL query string, so it survives a
   reload and can be bookmarked
-- An empty result shows "No applications match your filters" with a way to
-  clear them
+- Empty states, in this order (the first that applies wins). "Show archived"
+  doesn't count as a filter here:
+  1. At least one filter is active (status, `q`, `from` or `to`, counting
+     valid values only) and nothing matches: "No applications match your
+     filters" with "Clear filters". This applies even when the user has no
+     applications at all; Clear then leads to state 3
+  2. No filter is active, "Show archived" is off, and every application is
+     archived: "All your applications are archived" with a "Show archived"
+     link
+  3. Otherwise: "No applications yet." with an "Add your first application"
+     button
 - Status counts: each status checkbox shows how many of my applications have
   that status. The counts respect only "Show archived": search, the selected
   statuses and the date range don't change them. A status with none shows 0
 - A pipeline bar above the list shows the same counts as segments in the
   status colours, one per status with at least one application. The bar is
   decorative (hidden from assistive technology); a text legend next to it
-  gives each status with its count. With no applications at all, the empty
-  state shows instead of the bar
-- The loading skeleton includes the bar and the counts, so the layout doesn't
-  shift when they load
+  gives each status with its count. The bar and the legend show only when at
+  least one count is greater than 0 under the current "Show archived"
+  setting; otherwise neither is shown (this covers no applications at all and
+  all archived with "Show archived" off). The status checkboxes still show
+  their counts, including 0
+- The loading skeleton includes the bar and the counts; the list and the
+  filter column have the same positions in the skeleton and in the loaded page
 
 ### US-7 AI job posting parsing (M6)
 
@@ -224,18 +303,18 @@ As a job seeker, I want to archive applications that are no longer relevant, so 
 - An archived application's detail page shows an "Archived" badge (no date)
   and stays accessible and editable: the edit form, status changes (history as
   usual; a status change does not unarchive) and delete all work
-- Archived applications are hidden from the list, kanban board and search
-  results by default. In M4 this covers the list; the board and search exclude
-  them from M5 (US-5, US-6)
+- Archived applications are hidden from the list and search results by
+  default, and never shown on the kanban board. In M4 this covers the list;
+  the board and search exclude them from M5 (US-5, US-6). "Show archived"
+  applies to the list only
 - "Show archived" is a checkbox in the list's filter form, stored in the URL
   (`?archived=1`) and applied with Apply, like the status filter, and combined
   with it. It shows active and archived applications together, in the US-2
   order (last updated, newest first). Archived rows get an "Archived" badge
   next to the status badge, with no date
-- Empty states: a user with no applications sees "No applications yet" (US-2);
-  a user whose applications are all archived sees "All your applications are
-  archived" with a link that turns on "Show archived"; filters that match
-  nothing show "No applications match your filters"
+- Empty states follow the order in US-6: a user whose applications are all
+  archived sees "All your applications are archived" with a link that turns
+  on "Show archived"
 - Archive and unarchive follow the same ownership rules as US-0
 
 ## 5. Data model (draft)
@@ -303,7 +382,10 @@ lives in `src/lib/auth.ts`.
   redirected away from `/sign-in` and `/sign-up`, covered by an e2e test; the
   status filter from US-6, pulled forward from M5 (see the decision log)
 - M4 (week 4): archive application (US-8)
-- M5 (week 5): kanban board + search and filters
+- Before M5: visual identity (design tokens, fonts, restyle of the existing
+  screens); the criteria are in `docs/design-brief.md`
+- M5 (week 5): kanban board + search and filters; motion (view transitions,
+  micro-interactions) after the board works
 - M6 (week 6): AI job posting parsing + eval script
 - M7–M8 (weeks 7–8): deploy, preview deployments, CI, monitoring, portfolio prep
   - Required before the public deploy (M7): rate limiting for sign-in and sign-up,
@@ -314,7 +396,6 @@ lives in `src/lib/auth.ts`.
 
 ## 9. Open questions
 
-- Should the create form allow choosing an initial status other than Wishlist?
 - How are sign-in and sign-up rate limited before the public deploy (M7)? Better
   Auth's limiter does not apply to `auth.api` calls from Server Actions, so
   attempts are currently unlimited. Deferred on purpose: design one table for
@@ -372,6 +453,10 @@ lives in `src/lib/auth.ts`.
   runs on native Node type stripping (no dotenv, no tsx)
 - 2026-11-01: the M1 demo-user stub finds the seeded user by email
   (`demo@example.com`)
+- 2026-11-01: dates are shown in the browser's local timezone by a `LocalDate`
+  client component (`Intl.DateTimeFormat`, no date library): an inline script
+  corrects the server-rendered text before first paint on full page loads, and
+  the component formats in the browser on client-side navigations
 - 2026-11-02: the create form disables native browser validation (`noValidate`);
   the server-side Zod schema is the only source of field errors
 - 2026-11-02: salary currency is a text input with `<datalist>` suggestions
@@ -707,6 +792,119 @@ lives in `src/lib/auth.ts`.
   which renders once per document; pages and their components still follow
   #26. Signed out, Sign in and Sign up stay inline at every width. Covered by
   `e2e/account-menu.spec.ts`
+- 2026-11-16: the board (US-5) has its own route, `/board`, and both `/` and
+  `/board` show a "Views" nav with "List" and "Board" links above the content,
+  at every width; the links don't carry list filters over, and the header
+  doesn't change. Rejected: a list/board toggle on `/` stored in the URL (one
+  page doing two jobs), and navigation in the header or a hamburger menu (it
+  hides the two main views behind a tap on mobile and crowds the header at
+  360px)
+- 2026-11-16: the board has no filters in M5 and shows all non-archived
+  applications; archived applications never appear on it, and "Show archived"
+  applies to the list only. "Search results" is the list on `/` with search
+  parameters, not a separate surface. Rejected: filters on the board (a status
+  filter on a board grouped by status adds little, and it doubles the M5
+  scope)
+- 2026-11-16: a board card shows company, role and last updated, and only the
+  company name links to the detail page. Columns have a minimum width; when the
+  five don't fit, the board container scrolls horizontally at any width and the
+  page never does (generalizes the below-768px rule). Rejected: the whole card
+  as a link (it would nest controls inside a link and clash with dragging)
+- 2026-11-16: the board's keyboard and screen-reader alternative is a status
+  select plus a "Move" button on every card, with the detail page's rules (no
+  auto-submit, button disabled while the selection equals the current status),
+  accessible names that include company and role, and ids derived from the
+  record id (#26). Rejected: the drag-and-drop library's keyboard mode (the
+  criterion would depend on a library not chosen yet, and its announcements on
+  that library)
+- 2026-11-16: when a board move hits a missing or foreign id (one response for
+  both, never "forbidden"), the card disappears after a refresh and the board
+  shows "This application no longer exists"; any other failure returns the
+  card to its previous column with a generic error. Messages go to one live
+  region above the board and stay until the next move. The board and the
+  detail page keep one server action and one DAL function (US-3); the action
+  must not answer the board with `notFound()`, and how it reports not-found is
+  decided in the M5 plan. Rejected: returning the card to its column for a
+  missing or foreign id (the application no longer exists for this user), and
+  answering the board with the action's `notFound()` (it replaces the whole
+  board)
+- 2026-11-16: dropping a card into the column it is shown in sends no request;
+  the US-3 server-side no-op stays for stale tabs. A moved card is placed
+  first in its new column, matching the newest-first order after the refresh.
+  Rejected: sending the drop into its own column to the server (nothing
+  changes for the user; the server no-op already covers stale tabs)
+- 2026-11-16: the cross-user e2e check gains "(from M5) user B's board shows
+  none of user A's cards". Rejected: a separate e2e check that user B moves
+  user A's card (the board uses the same action as the detail page, already
+  covered from M2)
+- 2026-11-16: the date range uses the browser's IANA time zone, which the
+  filter form adds to the URL as `tz`; the server computes the day boundaries
+  in that zone, and a missing or invalid `tz` falls back to UTC with no error.
+  No date library (same as the `LocalDate` entry); how the boundaries are
+  computed is decided in the M5 plan. Rejected: a cookie (the result of a
+  bookmark would depend on who opens it, and the first request may have no
+  cookie), UTC day boundaries (contradicts US-6: late-evening edits would land
+  in the next day), and filtering on the client (the list is rendered on the
+  server)
+- 2026-11-16: the search and date parameters are `q`, `from` and `to`, with the
+  same rules as `status` and `archived` (trimmed, invalid values ignored, no
+  redirect). `q` is ignored when empty, whitespace only, over 200 characters
+  or containing a NUL byte; `from` and `to` are `YYYY-MM-DD`, inclusive days in
+  the `tz` zone; `from` later than `to` gives an empty result. Rejected:
+  swapping `from` and `to` silently (magic the user didn't ask for), and a
+  redirect to a canonical URL (same reason as the 2026-11-11 status filter
+  entry)
+- 2026-11-16: one search input matches company OR role, the whole trimmed text
+  is one substring phrase, `%` and `_` match literally, and matching is
+  case-insensitive also for non-Latin letters such as Cyrillic. Whether
+  Prisma's `contains` escapes `%` and `_`, and how case-insensitive matching
+  handles Cyrillic in our database, is checked in the M5 plan, not assumed.
+  Rejected: matching separate words (more complex, no story needs it), and `%`
+  and `_` as wildcards (users type them as text)
+- 2026-11-16: the Clear link (`/`) resets everything: search, dates, statuses
+  and "Show archived"; this extends the 2026-11-12 Clear rule from "both
+  filters" to all of them. The whole filter column, including Apply, must still
+  fit a 1024×700 viewport, now including search, the dates and the status
+  counts. From `lg`, the view switcher on `/` sits above the list column, not
+  above the whole grid, so it doesn't push the filter column down. If the
+  column still doesn't fit, the M5 plan solves it with a screenshot. Rejected:
+  relaxing the 1024×700 rule in advance (decide with a screenshot once the real
+  column exists)
+- 2026-11-16: the no-applications empty state is "No applications yet." with
+  an "Add your first application" button, described the same way in US-2 and
+  US-8. No alternatives were considered: this aligns the spec text with what
+  ships
+- 2026-11-16: empty states follow one order (US-6): active filters with no
+  match ("No applications match your filters" with "Clear filters", even when
+  the user has no applications), then all archived with "Show archived" off,
+  then "No applications yet."; "Show archived" doesn't count as a filter. The
+  board always shows its five columns, also when empty, and shows the same
+  empty state as states 2 and 3 instead of the columns when the user has no
+  non-archived applications, linking state 2 to `/?archived=1`. Rejected: a
+  separate message for "filters on, but no applications at all" (rare, and
+  Clear leads to the right message), and hiding empty columns on the board
+  (they are drop targets)
+- 2026-11-16: the pipeline bar and its legend show only when at least one
+  count is greater than 0 under the current "Show archived" setting; the
+  status checkboxes still show 0. The board has no pipeline bar; each column
+  header shows its count (e.g. "Applied · 3"). Rejected: an empty bar frame
+  when all counts are 0 (it shows nothing useful), and the pipeline bar on the
+  board (the columns and their counts already show the same thing)
+- 2026-11-16: the create form has no status choice: a new application always
+  starts as Wishlist (US-1), and the user changes the status in one step on
+  the detail page; the open question is closed. Rejected: a status choice in
+  the create form (the history would start somewhere other than Wishlist,
+  close to the backdating non-goal)
+- 2026-11-16: section 8 lists the visual identity before M5 and motion in M5,
+  after the board works. This records in the milestones what the 2026-11-14
+  entry already decided; the design criteria stay in `docs/design-brief.md`
+- 2026-11-16: two criteria become verifiable. The US-6 loading skeleton keeps
+  the list and the filter column at the same positions as the loaded page.
+  Under `prefers-reduced-motion`, view transitions and micro-interactions are
+  off or reduced to a fade, while dragging a card still follows the pointer
+  (US-5). Rejected: "no layout shift" judged by eye (not testable), and
+  banning drag animation under reduced motion (dragging follows the pointer,
+  it isn't decorative motion)
 
 ## 11. End-to-end verification
 
@@ -718,18 +916,15 @@ lives in `src/lib/auth.ts`.
 - (from M2) Signed in as user B, every action on user A's application that
   exists at that milestone shows the not-found UI and leaves it unchanged:
   open and status change (M2), plus edit and delete (M3), plus archive and
-  unarchive (M4). The response is the same as for an id that does not exist
+  unarchive (M4). The response is the same as for an id that does not exist.
+  (from M5) User B's board shows none of user A's cards
 - (from M3) Edit an application and reload: changes persist; delete it: it is
   gone from the list and its URL shows the not-found UI
 - (from M4) Archive an application: it disappears from the list, appears with
-  "Show archived" marked as archived, and unarchive restores it. (from M5) It is
-  also hidden from the board and search
+  "Show archived" marked as archived, and unarchive restores it. (from M5) It
+  never appears on the board, and search hides it unless "Show archived" is on
 - (from M5) Move a card on the board by drag-and-drop and by keyboard: status
   and history update in both cases; search + status + date filters combine and
   survive a reload
 - (from M6) Paste a job posting: the form is pre-filled, nothing is saved until
   the user submits; the eval script reports per-field accuracy against targets
-- 2026-11-01: dates are shown in the browser's local timezone by a `LocalDate`
-  client component (`Intl.DateTimeFormat`, no date library): an inline script
-  corrects the server-rendered text before first paint on full page loads, and
-  the component formats in the browser on client-side navigations
