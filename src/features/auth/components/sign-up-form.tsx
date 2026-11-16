@@ -23,7 +23,7 @@ export function SignUpForm() {
       action={formAction}
       // Validation runs on the server only; the browser must not block submit.
       noValidate
-      className="flex flex-col gap-5"
+      className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-4 sm:p-6"
     >
       <AuthField
         name="name"
@@ -53,7 +53,7 @@ export function SignUpForm() {
       {failure?.error.message && (
         <p
           role="alert"
-          className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300"
+          className="rounded-md border border-l-6 border-line border-l-danger bg-surface px-3 py-2 text-sm"
         >
           {failure.error.message}
         </p>
@@ -62,7 +62,7 @@ export function SignUpForm() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300 dark:focus-visible:outline-zinc-100"
+        className="button-ink w-full px-4 py-2 text-sm"
       >
         {pending ? "Creating account…" : "Create account"}
       </button>
