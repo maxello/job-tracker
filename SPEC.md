@@ -224,11 +224,20 @@ log, 2026-11-11).
   trimmed, invalid ones ignored, no redirect):
   - `q`: the search text. Ignored when empty or whitespace only, longer than
     200 characters (the US-1 limit for company and role) or containing a NUL
-    byte
+    byte. The length is counted after trimming, in UTF-16 code units (as Zod's
+    `.max(200)` counts). Only the first `q` value counts: if it is invalid,
+    there is no search, and later values are never tried. Internal whitespace
+    is kept as typed, and the text is not Unicode-normalized. An empty search
+    input submits `q=`, which is ignored like any empty value
   - `from` and `to`: `YYYY-MM-DD`, as `<input type="date">` sends them. An
     invalid date is ignored. Both are inclusive days in the `tz` zone
   - `from` later than `to` gives an empty result with the usual "No
     applications match your filters", never a silent swap
+- The search input is `<input type="search" name="q" maxLength={200}>` with
+  the visible label "Search company or role" (no placeholder, no helper text),
+  at the top of the filter column, above the Status fieldset. After a reload,
+  Back or Forward it shows the parsed value: the trimmed text, or empty when
+  `q` was ignored
 - The Clear link (`/`) resets everything: search, dates, statuses and "Show
   archived"
 - The whole filter column, including Apply, fits a 1024×700 viewport, with
@@ -905,6 +914,24 @@ lives in `src/lib/auth.ts`.
   (US-5). Rejected: "no layout shift" judged by eye (not testable), and
   banning drag animation under reduced motion (dragging follows the pointer,
   it isn't decorative motion)
+- 2026-11-16: search (`q`) ships on its own branch before the date range. Only
+  the first `q` value counts; if it is invalid there is no search, and later
+  values are never tried. This differs on purpose from `status` (all valid
+  values count) and `archived` (on when any value is `1`): search is one
+  phrase, and merging or picking among several would be magic the user didn't
+  ask for. The 200-character limit is counted after trimming, in UTF-16 code
+  units, matching Zod's `.max(200)` for company and role and the input's
+  `maxLength`. Internal whitespace is kept as typed and the text is not
+  Unicode-normalized. An empty input submits `q=`, which is ignored, so no
+  JavaScript strips it. The input is `type="search"` with the visible label
+  "Search company or role", at the top of the filter column above Status; it
+  shows the parsed value (trimmed, or empty when ignored), and `q` joins the
+  form wrapper's key so Back, Forward and Clear re-mount it.
+  `e2e/filter-layout.spec.ts` checks now that the whole column, including the
+  search input and Apply, fits 1024×700. Rejected: a placeholder or helper
+  text instead of the label (a placeholder is not a label, and the column has
+  no vertical room for helper text), using the last `q` value, and collapsing
+  internal whitespace
 
 ## 11. End-to-end verification
 
