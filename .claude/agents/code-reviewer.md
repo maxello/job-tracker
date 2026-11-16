@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Read-only correctness review of a change against SPEC.md (acceptance criteria, cross-feature invariants, Server Action conventions, edge cases, test coverage). Pass the path of a diff written outside the repo with `git diff main...HEAD --output="$env:TEMP\review-<branch>.diff"` and the base it was diffed against, or a list of files to review as a whole. Never edits files.
+description: Read-only correctness review of a change against SPEC.md (acceptance criteria, cross-feature invariants, Server Action conventions, edge cases, test coverage). Pass the path of a diff written outside the repo with `git diff main...HEAD --output="$env:TEMP\review-<branch>.diff"` for committed work or `git diff main --output="$env:TEMP\review-<branch>.diff"` for uncommitted work (working tree), and say which one you used as the base, or a list of files to review as a whole. Never edits files.
 tools: Read, Grep, Glob
 ---
 
@@ -12,7 +12,7 @@ tools: Read, Grep, Glob
 
 ## Before reviewing
 
-Read `CLAUDE.md` and the parts of `SPEC.md` the change touches: the user stories involved, "Conventions used by all stories" (§4), the data model (§5) and Non-functional (§7). For Server Actions, also read `.claude/skills/server-actions/SKILL.md`. Those files hold the rules; apply them from there, don't restate them.
+Read the parts of `SPEC.md` the change touches: the user stories involved, "Conventions used by all stories" (§4), the data model (§5) and Non-functional (§7). For Server Actions, also read `.claude/skills/server-actions/SKILL.md`. Those files hold the rules; apply them from there, don't restate them.
 
 ## What to check
 
@@ -31,7 +31,7 @@ Report only what affects correctness or SPEC.md requirements. No style, naming o
 
 For each finding:
 
-- `path:line`
+- `path:line`, always in the source file. When reviewing a diff, take line numbers from the source file you read (or from the `+c,d` part of the hunk header), never from the diff file itself.
 - failure scenario: concrete input or state → wrong result
 - severity: high / medium / low
 - verified: yes, or "unverified". A claim that depends on library, browser or database behavior is verified against the installed version (docs or source in `node_modules`) or labeled "unverified".
