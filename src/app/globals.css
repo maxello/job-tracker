@@ -40,6 +40,22 @@
   --color-on-check: #ffffff;
 
   /*
+   * Danger: only for destruction and errors (Delete, field errors, invalid
+   * borders, alerts), never decoration. As text or a boundary: on surface
+   * 6.57 / 6.21, bg 5.75 / 6.80, row-hover 6.07 / 5.61, offer-tint
+   * 5.83 / 5.50.
+   */
+  --color-danger: #b42318;
+  --color-danger-hover: #8f1d14;
+  /* Lip under danger buttons, darker than the face like ink-lip. Decorative,
+     no contrast minimum (vs face 1.64 / 1.93; the bg hairline separates them) */
+  --color-danger-lip: #7a160e;
+  /* Label: on danger 6.57 / 6.80, danger-hover 8.92 / 9.75 */
+  --color-on-danger: #ffffff;
+  /* Dialog backdrop, decorative */
+  --color-scrim: rgb(14 22 33 / 0.5);
+
+  /*
    * Status: edge / badge background / badge text.
    * Edges (and checkbox fills) on surface: wishlist 5.22 / 6.38, applied
    * 4.84 / 6.21, interview 4.27 / 8.33, offer 4.41 / 8.93, rejected
@@ -81,11 +97,24 @@
    */
   --shadow-lip: 0 1px 0 var(--color-bg), 0 4px 0 var(--color-ink-lip);
   --shadow-lip-pressed: 0 1px 0 var(--color-bg), 0 1px 0 var(--color-ink-lip);
+  /* Every Signal button has the lip; its colour follows the role. Decorative:
+     the border or face carries the control boundary. */
+  --shadow-lip-quiet: 0 1px 0 var(--color-bg), 0 4px 0 var(--color-control);
+  --shadow-lip-quiet-pressed:
+    0 1px 0 var(--color-bg), 0 1px 0 var(--color-control);
+  --shadow-lip-danger: 0 1px 0 var(--color-bg), 0 4px 0 var(--color-danger-lip);
+  --shadow-lip-danger-pressed:
+    0 1px 0 var(--color-bg), 0 1px 0 var(--color-danger-lip);
 }
 
 @theme inline {
   --font-sans: var(--font-archivo);
   --font-mono: var(--font-martian-mono);
+}
+
+/* Native popups (select, datalist) and scrollbars follow the theme. */
+:root {
+  color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -104,6 +133,11 @@
     --color-ink-lip: #8e9aad;
     --color-on-ink: #0e1621;
     --color-on-check: #0c1118;
+    --color-danger: #f97066;
+    --color-danger-hover: #fda29b;
+    --color-danger-lip: #b8433a;
+    --color-on-danger: #0c1118;
+    --color-scrim: rgb(0 0 0 / 0.6);
 
     --color-wishlist: #a88bfa;
     --color-wishlist-badge: #2a2148;
@@ -130,8 +164,13 @@
 }
 
 /*
- * Primary button: ink face with a lip that presses down. The transparent
- * border becomes visible in forced-colors mode, where box-shadow is dropped.
+ * Buttons share one shape, a face with a lip that presses down; the colour
+ * carries the role: ink = primary, quiet = secondary, danger = destruction.
+ * The focus ring sits 5px out to clear the 4px lip, so leave 7px of room
+ * around every button (no clipping overflow on the parent).
+ *
+ * Primary button: ink face. The transparent border becomes visible in
+ * forced-colors mode, where box-shadow is dropped.
  */
 @utility button-ink {
   display: inline-flex;
@@ -145,10 +184,10 @@
   box-shadow: var(--shadow-lip);
   cursor: pointer;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: var(--color-ink-hover);
   }
-  &:active {
+  &:active:not(:disabled) {
     /* Moves down by the lip's height minus the 1px it keeps when pressed. */
     translate: 0 3px;
     box-shadow: var(--shadow-lip-pressed);
@@ -158,9 +197,16 @@
     outline: 2px solid var(--color-focus);
     outline-offset: 5px;
   }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
 }
 
-/* Secondary button: surface face, a control-coloured border. */
+/*
+ * Secondary button: surface face, a control-coloured border and lip. The
+ * --lip* variables exist only so `lip-none` can switch the lip off.
+ */
 @utility button-quiet {
   display: inline-flex;
   align-items: center;
@@ -170,14 +216,182 @@
   background-color: var(--color-surface);
   color: var(--color-text);
   font-weight: var(--font-weight-medium);
+  box-shadow: var(--lip, var(--shadow-lip-quiet));
   cursor: pointer;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: var(--color-row-hover);
+  }
+  &:active:not(:disabled) {
+    translate: 0 var(--lip-press, 3px);
+    box-shadow: var(--lip-pressed, var(--shadow-lip-quiet-pressed));
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: var(--lip-ring-offset, 5px);
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+/*
+ * A button-quiet without the lip: only the round account-menu trigger, which
+ * isn't a button shape. No press, and the ring back at 2px.
+ */
+@utility lip-none {
+  --lip: none;
+  --lip-pressed: none;
+  --lip-press: 0px;
+  --lip-ring-offset: 2px;
+}
+
+/*
+ * Destructive button: danger face and lip (the bg hairline separates them).
+ * The transparent border becomes visible in forced-colors mode.
+ */
+@utility button-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background-color: var(--color-danger);
+  color: var(--color-on-danger);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-lip-danger);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: var(--color-danger-hover);
+  }
+  &:active:not(:disabled) {
+    translate: 0 3px;
+    box-shadow: var(--shadow-lip-danger-pressed);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 5px;
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+/*
+ * Text inputs, selects and textareas: the look only; width and padding stay
+ * in the component. Boundary: control on surface 4.35 / 3.98. Invalid: a
+ * danger border (6.57 / 6.21); the error text below carries the state too,
+ * so forced colors, which drop the border colour, lose nothing.
+ */
+@utility field {
+  border: 1px solid var(--color-control);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+
+  &::placeholder {
+    color: var(--color-muted);
+    opacity: 1;
   }
   &:focus-visible {
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
+  }
+  &[aria-invalid="true"] {
+    border-color: var(--color-danger);
+  }
+}
+
+/*
+ * Wrapper for a `field` select: drops the native arrow and draws a chevron in
+ * currentColor (text on surface 18.18 / 14.45) after the select. A select
+ * can't have ::after, so the wrapper carries it. Forced-colors mode gets the
+ * native arrow back, as `check` does. No lip: a select isn't a button.
+ *
+ * Where the customizable select is supported (Chrome/Edge 135+, Safari 27;
+ * Firefox only behind a pref), the picker is styled with our tokens too. Plain
+ * <option>s only: no <button>/<selectedcontent>, which React 19.3 doesn't
+ * know. Elsewhere the OS picker stays (color-scheme follows the theme).
+ *   picker border: control on surface 4.35 / 3.98, on bg 3.80 / 4.36
+ *   option text: on surface 18.18 / 14.45, on row-hover (hover, focus,
+ *   selected) 16.79 / 13.05; focus ring on row-hover 14.27 / 13.05
+ */
+@utility field-select {
+  position: relative;
+  display: inline-grid;
+  min-width: 0;
+
+  & > select {
+    appearance: none;
+    padding-right: 2.25rem;
+  }
+  @supports (appearance: base-select) {
+    & > select,
+    & > select::picker(select) {
+      appearance: base-select;
+    }
+    & > select::picker-icon {
+      display: none;
+    }
+    & > select::picker(select) {
+      /* Open below unless it doesn't fit; the default picks the taller side,
+         so mid-page it opened upward over the header card. */
+      position-try-order: normal;
+      margin-block: 0.25rem;
+      padding: 0.25rem;
+      border: 1px solid var(--color-control);
+      border-radius: var(--radius-md);
+      background-color: var(--color-surface);
+      color: var(--color-text);
+    }
+    & > select option {
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: var(--text-sm);
+      line-height: var(--text-sm--line-height);
+      font-weight: var(--font-weight-medium);
+    }
+    & > select option:hover,
+    & > select option:checked {
+      background-color: var(--color-row-hover);
+    }
+    & > select option:checked {
+      font-weight: var(--font-weight-semibold);
+    }
+    & > select option:focus-visible {
+      background-color: var(--color-row-hover);
+      outline: 2px solid var(--color-focus);
+      outline-offset: -2px;
+    }
+    &:has(> select:open)::after {
+      rotate: 180deg;
+    }
+  }
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    translate: 0 -50%;
+    background-color: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    pointer-events: none;
+  }
+
+  @media (forced-colors: active) {
+    & > select {
+      appearance: auto;
+    }
+    &::after {
+      display: none;
+    }
   }
 }
 

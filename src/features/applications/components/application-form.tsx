@@ -14,8 +14,7 @@ import type { ApplicationFormValues } from "../form-values";
 
 const CURRENCY_SUGGESTIONS = ["USD", "EUR", "UAH", "GBP", "PLN"];
 
-const controlClass =
-  "w-full min-w-0 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 aria-invalid:border-red-600 dark:border-zinc-700 dark:bg-zinc-950 dark:focus-visible:outline-zinc-100 dark:aria-invalid:border-red-400";
+const controlClass = "field w-full min-w-0 px-3 py-2 text-sm";
 
 type FormResult = ActionResult<never, ApplicationFieldName>;
 
@@ -84,7 +83,7 @@ export function ApplicationForm({
         <label htmlFor={fieldId(name)} className="text-sm font-medium">
           {label}
           {options.required && (
-            <span aria-hidden="true" className="text-red-600 dark:text-red-400">
+            <span aria-hidden="true" className="text-muted">
               {" "}
               *
             </span>
@@ -92,18 +91,12 @@ export function ApplicationForm({
         </label>
         {input}
         {options.hint && (
-          <p
-            id={fieldId(`${name}-hint`)}
-            className="text-xs text-zinc-500 dark:text-zinc-400"
-          >
+          <p id={fieldId(`${name}-hint`)} className="text-xs text-muted">
             {options.hint}
           </p>
         )}
         {error && (
-          <p
-            id={fieldId(`${name}-error`)}
-            className="text-sm text-red-600 dark:text-red-400"
-          >
+          <p id={fieldId(`${name}-error`)} className="text-sm text-danger">
             {error}
           </p>
         )}
@@ -117,11 +110,11 @@ export function ApplicationForm({
       action={formAction}
       // Validation runs on the server only; the browser must not block submit.
       noValidate
-      className="flex flex-col gap-5"
+      className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-4 sm:p-6"
     >
       {id !== undefined && <input type="hidden" name="id" value={id} />}
 
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-muted">
         Fields marked <span aria-hidden="true">*</span>
         <span className="sr-only">as required</span> are required.
       </p>
@@ -174,7 +167,7 @@ export function ApplicationForm({
       )}
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-medium">
+        <legend className="mb-2 font-display text-sm font-semibold">
           Salary (annual gross)
         </legend>
         <div className="grid gap-5 sm:grid-cols-3">
@@ -213,7 +206,7 @@ export function ApplicationForm({
       {failure?.error.message && (
         <p
           role="alert"
-          className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300"
+          className="rounded-md border border-l-6 border-line border-l-danger bg-surface px-3 py-2 text-sm"
         >
           {failure.error.message}
         </p>
@@ -223,14 +216,11 @@ export function ApplicationForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300 dark:focus-visible:outline-zinc-100"
+          className="button-ink px-4 py-2 text-sm"
         >
           {pending ? "Saving…" : submitLabel}
         </button>
-        <Link
-          href={cancelHref}
-          className="rounded-md px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900"
-        >
+        <Link href={cancelHref} className="button-quiet px-4 py-2 text-sm">
           Cancel
         </Link>
       </div>

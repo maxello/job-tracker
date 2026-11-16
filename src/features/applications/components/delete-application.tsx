@@ -9,9 +9,6 @@ type Props = {
   name: string;
 };
 
-const buttonClass =
-  "rounded-md px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:outline-zinc-100";
-
 // The form lives inside the closed <dialog>, which isn't displayed, so it can't
 // be submitted before hydration: the trigger needs JavaScript to open it.
 // Cancel comes first in the DOM, so showModal() gives it the initial focus.
@@ -33,7 +30,7 @@ export function DeleteApplication({ id, name }: Props) {
       <button
         type="button"
         onClick={() => dialogRef.current?.showModal()}
-        className={`${buttonClass} text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950`}
+        className="button-quiet px-4 py-2 text-sm text-danger"
       >
         Delete
       </button>
@@ -41,23 +38,17 @@ export function DeleteApplication({ id, name }: Props) {
         ref={dialogRef}
         aria-labelledby={headingId}
         aria-describedby={descriptionId}
-        className="m-auto w-[calc(100%-2rem)] max-w-md rounded-lg border border-zinc-200 bg-white p-6 text-zinc-900 backdrop:bg-black/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+        className="m-auto w-[calc(100%-2rem)] max-w-md rounded-lg border border-line bg-surface p-6 text-text backdrop:bg-scrim"
       >
-        <h2 id={headingId} className="text-lg font-semibold">
+        <h2 id={headingId} className="font-display text-lg font-semibold">
           Delete this application?
         </h2>
-        <p
-          id={descriptionId}
-          className="mt-2 text-sm break-words text-zinc-600 dark:text-zinc-400"
-        >
+        <p id={descriptionId} className="mt-2 text-sm break-words text-muted">
           The application for {name} and its status history will be removed
           permanently. This can&apos;t be undone.
         </p>
         {error && (
-          <p
-            role="alert"
-            className="mt-3 text-sm text-red-600 dark:text-red-400"
-          >
+          <p role="alert" className="mt-3 text-sm text-danger">
             {error}
           </p>
         )}
@@ -70,14 +61,14 @@ export function DeleteApplication({ id, name }: Props) {
             type="button"
             disabled={pending}
             onClick={() => dialogRef.current?.close()}
-            className={`${buttonClass} text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900`}
+            className="button-quiet px-4 py-2 text-sm"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={pending}
-            className={`${buttonClass} bg-red-700 text-white hover:bg-red-600`}
+            className="button-danger px-4 py-2 text-sm"
           >
             {pending ? "Deleting…" : "Delete permanently"}
           </button>

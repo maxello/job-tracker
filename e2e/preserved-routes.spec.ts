@@ -99,7 +99,7 @@ test.describe("signed in", () => {
     await createFromList(page, second.company, second.role);
 
     await openFromList(page, first.company);
-    await page.getByRole("link", { name: "← Applications" }).click();
+    await page.getByRole("link", { name: "Applications", exact: true }).click();
     await expect(page).toHaveURL("/");
     await openFromList(page, second.company);
 

@@ -39,7 +39,7 @@ export async function UserMenu({ menuId }: { menuId: string }) {
         type="button"
         popoverTarget={menuId}
         aria-label="Account menu"
-        className="button-quiet size-11 shrink-0 rounded-full font-mono text-sm sm:hidden"
+        className="button-quiet lip-none size-11 shrink-0 rounded-full font-mono text-sm sm:hidden"
       >
         <span aria-hidden="true">{email[0].toUpperCase()}</span>
       </button>
