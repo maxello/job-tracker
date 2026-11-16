@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
+import { BackLink } from "@/features/applications/components/back-link";
 import {
   NewApplicationForm,
   NewApplicationFormSkeleton,
@@ -12,19 +12,16 @@ export const metadata: Metadata = {
 
 export default function NewApplicationPage() {
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
-      <Link
-        href="/"
-        className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"
-      >
-        ← Applications
-      </Link>
-      <h1 className="mt-2 mb-6 text-2xl font-semibold tracking-tight">
-        New application
-      </h1>
-      <Suspense fallback={<NewApplicationFormSkeleton />}>
-        <NewApplicationForm />
-      </Suspense>
+    <main className="mx-auto w-full max-w-page px-4 py-8">
+      <div className="max-w-3xl">
+        <BackLink />
+        <h1 className="mt-3 mb-6 font-display text-2xl font-bold tracking-tight">
+          New application
+        </h1>
+        <Suspense fallback={<NewApplicationFormSkeleton />}>
+          <NewApplicationForm />
+        </Suspense>
+      </div>
     </main>
   );
 }

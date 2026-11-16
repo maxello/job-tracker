@@ -140,9 +140,7 @@ test.describe("below sm (360px)", () => {
     await expect(page).toHaveURL(/\/applications\/[^/]+$/);
     await expect(menuIds).toHaveCount(1);
 
-    await page
-      .getByRole("link", { name: "← Applications", exact: true })
-      .click();
+    await page.getByRole("link", { name: "Applications", exact: true }).click();
     await expect(page).toHaveURL("/");
     await newApplication.click();
     await expect(page).toHaveURL("/applications/new");

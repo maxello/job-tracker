@@ -104,12 +104,12 @@ function ArchiveButtonForm({
         type="submit"
         disabled={pending}
         onClick={onSubmit}
-        className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:focus-visible:outline-zinc-100"
+        className="button-quiet px-4 py-2 text-sm"
       >
         {pending ? pendingLabel : label}
       </button>
       {error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}

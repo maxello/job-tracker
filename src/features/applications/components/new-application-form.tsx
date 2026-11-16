@@ -21,13 +21,11 @@ export function NewApplicationFormSkeleton() {
     <div
       aria-busy="true"
       aria-label="Loading form"
-      className="flex flex-col gap-4"
+      // The form's card box, so its border doesn't pop in.
+      className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-4 sm:p-6"
     >
       {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="h-10 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800"
-        />
+        <div key={i} className="h-10 animate-pulse rounded bg-line" />
       ))}
     </div>
   );
