@@ -14,11 +14,11 @@ export default function SignInPage() {
       <Suspense>
         <RedirectIfSignedIn />
       </Suspense>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Sign in</h1>
+      <h1 className="mb-6 font-display text-2xl font-bold tracking-tight">Sign in</h1>
       <SignInForm />
-      <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-6 text-sm text-muted">
         No account yet?{" "}
-        <Link href="/sign-up" className="underline">
+        <Link href="/sign-up" className="font-medium text-text underline underline-offset-2 hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
           Sign up
         </Link>
       </p>

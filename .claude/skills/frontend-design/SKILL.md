@@ -14,7 +14,6 @@ Reference components: `application-list.tsx` and `status-filter-form.tsx` in `sr
 - `src/app/globals.css`: tokens in `@theme`, dark overrides under `prefers-color-scheme`, utilities.
 - Components use token utilities only (`bg-surface`, `text-muted`, `border-control`, …): no raw colours, fonts, radii or shadows, no arbitrary `[#…]` values. A missing value becomes a new token, light and dark, first.
 - No `dark:` classes: the tokens switch themes.
-- Screens still on zinc + `dark:`: when the task restyles that component, move it fully to tokens; when the task isn't about styling, leave its classes alone (no unrelated refactors).
 
 ## Status colour
 
