@@ -18,14 +18,20 @@ Reference components: `application-list.tsx` and `status-filter-form.tsx` in `sr
 
 ## Status colour
 
-- Colour is spent on status only; everything else is neutral and ink.
+- Colour is spent on status only; everything else is neutral and ink. The one exception is `danger`, for destruction and errors only (Delete, field errors, invalid borders, alerts), never decoration.
+- A non-interactive status card (the detail page's header) uses `panel`, the edge without the hover tint.
 - Status classes come only from `STATUS_STYLES` in `src/features/applications/status-style.ts` (static strings, so Tailwind sees them). A new status surface (kanban card, …) gets a key there.
 - Never colour alone: the badge always carries the label.
 
 ## Utilities (`globals.css`)
 
+- Buttons: the lip is the Signal button shape; colour carries the role. Ink = primary, quiet = secondary, danger = destruction; all three share the lip, so every button needs 7px of room around it (see Lessons).
 - `button-ink`: the one primary action in a region (Apply, Add). Size it with padding and text size only.
 - `button-quiet`: secondary actions and header links (Sign in, Sign out).
+- `button-danger`: only the confirm of a destructive action (Delete permanently), with the `danger-lip`. A destructive trigger is `button-quiet text-danger`: control lip like its neighbours, only the text is danger.
+- `lip-none`: removes `button-quiet`'s lip and press; only for the round account-menu trigger, which isn't a button shape.
+- `field-select`: a wrapper around a `field` select; it swaps the native arrow for a currentColor chevron (native again in forced colors) and, where `appearance: base-select` is supported, styles the picker with tokens. Plain `<option>`s only (React 19.3 doesn't know `<selectedcontent>`). No lip. Next to a button, make the select as tall as the face plus the 4px lip (`h-10.5` for a `py-2 text-sm` button) and align the row with `items-start`.
+- `field`: every text input, select and textarea (border, focus ring, placeholder, `aria-invalid` border). Width and padding stay in the component.
 - `check`: every checkbox. Colour it with `text-<status>` from `STATUS_STYLES`, or `text-ink [--check-stripe:transparent]` for a box that isn't a status.
 - `font-display`: expanded width for headings, the logo and legends; not for body text.
 - A new reusable control becomes a new `@utility` there, not a repeated class string.
@@ -34,7 +40,7 @@ Reference components: `application-list.tsx` and `status-filter-form.tsx` in `sr
 
 - Status edges sit on `bg-surface`, not `bg-bg`: Rejected's grey edge reaches 3:1 only on surface.
 - Inside `overflow-hidden` (the list card), focus outlines are inset (`-outline-offset-2`), or the container clips them.
-- `button-ink` draws a 4px lip and a 5px-offset focus ring outside its box: leave room below and around it (padding on the parent, no tight `overflow-hidden`), or both get clipped.
+- Every button (`button-ink`, `button-quiet`, `button-danger`) draws a 4px lip and a 5px-offset focus ring outside its box: leave room below and around it (padding on the parent, no tight `overflow-hidden`), or both get clipped.
 - Custom controls need a `forced-colors: active` fallback, since box-shadows and backgrounds are dropped there (see the transparent border on `button-ink`, `appearance: auto` on `check`).
 - Every new token pair (text on its background, a control boundary on its background, the focus ring) gets a contrast ratio computed in both themes: 4.5:1 for text, 3:1 for non-text. Write the ratio in the token's comment in `globals.css`.
 - Skeletons match the real box model, so nothing shifts when data arrives: static labels are the real words with the real classes, `text-transparent` on the pulse background (inside `aria-hidden`, with `forced-color-adjust-none`), so the font sets their width; fixed sizes only for dynamic text. Text locators (`getByText`, `hasText`) can match those words while the fallback is on screen: scope them to `main` content that isn't the skeleton, or use `getByRole`.

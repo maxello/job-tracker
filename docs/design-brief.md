@@ -55,10 +55,14 @@ application stands; everything else is neutral grey and one ink.
   the logo and legends) and Martian Mono for dates, counts and the email.
 - **Layout:** the page is up to 1120px wide; from 1024px the filter is a
   sticky 14rem column left of the list.
-- **Buttons:** ink face with a darker bottom lip that presses down. In the
-  light theme lip and face are close (1.29:1), so a 1px hairline in the page
-  background separates them; both sit outside the button's box, so the label
-  is centred on the face.
+- **Buttons:** the lip is the Signal button shape; colour carries the role.
+  Ink = primary, quiet = secondary, danger = destruction, and all three share
+  a bottom lip that presses down (ink lip, control lip, danger lip; a quiet
+  Delete trigger keeps the control lip, only its text is danger). The round
+  account-menu trigger is the one button without a lip. In the light theme
+  the ink lip and face are close (1.29:1), so a 1px hairline in the page
+  background separates every lip from its face; both sit outside the button's
+  box, so the label is centred on the face.
 - **Checkboxes:** native inputs styled with `appearance: none`, not hidden
   inputs with a drawn box.
 
@@ -75,6 +79,8 @@ Status colours (edge / badge background / badge text):
 Neutrals: background `#EDF0F4` / `#0C1118`, surface `#FFFFFF` / `#141B25`,
 line `#DCE1E8` / `#263141`, text `#0E1621` / `#E6EBF2`, muted `#4D5969` /
 `#9DA9BA`, control border `#6F7A8B` / `#6E7A8D`, ink `#1B2533` / `#E6EBF2`.
+Danger, only for destruction and errors: `#B42318` / `#F97066`, its lip
+`#7A160E` / `#B8433A`.
 
 Risk to watch: with 40 rows it can get busy. Colour stays on the edge and
 the badge, never on whole rows except Offer.
@@ -108,7 +114,10 @@ the badge, never on whole rows except Offer.
   fieldsets with checkboxes, a "Clear" link and an "Apply" button; a sticky
   column left of the list from 1024px, above the list below it; an
   "Archived" badge on archived rows.
-- **Detail page, forms, sign-in and sign-up:** restyled before M5.
+- **Detail page, forms, sign-in and sign-up:** restyled before M5. The
+  detail page's header is a card with the status edge and badge (Offer
+  tinted); the status select stays neutral, since an unsaved choice isn't
+  where the application stands.
 - **Kanban (M5)** and the **landing page** (week 8, needs a `SPEC.md` story
   first): the direction must have an answer for both.
 
