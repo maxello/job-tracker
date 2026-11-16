@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   archiveApplicationAction,
+  changeStatusAction,
   createApplicationAction,
   deleteApplicationAction,
   unarchiveApplicationAction,
@@ -303,8 +304,7 @@ describe.each([
     failed: "Couldn't unarchive the application. Please try again.",
   },
 ])("$name", ({ action, dal, done, failed }) => {
-  const submit = (fields: Record<string, string>) =>
-    action(null, form(fields));
+  const submit = (fields: Record<string, string>) => action(null, form(fields));
 
   beforeEach(() => {
     dal.mockResolvedValue(done);
@@ -375,5 +375,118 @@ describe.each([
     });
     expect(console.error).toHaveBeenCalledWith(expect.any(String), error);
     expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe("changeStatusAction", () => {
+  const STATUS_FAILED = "Couldn't update the status. Please try again.";
+  const submit = (fields: Record<string, string>) =>
+    changeStatusAction(null, form(fields));
+
+  beforeEach(() => {
+    mocks.changeApplicationStatus.mockResolvedValue("changed");
+  });
+
+  it("US-3: a failed session read returns a generic message", async () => {
+    mocks.tryGetCurrentUserId.mockResolvedValue(null);
+
+    await expect(submit({ id: ID, status: "OFFER" })).resolves.toEqual({
+      ok: false,
+      error: { message: STATUS_FAILED },
+    });
+    expect(mocks.changeApplicationStatus).not.toHaveBeenCalled();
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["missing", {}],
+    ["empty", { id: "" }],
+    ["with a NUL byte", { id: "a\0b" }],
+  ])("US-0: an id that is %s gets the not-found response", async (_, id) => {
+    await expect(submit({ ...id, status: "OFFER" })).rejects.toBeInstanceOf(
+      NotFoundSignal,
+    );
+
+    expect(mocks.changeApplicationStatus).not.toHaveBeenCalled();
+  });
+
+  it("US-0: a bad id gets the not-found response even with an invalid status", async () => {
+    await expect(submit({ status: "ARCHIVED" })).rejects.toBeInstanceOf(
+      NotFoundSignal,
+    );
+
+    expect(mocks.changeApplicationStatus).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["missing", {}],
+    ["not a status", { status: "ARCHIVED" }],
+    ["empty", { status: "" }],
+  ])("US-3: a status that is %s returns a field error", async (_, status) => {
+    await expect(submit({ id: ID, ...status })).resolves.toEqual({
+      ok: false,
+      error: { fieldErrors: { status: ["Choose a valid status."] } },
+    });
+    expect(mocks.changeApplicationStatus).not.toHaveBeenCalled();
+    expect(mocks.refresh).not.toHaveBeenCalled();
+    expect(mocks.notFound).not.toHaveBeenCalled();
+  });
+
+  it("US-0: a missing or foreign application gets the not-found response", async () => {
+    mocks.changeApplicationStatus.mockResolvedValue("not-found");
+
+    await expect(submit({ id: ID, status: "OFFER" })).rejects.toBeInstanceOf(
+      NotFoundSignal,
+    );
+
+    expect(console.error).not.toHaveBeenCalled();
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+
+  it("US-3: a failed write returns a generic message, logs the real error and never returns it", async () => {
+    const error = new Error("connection refused");
+    mocks.changeApplicationStatus.mockRejectedValue(error);
+
+    await expect(submit({ id: ID, status: "OFFER" })).resolves.toEqual({
+      ok: false,
+      error: { message: STATUS_FAILED },
+    });
+    expect(console.error).toHaveBeenCalledWith(expect.any(String), error);
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+
+  it("US-3: the session user's status changes and the page refreshes in place", async () => {
+    await expect(submit({ id: ID, status: "OFFER" })).resolves.toEqual({
+      ok: true,
+      data: undefined,
+    });
+
+    expect(mocks.changeApplicationStatus).toHaveBeenCalledExactlyOnceWith(
+      OWNER,
+      ID,
+      "OFFER",
+    );
+    expect(mocks.refresh).toHaveBeenCalledOnce();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+
+  it("US-3: a no-op still succeeds and refreshes, so a stale tab catches up", async () => {
+    mocks.changeApplicationStatus.mockResolvedValue("unchanged");
+
+    await expect(submit({ id: ID, status: "OFFER" })).resolves.toEqual({
+      ok: true,
+      data: undefined,
+    });
+    expect(mocks.refresh).toHaveBeenCalledOnce();
+  });
+
+  it("US-0: the owner comes from the session, and a forged userId is ignored", async () => {
+    await submit({ id: ID, status: "OFFER", userId: "user-b" });
+
+    expect(mocks.changeApplicationStatus).toHaveBeenCalledExactlyOnceWith(
+      OWNER,
+      ID,
+      "OFFER",
+    );
   });
 });
