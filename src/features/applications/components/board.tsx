@@ -21,17 +21,20 @@ export async function Board() {
   const applications = await listApplications(userId);
 
   // Empty states 2 and 3 of US-6 replace the columns. The board has no "Show
-  // archived", so state 2 links to the list's.
-  if (applications.length === 0) {
-    return (await hasArchivedApplications(userId)) ? (
-      <AllArchived href={`/?archived=${SHOW_ARCHIVED_VALUE}`} />
-    ) : (
-      <NoApplications />
-    );
-  }
+  // archived", so state 2 links to the list's. BoardColumns still renders, so
+  // its live region survives a move that empties the board.
+  const empty =
+    applications.length === 0 ? (
+      (await hasArchivedApplications(userId)) ? (
+        <AllArchived href={`/?archived=${SHOW_ARCHIVED_VALUE}`} focusable />
+      ) : (
+        <NoApplications focusable />
+      )
+    ) : undefined;
 
   return (
     <BoardColumns
+      empty={empty}
       applications={applications.map(
         ({ id, company, role, status, updatedAt }) => ({
           id,

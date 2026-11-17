@@ -396,6 +396,86 @@ test("US-5: moving an application deleted in another tab removes the card, says 
   ).toHaveCount(0);
 });
 
+test("US-5: moving the only active card after it was deleted in another tab shows the empty state, keeps the message and focuses the empty state's text", async ({
+  page,
+}) => {
+  const company = uniqueName("Last");
+  await create(page, company);
+  await openBoard(page);
+  await expect(card(page, company)).toHaveCount(1);
+  await expect(headings(page)).toHaveCount(5);
+
+  const tab = await page.context().newPage();
+  try {
+    await tab.goto("/");
+    await tab.getByRole("link", { name: company }).click();
+    await tab.getByRole("button", { name: "Delete", exact: true }).click();
+    await tab
+      .getByRole("dialog")
+      .getByRole("button", { name: "Delete permanently" })
+      .click();
+    await expect(tab).toHaveURL("/");
+  } finally {
+    await tab.close();
+  }
+
+  await keyboardMove(page, company, "Applied");
+  const empty = page.getByRole("main").getByText("No applications yet.");
+  await expect(empty).toBeVisible();
+  await expect(headings(page)).toHaveCount(0);
+  await expect(messages(page)).toHaveText("This application no longer exists");
+  await expect(empty).toBeFocused();
+});
+
+// Review finding #2: a keyboard Move whose card then leaves the board (it was
+// archived in another tab) must not leave a focus target behind, which a
+// later refresh bringing the card back would act on.
+test("US-5: a later move's refresh doesn't pull focus to a card from an earlier keyboard Move", async ({
+  page,
+}) => {
+  const returns = uniqueName("Returns");
+  const dragged = uniqueName("Dragged");
+  await create(page, returns);
+  await create(page, dragged);
+  await openBoard(page);
+
+  const tab = await page.context().newPage();
+  try {
+    await tab.goto("/");
+    await tab.getByRole("link", { name: returns }).click();
+    await tab.getByRole("button", { name: "Archive", exact: true }).click();
+    await expect(
+      tab.getByRole("button", { name: "Unarchive", exact: true }),
+    ).toBeVisible();
+
+    // A status change on an archived application is allowed (US-8), so the
+    // move succeeds and the refresh drops the archived card.
+    await keyboardMove(page, returns, "Applied");
+    await expect(messages(page)).toHaveText(moved(returns, "Applied"));
+    await expect(card(page, returns)).toHaveCount(0);
+
+    await tab.getByRole("button", { name: "Unarchive", exact: true }).click();
+    await expect(
+      tab.getByRole("button", { name: "Archive", exact: true }),
+    ).toBeVisible();
+  } finally {
+    await tab.close();
+  }
+
+  await card(page, dragged).dragTo(column(page, "Interview"));
+  await expect(messages(page)).toHaveText(moved(dragged, "Interview"));
+  await expect(cardSelect(page, returns)).toBeVisible();
+  // Two frames, so React's effects for the refreshed board have run before
+  // focus is checked (a wait on the browser, not on a timeout).
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  await expect(cardSelect(page, returns)).not.toBeFocused();
+});
+
 test("US-5: when the move fails, the card returns to its column, a generic error shows and focus stays on its select", async ({
   page,
 }) => {

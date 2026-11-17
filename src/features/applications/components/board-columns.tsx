@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   type DragEvent,
+  type ReactNode,
 } from "react";
 import { Status } from "@/generated/prisma/enums";
 import type { ActionResult } from "@/lib/action-result";
@@ -36,14 +37,21 @@ const NO_LONGER_EXISTS = "This application no longer exists";
 type Message = { text: string; error: boolean };
 
 // Where focus goes once a keyboard move has settled (US-5): the moved card's
-// select, or the heading of the column a vanished card was shown in.
+// select, or the heading of the column a vanished card was shown in (the
+// empty state's text when that emptied the board).
 type FocusTarget =
   { kind: "select"; id: string } | { kind: "heading"; status: Status };
 
+// The board's client part (US-5). It always renders, also when the user has
+// no active applications: then it shows `empty` (the board's empty state)
+// instead of the columns, so the live region above both stays mounted when a
+// move empties the board (SPEC decision log, 2026-11-17).
 export function BoardColumns({
   applications,
+  empty,
 }: {
   applications: BoardApplication[];
+  empty?: ReactNode;
 }) {
   // Both optimistic values fall back to the server's when the move's
   // transition ends, which also delivers the refreshed board.
@@ -60,19 +68,24 @@ export function BoardColumns({
   const selects = useRef(new Map<string, HTMLSelectElement>());
   const headings = useRef(new Map<Status, HTMLHeadingElement>());
   const focusTarget = useRef<FocusTarget | null>(null);
+  // Wraps the empty state; its text is the focus target when a move empties
+  // the board.
+  const emptyBox = useRef<HTMLDivElement>(null);
   // Native drag-and-drop doesn't expose dataTransfer during dragover, so the
   // dragged card lives here.
   const dragged = useRef<BoardApplication | null>(null);
 
-  // Runs after every commit: the target is focused once it exists and is no
-  // longer disabled (a pending card's select is).
+  // Runs after every commit. It waits until no move is pending: the result
+  // arrives before the refreshed board, and a heading focused in between can
+  // vanish when the refresh empties the board.
   useEffect(() => {
     const target = focusTarget.current;
-    if (!target) return;
+    if (!target || pendingIds.length > 0) return;
     const element =
       target.kind === "select"
         ? selects.current.get(target.id)
-        : headings.current.get(target.status);
+        : (headings.current.get(target.status) ??
+          emptyBox.current?.querySelector<HTMLElement>("[tabindex='-1']"));
     if (!element || (element instanceof HTMLSelectElement && element.disabled))
       return;
     element.focus();
@@ -81,6 +94,9 @@ export function BoardColumns({
 
   function move(card: BoardApplication, to: Status, viaKeyboard: boolean) {
     setMessage({ text: "", error: false });
+    // A new move replaces any earlier target that never resolved (e.g. its
+    // card left the board), so a later refresh can't pull focus unasked.
+    focusTarget.current = null;
     startTransition(async () => {
       addMove({ id: card.id, to });
       addPending(card.id);
@@ -143,62 +159,72 @@ export function BoardColumns({
       >
         {message.text}
       </p>
-      <div className={boardClass}>
-        {Object.values(Status).map((status) => {
-          const column = columns[status];
-          return (
-            <section
-              key={status}
-              aria-labelledby={`${baseId}-${status}`}
-              onDragOver={(event) => onDragOver(event, status)}
-              onDrop={(event) => onDrop(event, status)}
-              className={columnClass}
-            >
-              <h2
-                id={`${baseId}-${status}`}
-                tabIndex={-1}
-                ref={(element) => {
-                  if (element) headings.current.set(status, element);
-                }}
-                className={headingClass}
+      {applications.length === 0 && empty ? (
+        <div ref={emptyBox}>{empty}</div>
+      ) : (
+        <div className={boardClass}>
+          {Object.values(Status).map((status) => {
+            const column = columns[status];
+            return (
+              <section
+                key={status}
+                aria-labelledby={`${baseId}-${status}`}
+                onDragOver={(event) => onDragOver(event, status)}
+                onDrop={(event) => onDrop(event, status)}
+                className={columnClass}
               >
-                {STATUS_LABELS[status]}
-                <span className={countClass}>{` · ${column.length}`}</span>
-              </h2>
-              <ul className={cardListClass}>
-                {column.map((card) => (
-                  <BoardCard
-                    key={card.id}
-                    application={card}
-                    pending={pendingIds.includes(card.id)}
-                    selectRef={(element) => {
-                      if (!element) return;
-                      selects.current.set(card.id, element);
-                      // React 19 cleanup: only drop the entry this card set,
-                      // so a re-mount in another column isn't removed.
-                      return () => {
-                        if (selects.current.get(card.id) === element) {
-                          selects.current.delete(card.id);
-                        }
-                      };
-                    }}
-                    onMove={(to) => move(card, to, true)}
-                    onDragStart={(event) => {
-                      dragged.current = card;
-                      event.dataTransfer.effectAllowed = "move";
-                      // Firefox starts a drag only with some data set.
-                      event.dataTransfer.setData("text/plain", card.company);
-                    }}
-                    onDragEnd={() => {
-                      dragged.current = null;
-                    }}
-                  />
-                ))}
-              </ul>
-            </section>
-          );
-        })}
-      </div>
+                <h2
+                  id={`${baseId}-${status}`}
+                  tabIndex={-1}
+                  ref={(element) => {
+                    if (!element) return;
+                    headings.current.set(status, element);
+                    return () => {
+                      if (headings.current.get(status) === element) {
+                        headings.current.delete(status);
+                      }
+                    };
+                  }}
+                  className={headingClass}
+                >
+                  {STATUS_LABELS[status]}
+                  <span className={countClass}>{` · ${column.length}`}</span>
+                </h2>
+                <ul className={cardListClass}>
+                  {column.map((card) => (
+                    <BoardCard
+                      key={card.id}
+                      application={card}
+                      pending={pendingIds.includes(card.id)}
+                      selectRef={(element) => {
+                        if (!element) return;
+                        selects.current.set(card.id, element);
+                        // React 19 cleanup: only drop the entry this card set,
+                        // so a re-mount in another column isn't removed.
+                        return () => {
+                          if (selects.current.get(card.id) === element) {
+                            selects.current.delete(card.id);
+                          }
+                        };
+                      }}
+                      onMove={(to) => move(card, to, true)}
+                      onDragStart={(event) => {
+                        dragged.current = card;
+                        event.dataTransfer.effectAllowed = "move";
+                        // Firefox starts a drag only with some data set.
+                        event.dataTransfer.setData("text/plain", card.company);
+                      }}
+                      onDragEnd={() => {
+                        dragged.current = null;
+                      }}
+                    />
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
