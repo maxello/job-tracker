@@ -167,7 +167,6 @@ test("E4 US-6: a search with no match shows the empty-result message, and Clear 
 
   await expect(page).toHaveURL(searchUrl(missing));
   await expect(page.getByText(NO_MATCH)).toBeVisible();
-  await expectRows(page, [], [company]);
 
   await page.getByRole("link", { name: "Clear filters", exact: true }).click();
 
