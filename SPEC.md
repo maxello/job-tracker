@@ -236,9 +236,11 @@ log, 2026-11-11).
 - The search input is `<input type="search" name="q" maxLength={200}>` with
   the visible label "Search company or role" (no placeholder, no helper text),
   at the top of the filter column, above the Status fieldset. After a reload,
-  Back or Forward it shows the parsed value: the trimmed text, or empty when
-  `q` was ignored. Text typed but not applied is dropped on Back and Forward;
-  Clear while already on `/` keeps it (see the decision log, 2026-11-17)
+  Back or Forward between list URLs it shows the parsed value: the trimmed
+  text, or empty when `q` was ignored, so text typed but not applied is
+  dropped. Returning to the list from another page that Next still preserves
+  restores the unapplied draft, by design; Clear while already on `/` keeps
+  it too (see the decision log, 2026-11-17)
 - The Clear link (`/`) resets everything: search, dates, statuses and "Show
   archived"
 - The whole filter column, including Apply, fits a 1024×700 viewport, with
@@ -957,6 +959,17 @@ lives in `src/lib/auth.ts`.
   the unapplied text, like unapplied checkboxes; it is inherent to the GET
   form, and fixing it needs client JavaScript. Rejected: client JavaScript
   that resets the form on Clear (a new client component for a rare case)
+- 2026-11-17: returning to the list from another page (e.g. `/?q=acme`, type
+  without applying, open a row, then Back) restores the unapplied search
+  draft, by design. With `cacheComponents`, Next hides up to 3 previous routes
+  with `<Activity>` and preserves form input values
+  (`node_modules/next/dist/docs/01-app/02-guides/preserving-ui-state.md`,
+  which names "a search page with filters" as a case to keep); the status
+  checkboxes already behave the same. Back or Forward between list URLs still
+  shows the parsed value (the raw-`q` key above). Checked by hand, not by an
+  e2e test, since it pins framework behaviour. Rejected: resetting the form
+  via `bfcacheId` or a client reset effect (new client code that works
+  against the documented default)
 
 ## 11. End-to-end verification
 
