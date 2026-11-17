@@ -1,5 +1,6 @@
 import type { Status } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
+import type { UpdatedRange } from "./date-filter";
 import type { CreateApplicationInput } from "./schemas";
 
 // Data access layer: every function takes the current user's id explicitly.
@@ -27,19 +28,39 @@ function escapeLike(text: string) {
   return text.replace(/[\\%_]/g, "\\$&");
 }
 
+// A bound before year 1 can't reach the database: Prisma sends 1 BC as
+// "0000-12-31 …", which Postgres rejects (22008, date/time field value out of
+// range; queries.db.test.ts D14). No row can be updated that early, so such a
+// bound is dropped, which gives the same result.
+function updatedAtCondition(updated: UpdatedRange | undefined) {
+  const gte =
+    updated?.gte && updated.gte.getUTCFullYear() >= 1 ? updated.gte : undefined;
+  const lt = updated?.lt;
+  if (!gte && !lt) return {};
+  return { updatedAt: { ...(gte && { gte }), ...(lt && { lt }) } };
+}
+
 // Home page list, newest activity first: non-archived only, unless "Show
 // archived" is on, which shows active and archived together (US-8).
 // `statuses` filters with IN only when non-empty: Prisma's `in: []` matches
 // nothing, so an empty list means no filter. `search` (US-6) is one
 // case-insensitive substring of company OR role; the OR sits beside the
 // `userId` scope, so it is ANDed with it and every other condition.
+// `updated` (US-6 date range) bounds `updatedAt` with the instants from
+// dateRange; an empty range adds no condition.
 export async function listApplications(
   userId: string,
   {
     statuses = [],
     includeArchived = false,
     search,
-  }: { statuses?: Status[]; includeArchived?: boolean; search?: string } = {},
+    updated,
+  }: {
+    statuses?: Status[];
+    includeArchived?: boolean;
+    search?: string;
+    updated?: UpdatedRange;
+  } = {},
 ) {
   const contains = search === undefined ? undefined : escapeLike(search);
   return db.application.findMany({
@@ -47,6 +68,7 @@ export async function listApplications(
       userId,
       ...(!includeArchived && { archivedAt: null }),
       ...(statuses.length > 0 && { status: { in: statuses } }),
+      ...updatedAtCondition(updated),
       ...(contains !== undefined && {
         OR: [
           { company: { contains, mode: "insensitive" } },

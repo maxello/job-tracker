@@ -6,6 +6,7 @@ import { SEARCH_MAX_LENGTH } from "../search-filter";
 import { STATUS_LABELS } from "../status";
 import { STATUS_STYLES } from "../status-style";
 import { statusFilterValue } from "../status-filter";
+import { TimeZoneInput } from "./time-zone-input";
 
 // GET form to `/`: the checked boxes become repeated `status` keys, and "Show
 // archived" adds `archived=1` (US-8).
@@ -24,6 +25,17 @@ export const searchLabelClass =
   "flex basis-full flex-col gap-1 text-sm font-medium";
 export const searchInputClass = "field w-full min-w-0 px-3 py-1.5 text-sm";
 
+// US-6 date range: an "Updated" fieldset (the word the list rows use for this
+// date) between Status and Archive, with From and To date inputs and no
+// min/max (2026-11-17). The label wraps the input, so no id is needed (#26).
+// The label column has a fixed width, so the two inputs line up. The input
+// has a fixed width below `lg` (the full column from it), shared with the
+// skeleton's box, which has no content width of its own and would otherwise
+// collapse to its padding.
+export const dateLabelClass =
+  "grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-2 text-sm lg:w-full";
+export const dateInputClass = "field w-36 min-w-0 px-2 py-1 text-sm lg:w-full";
+
 const fieldsetClass =
   "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-line bg-surface px-4 py-3 lg:flex-col lg:items-start";
 
@@ -32,22 +44,42 @@ export function StatusFilterForm({
   showArchived,
   search,
   rawQuery,
+  from,
+  to,
+  rawFrom,
+  rawTo,
+  rawTimeZone,
 }: {
   selected: Status[];
   showArchived: boolean;
   search?: string;
   // The first `q` value as it is in the URL, before parsing.
   rawQuery?: string;
+  // The parsed dates (YYYY-MM-DD), shown in the inputs.
+  from?: string;
+  to?: string;
+  // The first `from`, `to` and `tz` values as they are in the URL, before
+  // parsing.
+  rawFrom?: string;
+  rawTo?: string;
+  rawTimeZone?: string;
 }) {
   // JSON, not a joined string: `q` is user text, so no separator is safe
-  // (`?archived=1` and `?q=archived` would collide on "|archived"). The raw
-  // `q`, not the parsed one: `/` and `/?q=`, or `?q=acme` and `?q=%20acme%20`,
-  // parse the same, and Back between them must still drop unapplied text
-  // (SPEC.md decision log, 2026-11-17).
+  // (`?archived=1` and `?q=archived` would collide on "|archived"). The key
+  // tells apart every list URL the form must re-mount between, so Back and
+  // Forward drop unapplied input (SPEC.md decision log, 2026-11-17). Raw
+  // values, not parsed ones: `/` and `/?q=`, or `?q=acme` and
+  // `?q=%20acme%20`, parse the same. `tz` is in it although it isn't a
+  // visible field: Apply replaces another zone (a bookmark, or `tz=` from a
+  // submit before hydration) with the browser's, so two URLs can differ only
+  // in `tz`.
   const key = JSON.stringify([
     [...selected].sort(),
     showArchived,
     rawQuery ?? null,
+    rawFrom ?? null,
+    rawTo ?? null,
+    rawTimeZone ?? null,
   ]);
 
   return (
@@ -83,6 +115,28 @@ export function StatusFilterForm({
             </label>
           ))}
         </fieldset>
+        <fieldset className={fieldsetClass}>
+          <legend className="px-1 font-display text-sm font-semibold">
+            Updated
+          </legend>
+          {(
+            [
+              ["from", "From", from],
+              ["to", "To", to],
+            ] as const
+          ).map(([name, label, value]) => (
+            <label key={name} className={dateLabelClass}>
+              {label}
+              <input
+                type="date"
+                name={name}
+                defaultValue={value}
+                className={dateInputClass}
+              />
+            </label>
+          ))}
+        </fieldset>
+        <TimeZoneInput />
         <fieldset className={fieldsetClass}>
           <legend className="px-1 font-display text-sm font-semibold">
             Archive

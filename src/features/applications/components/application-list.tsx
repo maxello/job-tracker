@@ -2,6 +2,12 @@ import Link from "next/link";
 import { Status } from "@/generated/prisma/enums";
 import { getCurrentUserId } from "@/lib/current-user";
 import { parseShowArchived, SHOW_ARCHIVED_VALUE } from "../archived-filter";
+import {
+  dateRange,
+  parseDateParam,
+  parseTimeZone,
+  type UpdatedRange,
+} from "../date-filter";
 import { hasArchivedApplications, listApplications } from "../queries";
 import { STATUS_LABELS } from "../status";
 import { parseSearchQuery } from "../search-filter";
@@ -10,6 +16,8 @@ import { STATUS_STYLES } from "../status-style";
 import { ArchivedBadge } from "./archived-badge";
 import { LocalDate } from "./local-date";
 import {
+  dateInputClass,
+  dateLabelClass,
   searchInputClass,
   searchLabelClass,
   StatusFilterForm,
@@ -52,6 +60,11 @@ export async function ApplicationList({
   const statuses = parseStatusFilter(params.status);
   const showArchived = parseShowArchived(params.archived);
   const search = parseSearchQuery(params.q);
+  const from = parseDateParam(params.from);
+  const to = parseDateParam(params.to);
+  const updated = dateRange(from, to, parseTimeZone(params.tz));
+  const firstRaw = (value: string | string[] | undefined) =>
+    [value ?? []].flat()[0];
   return (
     <div className={listLayout}>
       <div className={filterColumn}>
@@ -59,13 +72,20 @@ export async function ApplicationList({
           selected={statuses}
           showArchived={showArchived}
           search={search}
-          rawQuery={[params.q ?? []].flat()[0]}
+          rawQuery={firstRaw(params.q)}
+          from={from}
+          to={to}
+          rawFrom={firstRaw(params.from)}
+          rawTo={firstRaw(params.to)}
+          rawTimeZone={firstRaw(params.tz)}
         />
       </div>
       <Results
         statuses={statuses}
         showArchived={showArchived}
         search={search}
+        updated={updated}
+        dated={from !== undefined || to !== undefined}
       />
     </div>
   );
@@ -75,21 +95,27 @@ async function Results({
   statuses,
   showArchived,
   search,
+  updated,
+  dated,
 }: {
   statuses: Status[];
   showArchived: boolean;
   search: string | undefined;
+  updated: UpdatedRange;
+  // A valid `from` or `to` is set; `tz` alone is never a filter.
+  dated: boolean;
 }) {
   const userId = await getCurrentUserId();
   const applications = await listApplications(userId, {
     statuses,
     includeArchived: showArchived,
     search,
+    updated,
   });
 
-  // Empty state 1 (US-6): a valid status or search filter is active; "Show
-  // archived" doesn't count as a filter.
-  const filtered = statuses.length > 0 || search !== undefined;
+  // Empty state 1 (US-6): a valid status, search or date filter is active;
+  // "Show archived" and `tz` don't count as filters.
+  const filtered = statuses.length > 0 || search !== undefined || dated;
   if (applications.length === 0 && filtered) {
     return (
       <div className={emptyBox}>
@@ -250,6 +276,21 @@ function StatusFilterSkeleton() {
           <div key={status} className={label}>
             <span className={box} />
             <span className={textPulse}>{STATUS_LABELS[status]}</span>
+          </div>
+        ))}
+      </fieldset>
+      {/* Date inputs keep the real field box; their value comes from the URL,
+          so the inside pulses, like the search box. */}
+      <fieldset className={fieldset}>
+        <legend className={legend}>
+          <span className={textPulse}>Updated</span>
+        </legend>
+        {["From", "To"].map((label) => (
+          <div key={label} className={dateLabelClass}>
+            <span className={textPulse}>{label}</span>
+            <span className={`block ${dateInputClass}`}>
+              <span className={`block h-5 ${pulse}`} />
+            </span>
           </div>
         ))}
       </fieldset>

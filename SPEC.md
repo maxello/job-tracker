@@ -220,6 +220,15 @@ log, 2026-11-11).
   the server computes the day boundaries in that zone. A missing or invalid
   `tz` falls back to UTC with no error. A bookmark gives the same result
   anywhere, because the zone is in it
+  - `tz` is a hidden input, sent on every Apply, also with no dates. Before
+    hydration it is empty, so a submit then filters in UTC (forms need
+    JavaScript, see the decision log, 2026-11-04)
+  - `tz` is valid when `Intl.DateTimeFormat` accepts it as `timeZone` after
+    trimming (aliases, any case, `UTC` and offsets such as `+02:00` included).
+    Only the first `tz` value counts, like `q`. The validity check and the
+    day-boundary computation share one function, so an accepted zone can
+    always be computed
+  - `tz` alone is never a filter: it doesn't count for empty state 1
 - URL parameters follow the same rules as `status` and `archived` (values
   trimmed, invalid ones ignored, no redirect):
   - `q`: the search text. Ignored when empty or whitespace only, longer than
@@ -231,8 +240,14 @@ log, 2026-11-11).
     input submits `q=`, which is ignored like any empty value
   - `from` and `to`: `YYYY-MM-DD`, as `<input type="date">` sends them. An
     invalid date is ignored. Both are inclusive days in the `tz` zone
+    - Valid means strictly `YYYY-MM-DD`, a real calendar date (`2026-02-30`
+      is invalid) and a year from 0001 to 9999. Only the first value of each
+      counts, like `q`
+    - When one date is valid and the other isn't, the valid one still
+      applies, and it alone makes the filter active for empty state 1
   - `from` later than `to` gives an empty result with the usual "No
-    applications match your filters", never a silent swap
+    applications match your filters", never a silent swap. This applies only
+    when both are valid
 - The search input is `<input type="search" name="q" maxLength={200}>` with
   the visible label "Search company or role" (no placeholder, no helper text),
   at the top of the filter column, above the Status fieldset. After a reload,
@@ -241,6 +256,15 @@ log, 2026-11-11).
   dropped. Returning to the list from another page that Next still preserves
   restores the unapplied draft, by design; Clear while already on `/` keeps
   it too (see the decision log, 2026-11-17)
+- The date range is a `<fieldset>` with the legend "Updated" (the word the
+  list rows use for this date) between the Status and Archive fieldsets,
+  holding two `<input type="date">` labelled "From" (`name="from"`) and "To"
+  (`name="to"`), with no `min` or `max`. Like search, after a reload, Back or
+  Forward between list URLs they show the parsed value, or are empty when the
+  value was ignored. Like search and the status checkboxes, an unapplied date
+  is restored when returning to the list from another page that Next still
+  preserves, and Clear while already on `/` keeps it (see the decision log,
+  2026-11-17)
 - The Clear link (`/`) resets everything: search, dates, statuses and "Show
   archived"
 - The whole filter column, including Apply, fits a 1024×700 viewport, with
@@ -273,7 +297,9 @@ log, 2026-11-11).
   all archived with "Show archived" off). The status checkboxes still show
   their counts, including 0
 - The loading skeleton includes the bar and the counts; the list and the
-  filter column have the same positions in the skeleton and in the loaded page
+  filter column have the same positions in the skeleton and in the loaded page.
+  The skeleton includes the date fieldset from the date-range branch, before
+  the counts and the bar ship
 
 ### US-7 AI job posting parsing (M6)
 
@@ -970,6 +996,44 @@ lives in `src/lib/auth.ts`.
   e2e test, since it pins framework behaviour. Rejected: resetting the form
   via `bfcacheId` or a client reset effect (new client code that works
   against the documented default)
+- 2026-11-17: the date range (`from`, `to`, `tz`) ships on its own branch;
+  the status counts and the pipeline bar ship on another. `tz` is a hidden
+  input in the filter form, sent on every Apply, also with no dates, so no
+  client code decides when to drop it. It gets the browser's zone after
+  hydration; a submit before that sends an empty `tz` and filters in UTC,
+  accepted because forms need JavaScript (2026-11-04). `tz` is valid when
+  `Intl.DateTimeFormat` accepts it as `timeZone` after trimming, which also
+  admits aliases, any case, `UTC` and offsets such as `+02:00`; one shared
+  function both checks it and computes the day boundaries, so an accepted zone
+  can always be computed. `tz` alone is never a filter. `from` and `to` are
+  valid when strictly `YYYY-MM-DD`, a real calendar date, with a year from
+  0001 to 9999; one valid date alone applies and makes the filter active, and
+  "`from` later than `to`" applies only when both are valid. For `tz`, `from`
+  and `to`, only the first value counts, like `q`. The raw first `from`, `to`
+  and `tz` values join the filter form's wrapper key (same reason as the raw
+  `q`, 2026-11-17): the key tells apart the list URLs the form must re-mount
+  between, not only its visible fields. `tz` is needed because Apply
+  replaces another zone (a bookmark, or `tz=` from a submit before
+  hydration) with the browser's, so two list URLs can differ only in `tz`,
+  and Back between them must still drop unapplied dates (found in review;
+  covered by `e2e/date-range.spec.ts` R11). The fieldset
+  has the legend "Updated", the word the list rows use for this date, sits
+  between Status and Archive, and holds
+  "From" and "To" date inputs with no `min` or `max`: `from` later than `to`
+  is already handled by the empty result. The loading skeleton gets the date
+  fieldset on this branch. An unapplied date behaves like unapplied search
+  text: restored when returning from another preserved page, kept by Clear
+  while already on `/` (both 2026-11-17 entries above). Rejected: the legend
+  "Last updated" (the rows say "Updated"), adding `tz` only when a date is filled
+  (needs client code to drop the field), IANA names only (narrower than what
+  the browser and the server both accept, for no gain), and `min`/`max` on
+  the inputs (client logic for a case the empty result already covers)
+- 2026-11-17: accepted limitation: a bookmark with another zone's `tz` filters
+  by that zone, while `LocalDate` shows dates in the browser's zone, so a row
+  can show a date outside the range it was filtered by. The next Apply
+  replaces `tz` with the browser's zone. Rejected: showing dates in the URL's
+  zone (one more rule for a rare case; dates follow the browser everywhere
+  else)
 
 ## 11. End-to-end verification
 

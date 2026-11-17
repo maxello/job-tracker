@@ -200,6 +200,37 @@ describe("listApplications", () => {
       ...searchOn("acme"),
     });
   });
+
+  it("Q4 US-6: the date range bounds updatedAt, keeping the userId scope, the archived exclusion and the US-2 order", async () => {
+    const gte = new Date("2026-11-16T22:00:00.000Z");
+    const lt = new Date("2026-11-17T22:00:00.000Z");
+    await listApplications(OWNER, { updated: { gte, lt } });
+
+    expect(db.application.findMany).toHaveBeenCalledOnce();
+    expect(query().where).toEqual({
+      userId: OWNER,
+      archivedAt: null,
+      updatedAt: { gte, lt },
+    });
+    expect(query().orderBy).toEqual(order);
+  });
+
+  it("Q4 US-6: one bound alone is passed as is", async () => {
+    const lt = new Date("2026-11-17T22:00:00.000Z");
+    await listApplications(OWNER, { updated: { lt } });
+
+    expect(query().where).toEqual({
+      userId: OWNER,
+      archivedAt: null,
+      updatedAt: { lt },
+    });
+  });
+
+  it("Q4 US-6: an empty range adds no updatedAt condition", async () => {
+    await listApplications(OWNER, { updated: {} });
+
+    expect(query().where).toEqual({ userId: OWNER, archivedAt: null });
+  });
 });
 
 describe("changeApplicationStatus", () => {
