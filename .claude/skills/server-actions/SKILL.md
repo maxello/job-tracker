@@ -28,6 +28,7 @@ Reference example: `updateApplicationAction` in `src/features/applications/actio
 - `getCurrentUserId()` is what pages use; no action calls it.
 - Pass `userId` to the DAL functions in the feature's `queries.ts`. They filter by `{ id, userId }` and return `"not-found"` for a missing row or another user's row; the action then calls `notFound()` (404, never 403).
 - An id that fails `applicationIdSchema` also → `notFound()`, like an unknown id.
+- Exception: `changeStatusAction` never calls `notFound()`, because the board would be replaced by the not-found UI. For a missing, foreign or unusable id it returns the not-found result `{ ok: false, error: { notFound: true } }` (and calls `refresh()` when the DAL said `"not-found"`); the detail page's `StatusForm` calls `notFound()` while rendering (US-5, SPEC decision log 2026-11-17). Every other action still calls `notFound()`.
 
 ## Validation
 
