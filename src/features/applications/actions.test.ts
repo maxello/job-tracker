@@ -380,6 +380,7 @@ describe.each([
 
 describe("changeStatusAction", () => {
   const STATUS_FAILED = "Couldn't update the status. Please try again.";
+  const NOT_FOUND = { ok: false, error: { notFound: true } };
   const submit = (fields: Record<string, string>) =>
     changeStatusAction(null, form(fields));
 
@@ -402,20 +403,24 @@ describe("changeStatusAction", () => {
     ["missing", {}],
     ["empty", { id: "" }],
     ["with a NUL byte", { id: "a\0b" }],
-  ])("US-0: an id that is %s gets the not-found response", async (_, id) => {
-    await expect(submit({ ...id, status: "OFFER" })).rejects.toBeInstanceOf(
-      NotFoundSignal,
-    );
+  ])(
+    "A1 US-0/US-5: an id that is %s gets the not-found result, never notFound()",
+    async (_, id) => {
+      await expect(submit({ ...id, status: "OFFER" })).resolves.toEqual(
+        NOT_FOUND,
+      );
+
+      expect(mocks.changeApplicationStatus).not.toHaveBeenCalled();
+      expect(mocks.notFound).not.toHaveBeenCalled();
+      expect(mocks.refresh).not.toHaveBeenCalled();
+    },
+  );
+
+  it("A2 US-0/US-5: a bad id gets the not-found result even with an invalid status", async () => {
+    await expect(submit({ status: "ARCHIVED" })).resolves.toEqual(NOT_FOUND);
 
     expect(mocks.changeApplicationStatus).not.toHaveBeenCalled();
-  });
-
-  it("US-0: a bad id gets the not-found response even with an invalid status", async () => {
-    await expect(submit({ status: "ARCHIVED" })).rejects.toBeInstanceOf(
-      NotFoundSignal,
-    );
-
-    expect(mocks.changeApplicationStatus).not.toHaveBeenCalled();
+    expect(mocks.notFound).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -432,15 +437,20 @@ describe("changeStatusAction", () => {
     expect(mocks.notFound).not.toHaveBeenCalled();
   });
 
-  it("US-0: a missing or foreign application gets the not-found response", async () => {
+  // US-5: the board must not get notFound(), which would replace it with the
+  // not-found UI; the detail page's form calls notFound() itself (SPEC.md
+  // decision log, 2026-11-17). refresh() drops the card from the board in the
+  // same response.
+  it("A3 US-0/US-5: a missing or foreign application gets the not-found result and a refresh, never notFound()", async () => {
     mocks.changeApplicationStatus.mockResolvedValue("not-found");
 
-    await expect(submit({ id: ID, status: "OFFER" })).rejects.toBeInstanceOf(
-      NotFoundSignal,
+    await expect(submit({ id: ID, status: "OFFER" })).resolves.toEqual(
+      NOT_FOUND,
     );
 
+    expect(mocks.notFound).not.toHaveBeenCalled();
     expect(console.error).not.toHaveBeenCalled();
-    expect(mocks.refresh).not.toHaveBeenCalled();
+    expect(mocks.refresh).toHaveBeenCalledOnce();
   });
 
   it("US-3: a failed write returns a generic message, logs the real error and never returns it", async () => {

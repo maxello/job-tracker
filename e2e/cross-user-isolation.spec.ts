@@ -104,12 +104,15 @@ async function swapId(form: Locator, id: string) {
 }
 
 // Submits a Server Action and checks that the request carried the owner's id
-// and the action answered with notFound(): HTTP 404 on the action POST, then
-// the not-found UI on the same URL.
+// and the action answered with the not-found UI on the same URL. Actions that
+// call notFound() answer HTTP 404; the status change answers 200 with a
+// not-found result that its form turns into the same UI (US-5, SPEC.md
+// decision log, 2026-11-17).
 async function submitAndExpectNotFound(
   page: Page,
   submit: Locator,
   ownIdOfIntruder: string,
+  actionStatus = 404,
 ) {
   const url = page.url();
   const isAction = (request: {
@@ -126,7 +129,7 @@ async function submitAndExpectNotFound(
   const body = request.postData() ?? "";
   expect(body).toContain(ownerId);
   expect(body).not.toContain(ownIdOfIntruder);
-  expect(response.status()).toBe(404);
+  expect(response.status()).toBe(actionStatus);
 
   await expectNotFound(page);
   expect(page.url()).toBe(url);
@@ -167,6 +170,19 @@ test("US-0: the list on / doesn't show another user's application", async () => 
   await expect(intruder.getByText(ownerCompany)).toHaveCount(0);
 });
 
+test("US-0 (from M5): user B's board shows none of user A's cards", async () => {
+  const ownCompany = uniqueName("Globex");
+  await createAndOpen(intruder, ownCompany);
+
+  await intruder.goto("/board");
+  await expect(
+    intruder.getByRole("main").getByRole("link", { name: ownCompany }),
+  ).toBeVisible();
+  await expect(intruder.getByRole("main").getByText(ownerCompany)).toHaveCount(
+    0,
+  );
+});
+
 test("US-0: a status change with another user's id swapped in gets the not-found response and changes nothing", async () => {
   const ownId = await createAndOpen(intruder, uniqueName("Globex"));
 
@@ -177,6 +193,7 @@ test("US-0: a status change with another user's id swapped in gets the not-found
     intruder,
     intruder.getByRole("button", { name: "Update status" }),
     ownId,
+    200,
   );
   const afterAction = await intruder.getByRole("main").innerText();
 

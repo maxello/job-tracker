@@ -7,6 +7,10 @@ export type ActionError<F extends string> = {
   // A failure that doesn't belong to one field.
   message?: string;
   fieldErrors?: Partial<Record<F, string[]>>;
+  // The record is missing or another user's. Only for actions whose callers
+  // must not get notFound() (the status change: the board would be replaced
+  // by the not-found UI, SPEC.md decision log, 2026-11-17).
+  notFound?: true;
 };
 
 export type ActionResult<T, F extends string = never, V extends string = F> =
