@@ -66,6 +66,9 @@ export function BoardCard({
       </label>
       {/* items-start: the select spans Move's face plus its lip (h-10.5 next
           to a py-2 text-sm button; h-7.5 next to the compact py-1 text-xs one).
+          Its padding fills the box exactly (1 + 10 + 20 + 10 + 1 = 42 and
+          1 + 6 + 16 + 6 + 1 = 30): Chrome's base-select puts the text at the
+          top of the content box, so spare height would all go below it.
           Below md the card is full width, the primary touch path, so the
           controls keep their full size. From md the column can be 13rem
           (about 159px of content), so both controls shrink and stay on one
@@ -79,7 +82,7 @@ export function BoardCard({
             value={selected}
             disabled={pending}
             onChange={(event) => setSelected(event.target.value as Status)}
-            className="field h-10.5 w-full min-w-0 px-3 py-2.5 text-sm font-medium md:h-7.5 md:py-1 md:pl-2 md:text-xs"
+            className="field h-10.5 w-full min-w-0 px-3 py-2.5 text-sm font-medium md:h-7.5 md:py-1.5 md:pl-2 md:text-xs"
           >
             {Object.entries(STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
