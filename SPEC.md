@@ -194,7 +194,9 @@ As a job seeker, I want to see my applications on a board by status and move the
   its new column. After any other failure the card returns and focus stays on
   its select. When the application no longer exists, the card disappears and
   focus goes to the heading of the column it was shown in (an `h2` with
-  `tabIndex={-1}`)
+  `tabIndex={-1}`). If that empties the board, the board shows its empty
+  state (state 2 or 3, as on load) and focus goes to the empty state's text
+  (`tabIndex={-1}`)
 - Dropping a card into the column it is shown in sends no request: for the
   user it isn't a move, the same as the disabled "Move" button. The
   server-side no-op from US-3 stays for stale tabs
@@ -215,7 +217,9 @@ As a job seeker, I want to see my applications on a board by status and move the
 - On any other failure the card returns to its previous column and a generic
   error message is shown
 - Messages appear in one live region above the board and stay until the next
-  move; with several moves in flight, it shows the result of the latest one
+  move; with several moves in flight, it shows the result of the latest one.
+  The live region sits above both the columns and the empty state, so a
+  message stays when a move empties the board
 - The board and the detail page still go through one server action and one
   data access layer function (US-3), and the detail page keeps its not-found
   UI. The action must not answer the board with `notFound()`, which would
@@ -1163,6 +1167,16 @@ lives in `src/lib/auth.ts`.
   filtered list loses its filters; the same mechanism can carry them later,
   but only as validated list parameters, never a raw return URL (open
   redirect)
+- 2026-11-17: a board move that hits a missing application and so empties
+  the board (found in review: the last active card was deleted in another
+  tab) shows the board's empty state, state 2 or 3 as on load. The message
+  "This application no longer exists" stays in the one live region, which
+  sits above both the columns and the empty state, and focus goes to the
+  empty state's text (`tabIndex={-1}`), since the column heading it would
+  otherwise get no longer exists. Rejected: keeping five empty columns (after
+  a reload the same board shows the empty state, so the criterion would
+  depend on how the user got there), and focus on the `h1` (it sends the
+  user back through the nav before the message's context)
 
 ## 11. End-to-end verification
 
