@@ -181,11 +181,13 @@ As a job seeker, I want to see my applications on a board by status and move the
   page (US-3): no auto-submit, and the button is disabled while the selected
   status equals the current one. The select has the visible label "Status"
   and the accessible name "Status for {company}, {role}"; the button's
-  accessible name is "Move {company}, {role}". Their ids derive from the
-  record id (#26)
+  accessible name is "Move {company}, {role}". The card is a Client
+  Component, so its ids come from `useId()` (#26)
 - After a successful "Move", focus goes to the moved card's status select in
   its new column. After any other failure the card returns and focus stays on
-  its select
+  its select. When the application no longer exists, the card disappears and
+  focus goes to the heading of the column it was shown in (an `h2` with
+  `tabIndex={-1}`)
 - Dropping a card into the column it is shown in sends no request: for the
   user it isn't a move, the same as the disabled "Move" button. The
   server-side no-op from US-3 stays for stale tabs
@@ -1105,6 +1107,19 @@ lives in `src/lib/auth.ts`.
   board's positions. Motion ships on its own branch after the board is
   merged. Rejected: wider columns that scroll on desktop, and a status badge
   on cards (the column header already names the status)
+- 2026-11-17: after a "Move" that hits a missing or foreign application, the
+  card disappears and focus goes to the heading of the column it was shown in
+  (an `h2` with `tabIndex={-1}`); the live region announces the message. The
+  heading exists even when the column becomes empty. Rejected: the next
+  card's select in the same column (there is none when the column empties, so
+  it needs a second rule), and the live region itself (focusing a live region
+  makes screen readers read it twice)
+- 2026-11-17: clarifies the 2026-11-16 board entry ("ids derived from the
+  record id (#26)"): the card is a Client Component, so its select and button
+  ids come from `useId()`, the #26 rule for Client Components; deriving ids
+  from the record id is #26's rule for Server Components. Rejected:
+  `${useId()}-${id}` (`useId()` is already unique per instance; the record id
+  adds nothing)
 
 ## 11. End-to-end verification
 
