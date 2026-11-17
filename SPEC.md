@@ -224,11 +224,23 @@ log, 2026-11-11).
   trimmed, invalid ones ignored, no redirect):
   - `q`: the search text. Ignored when empty or whitespace only, longer than
     200 characters (the US-1 limit for company and role) or containing a NUL
-    byte
+    byte. The length is counted after trimming, in UTF-16 code units (as Zod's
+    `.max(200)` counts). Only the first `q` value counts: if it is invalid,
+    there is no search, and later values are never tried. Internal whitespace
+    is kept as typed, and the text is not Unicode-normalized. An empty search
+    input submits `q=`, which is ignored like any empty value
   - `from` and `to`: `YYYY-MM-DD`, as `<input type="date">` sends them. An
     invalid date is ignored. Both are inclusive days in the `tz` zone
   - `from` later than `to` gives an empty result with the usual "No
     applications match your filters", never a silent swap
+- The search input is `<input type="search" name="q" maxLength={200}>` with
+  the visible label "Search company or role" (no placeholder, no helper text),
+  at the top of the filter column, above the Status fieldset. After a reload,
+  Back or Forward between list URLs it shows the parsed value: the trimmed
+  text, or empty when `q` was ignored, so text typed but not applied is
+  dropped. Returning to the list from another page that Next still preserves
+  restores the unapplied draft, by design; Clear while already on `/` keeps
+  it too (see the decision log, 2026-11-17)
 - The Clear link (`/`) resets everything: search, dates, statuses and "Show
   archived"
 - The whole filter column, including Apply, fits a 1024×700 viewport, with
@@ -905,6 +917,59 @@ lives in `src/lib/auth.ts`.
   (US-5). Rejected: "no layout shift" judged by eye (not testable), and
   banning drag animation under reduced motion (dragging follows the pointer,
   it isn't decorative motion)
+- 2026-11-16: search (`q`) ships on its own branch before the date range. Only
+  the first `q` value counts; if it is invalid there is no search, and later
+  values are never tried. This differs on purpose from `status` (all valid
+  values count) and `archived` (on when any value is `1`): search is one
+  phrase, and merging or picking among several would be magic the user didn't
+  ask for. The 200-character limit is counted after trimming, in UTF-16 code
+  units, matching Zod's `.max(200)` for company and role and the input's
+  `maxLength`. Internal whitespace is kept as typed and the text is not
+  Unicode-normalized. An empty input submits `q=`, which is ignored, so no
+  JavaScript strips it. The input is `type="search"` with the visible label
+  "Search company or role", at the top of the filter column above Status; it
+  shows the parsed value (trimmed, or empty when ignored), and `q` joins the
+  form wrapper's key so Back, Forward and Clear re-mount it.
+  `e2e/filter-layout.spec.ts` checks now that the whole column, including the
+  search input and Apply, fits 1024×700. Rejected: a placeholder or helper
+  text instead of the label (a placeholder is not a label, and the column has
+  no vertical room for helper text), using the last `q` value, and collapsing
+  internal whitespace
+- 2026-11-16: search runs through Prisma's `contains` with
+  `mode: "insensitive"` (ILIKE) on company OR role, ANDed with the `userId`
+  scope and the other filters. Checked against the e2e database (Neon,
+  PostgreSQL 18.7) before planning: Prisma 7.10.1 does not escape `%` and `_`
+  (`100%` matched "100x Remote"), and `\` is ILIKE's escape character (`k\s`
+  didn't find "back\slash"), so the DAL escapes all three with a backslash.
+  The database's `C.UTF-8` locale matches Cyrillic case-insensitively
+  (`ПРИВІТ` finds "Привіт"); this was checked on the e2e database only, **to
+  verify on the production database at the M7 deploy**. The db tests
+  (`queries.db.test.ts`, "search") pin all of this. The filter form's wrapper
+  key is `JSON.stringify([sortedStatuses, showArchived, search ?? null])`.
+  Rejected: raw SQL (the escaping is three characters, and raw SQL would
+  bypass the typed `where` and its `userId` scope), and a separator-joined
+  string key (`q` is user text, so `?archived=1` and `?q=archived` could
+  collide on "|archived" and Back between them wouldn't re-mount the form)
+- 2026-11-17: the filter form's wrapper key uses the raw first `q` value from
+  the URL, not the parsed one. `/` and `/?q=`, or `?q=acme` and
+  `?q=%20acme%20`, parse to the same search, so a parsed key kept text typed
+  but not applied after Back or Forward between them (found in review;
+  covered by `e2e/search.spec.ts` E9). Accepted limitation: typing and then
+  clicking Clear while already on `/` (the same URL, so the same key) keeps
+  the unapplied text, like unapplied checkboxes; it is inherent to the GET
+  form, and fixing it needs client JavaScript. Rejected: client JavaScript
+  that resets the form on Clear (a new client component for a rare case)
+- 2026-11-17: returning to the list from another page (e.g. `/?q=acme`, type
+  without applying, open a row, then Back) restores the unapplied search
+  draft, by design. With `cacheComponents`, Next hides up to 3 previous routes
+  with `<Activity>` and preserves form input values
+  (`node_modules/next/dist/docs/01-app/02-guides/preserving-ui-state.md`,
+  which names "a search page with filters" as a case to keep); the status
+  checkboxes already behave the same. Back or Forward between list URLs still
+  shows the parsed value (the raw-`q` key above). Checked by hand, not by an
+  e2e test, since it pins framework behaviour. Rejected: resetting the form
+  via `bfcacheId` or a client reset effect (new client code that works
+  against the documented default)
 
 ## 11. End-to-end verification
 

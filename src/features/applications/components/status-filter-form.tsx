@@ -2,6 +2,7 @@ import Form from "next/form";
 import Link from "next/link";
 import { Status } from "@/generated/prisma/enums";
 import { SHOW_ARCHIVED_VALUE } from "../archived-filter";
+import { SEARCH_MAX_LENGTH } from "../search-filter";
 import { STATUS_LABELS } from "../status";
 import { STATUS_STYLES } from "../status-style";
 import { statusFilterValue } from "../status-filter";
@@ -16,18 +17,38 @@ import { statusFilterValue } from "../status-filter";
 // follow them (SPEC.md decision log, 2026-11-12). Below `lg` the fieldsets sit
 // side by side; from `lg` they stack in the list's left column, one checkbox
 // per line (2026-11-13). The column and its spacing come from ApplicationList.
+// US-6 search sits above them: a labelled `q` input showing the parsed value
+// (2026-11-16). The label wraps the input, so no id is needed (#26). It spans
+// the whole row below `lg`.
+export const searchLabelClass =
+  "flex basis-full flex-col gap-1 text-sm font-medium";
+export const searchInputClass = "field w-full min-w-0 px-3 py-1.5 text-sm";
+
 const fieldsetClass =
   "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-line bg-surface px-4 py-3 lg:flex-col lg:items-start";
 
 export function StatusFilterForm({
   selected,
   showArchived,
+  search,
+  rawQuery,
 }: {
   selected: Status[];
   showArchived: boolean;
+  search?: string;
+  // The first `q` value as it is in the URL, before parsing.
+  rawQuery?: string;
 }) {
-  const key =
-    [...selected].sort().join(",") + (showArchived ? "|archived" : "");
+  // JSON, not a joined string: `q` is user text, so no separator is safe
+  // (`?archived=1` and `?q=archived` would collide on "|archived"). The raw
+  // `q`, not the parsed one: `/` and `/?q=`, or `?q=acme` and `?q=%20acme%20`,
+  // parse the same, and Back between them must still drop unapplied text
+  // (SPEC.md decision log, 2026-11-17).
+  const key = JSON.stringify([
+    [...selected].sort(),
+    showArchived,
+    rawQuery ?? null,
+  ]);
 
   return (
     <div key={key}>
@@ -35,6 +56,16 @@ export function StatusFilterForm({
         action="/"
         className="flex flex-wrap items-end gap-3 lg:flex-col lg:flex-nowrap lg:items-stretch"
       >
+        <label className={searchLabelClass}>
+          Search company or role
+          <input
+            type="search"
+            name="q"
+            maxLength={SEARCH_MAX_LENGTH}
+            defaultValue={search}
+            className={searchInputClass}
+          />
+        </label>
         <fieldset className={fieldsetClass}>
           <legend className="px-1 font-display text-sm font-semibold">
             Status

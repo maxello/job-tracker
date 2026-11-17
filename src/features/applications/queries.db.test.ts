@@ -374,6 +374,110 @@ describe("archive and unarchive (real database)", () => {
   });
 });
 
+// US-6 search against Postgres: Prisma's `contains` and ILIKE behaviour can't
+// be checked with a mocked client (SPEC.md decision log, 2026-11-16).
+describe("search (real database)", () => {
+  async function create(userId: string, company: string, role = "Engineer") {
+    const { id } = await createApplication(userId, {
+      company,
+      role,
+      stack: [],
+    });
+    return id;
+  }
+
+  async function search(
+    userId: string,
+    text: string,
+    options: Omit<Parameters<typeof listApplications>[1] & {}, "search"> = {},
+  ) {
+    const rows = await listApplications(userId, { ...options, search: text });
+    return rows.map((row) => row.id).sort();
+  }
+
+  const ids = (...list: string[]) => [...list].sort();
+
+  it("D1 US-6: matches company OR role, case-insensitive substring", async () => {
+    const userId = await createUser();
+    const acme = await create(userId, "Acme");
+    const frontend = await create(userId, "Globex", "Senior Frontend Engineer");
+    await create(userId, "Initech", "Backend Engineer");
+
+    expect(await search(userId, "CME")).toEqual(ids(acme));
+    expect(await search(userId, "frontend")).toEqual(ids(frontend));
+  });
+
+  it("D2 US-6: the whole text is one phrase, not separate words", async () => {
+    const userId = await createUser();
+    const phrase = await create(userId, "Acme Dev Shop");
+    await create(userId, "Acme", "Developer");
+
+    expect(await search(userId, "acme dev")).toEqual(ids(phrase));
+  });
+
+  it("D3 US-6: %, _ and \\ match literally", async () => {
+    const userId = await createUser();
+    const percent = await create(userId, "100% Remote");
+    await create(userId, "100x Remote");
+    const underscore = await create(userId, "a_b");
+    await create(userId, "axb");
+    const backslash = await create(userId, "back\\slash");
+
+    expect(await search(userId, "100%")).toEqual(ids(percent));
+    expect(await search(userId, "a_b")).toEqual(ids(underscore));
+    expect(await search(userId, "k\\s")).toEqual(ids(backslash));
+  });
+
+  it("D4 US-6: case-insensitive for Cyrillic", async () => {
+    const userId = await createUser();
+    const lower = await create(userId, "Привіт Ltd");
+    const upper = await create(userId, "ПРИВІТ Co");
+    await create(userId, "Hello Ltd");
+
+    expect(await search(userId, "ПРИВІТ")).toEqual(ids(lower, upper));
+    expect(await search(userId, "привіт")).toEqual(ids(lower, upper));
+  });
+
+  it("D5 US-6: an archived match is hidden unless Show archived is on", async () => {
+    const userId = await createUser();
+    const active = await create(userId, "Acme Active");
+    const archived = await create(userId, "Acme Archived");
+    await archiveApplication(userId, archived);
+    await create(userId, "Globex");
+
+    expect(await search(userId, "acme")).toEqual(ids(active));
+    expect(await search(userId, "acme", { includeArchived: true })).toEqual(
+      ids(active, archived),
+    );
+  });
+
+  it("D6 US-6: search and the status filter combine (AND)", async () => {
+    const userId = await createUser();
+    const applied = await create(userId, "Acme Applied");
+    await changeApplicationStatus(userId, applied, "APPLIED");
+    await create(userId, "Acme Wishlist");
+    const otherApplied = await create(userId, "Globex Applied");
+    await changeApplicationStatus(userId, otherApplied, "APPLIED");
+
+    expect(await search(userId, "acme", { statuses: ["APPLIED"] })).toEqual(
+      ids(applied),
+    );
+  });
+
+  it("D7 US-0: another user's application never comes back, even when the text matches", async () => {
+    const owner = await createUser();
+    const intruder = await createUser();
+    // One owner row matches by company and one by role, so a userId that
+    // guards only one branch of the OR leaks the other.
+    await create(owner, "Shared Name Co");
+    await create(owner, "Owner Co", "Shared Name Engineer");
+    const own = await create(intruder, "Shared Name Ltd");
+    await create(intruder, "Unrelated");
+
+    expect(await search(intruder, "shared name")).toEqual(ids(own));
+  });
+});
+
 // Polls until `count` sessions wait on the holder: directly, or behind another
 // waiter that does (the second row-lock waiter queues behind the first).
 // Matching the holder's pid ignores unrelated sessions.

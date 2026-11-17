@@ -74,3 +74,56 @@ describe("StatusFilterForm groups", () => {
     expect(archive?.body).toContain('name="archived"');
   });
 });
+
+// US-6 search: a labelled search input at the top of the form.
+function searchLabel(html: string) {
+  return [...html.matchAll(/<label[^>]*>([\s\S]*?)<\/label>/g)]
+    .map(([, body]) => body!)
+    .find((body) => /<input[^>]*name="q"/.test(body));
+}
+
+function searchInput(html: string) {
+  return html.match(/<input[^>]*name="q"[^>]*>/)?.[0];
+}
+
+describe("StatusFilterForm search", () => {
+  it('F1 US-6: a search input named q, max 200, labelled "Search company or role", with no placeholder', () => {
+    const html = renderToStaticMarkup(
+      <StatusFilterForm selected={[]} showArchived={false} />,
+    );
+
+    const label = searchLabel(html);
+    expect(label).toBeDefined();
+    expect(label!.replace(/<[^>]*>/g, "").trim()).toBe(
+      "Search company or role",
+    );
+    const input = searchInput(html);
+    expect(input).toContain('type="search"');
+    expect(input).toContain('maxLength="200"');
+    expect(input).not.toContain("placeholder");
+  });
+
+  it("F2 US-6: the search input comes before the Status fieldset", () => {
+    const html = renderToStaticMarkup(
+      <StatusFilterForm selected={[]} showArchived={false} />,
+    );
+
+    const search = html.search(/<input[^>]*name="q"/);
+    expect(search).toBeGreaterThanOrEqual(0);
+    expect(search).toBeLessThan(html.indexOf("<fieldset"));
+  });
+
+  it.each([
+    ["acme", 'value="acme"'],
+    [undefined, undefined],
+  ])("F3 US-6: search=%j shows the parsed value", (search, value) => {
+    const html = renderToStaticMarkup(
+      <StatusFilterForm selected={[]} showArchived={false} search={search} />,
+    );
+
+    const input = searchInput(html);
+    expect(input).toBeDefined();
+    if (value) expect(input).toContain(value);
+    else expect(input).not.toMatch(/\svalue=/);
+  });
+});

@@ -4,11 +4,16 @@ import { getCurrentUserId } from "@/lib/current-user";
 import { parseShowArchived, SHOW_ARCHIVED_VALUE } from "../archived-filter";
 import { hasArchivedApplications, listApplications } from "../queries";
 import { STATUS_LABELS } from "../status";
+import { parseSearchQuery } from "../search-filter";
 import { parseStatusFilter } from "../status-filter";
 import { STATUS_STYLES } from "../status-style";
 import { ArchivedBadge } from "./archived-badge";
 import { LocalDate } from "./local-date";
-import { StatusFilterForm } from "./status-filter-form";
+import {
+  searchInputClass,
+  searchLabelClass,
+  StatusFilterForm,
+} from "./status-filter-form";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -46,12 +51,22 @@ export async function ApplicationList({
   const params = await searchParams;
   const statuses = parseStatusFilter(params.status);
   const showArchived = parseShowArchived(params.archived);
+  const search = parseSearchQuery(params.q);
   return (
     <div className={listLayout}>
       <div className={filterColumn}>
-        <StatusFilterForm selected={statuses} showArchived={showArchived} />
+        <StatusFilterForm
+          selected={statuses}
+          showArchived={showArchived}
+          search={search}
+          rawQuery={[params.q ?? []].flat()[0]}
+        />
       </div>
-      <Results statuses={statuses} showArchived={showArchived} />
+      <Results
+        statuses={statuses}
+        showArchived={showArchived}
+        search={search}
+      />
     </div>
   );
 }
@@ -59,17 +74,23 @@ export async function ApplicationList({
 async function Results({
   statuses,
   showArchived,
+  search,
 }: {
   statuses: Status[];
   showArchived: boolean;
+  search: string | undefined;
 }) {
   const userId = await getCurrentUserId();
   const applications = await listApplications(userId, {
     statuses,
     includeArchived: showArchived,
+    search,
   });
 
-  if (applications.length === 0 && statuses.length > 0) {
+  // Empty state 1 (US-6): a valid status or search filter is active; "Show
+  // archived" doesn't count as a filter.
+  const filtered = statuses.length > 0 || search !== undefined;
+  if (applications.length === 0 && filtered) {
     return (
       <div className={emptyBox}>
         <p className="text-muted">No applications match your filters.</p>
@@ -211,6 +232,16 @@ function StatusFilterSkeleton() {
       aria-hidden="true"
       className="flex flex-wrap items-end gap-3 lg:flex-col lg:flex-nowrap lg:items-stretch"
     >
+      {/* The search box keeps the real field's border and padding, but its
+          value comes from the URL like the checkbox states, so the inside
+          pulses. The bar is one text-sm line (h-5), the input's line height,
+          so the box is as tall as the loaded one. */}
+      <div className={searchLabelClass}>
+        <span className={textPulse}>Search company or role</span>
+        <span className={`block ${searchInputClass}`}>
+          <span className={`block h-5 ${pulse}`} />
+        </span>
+      </div>
       <fieldset className={fieldset}>
         <legend className={legend}>
           <span className={textPulse}>Status</span>

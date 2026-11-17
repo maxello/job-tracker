@@ -21,13 +21,17 @@ async function openListWithOneApplication(page: Page) {
 // Resolves every locator first, so a wrong selector fails here, not as a
 // layout assertion.
 async function layoutBoxes(page: Page) {
+  const search = page.getByRole("searchbox", {
+    name: "Search company or role",
+    exact: true,
+  });
   const status = page.getByRole("group", { name: "Status", exact: true });
   const archive = page.getByRole("group", { name: "Archive", exact: true });
   const apply = page.getByRole("button", { name: "Apply", exact: true });
   const form = page.locator("form").filter({ has: status });
   const list = page.getByRole("list");
 
-  for (const locator of [status, archive, apply, form, list]) {
+  for (const locator of [search, status, archive, apply, form, list]) {
     await expect(locator).toBeVisible();
   }
 
@@ -43,6 +47,7 @@ async function layoutBoxes(page: Page) {
   };
 
   return {
+    search: await box(search),
     status: await box(status),
     archive: await box(archive),
     apply: await box(apply),
@@ -62,11 +67,32 @@ test.describe("desktop (1280×800)", () => {
       .soft(boxes.form.right, "form right edge ≤ list left edge")
       .toBeLessThanOrEqual(boxes.list.left);
     expect
+      .soft(boxes.search.bottom, "search bottom ≤ Status top")
+      .toBeLessThanOrEqual(boxes.status.top);
+    expect
       .soft(boxes.archive.top, "Archive top ≥ Status bottom")
       .toBeGreaterThanOrEqual(boxes.status.bottom);
     expect
       .soft(boxes.apply.top, "Apply top ≥ Archive bottom")
       .toBeGreaterThanOrEqual(boxes.archive.bottom);
+  });
+});
+
+// US-6: the whole filter column, including search and Apply, fits a 1024×700
+// viewport (SPEC.md decision log, 2026-11-16).
+test.describe("small desktop (1024×700)", () => {
+  test.use({ viewport: { width: 1024, height: 700 } });
+
+  test("US-6: the whole filter column, including search and Apply, fits the viewport", async ({
+    page,
+  }) => {
+    await openListWithOneApplication(page);
+    const boxes = await layoutBoxes(page);
+
+    expect.soft(boxes.form.top, "form top ≥ 0").toBeGreaterThanOrEqual(0);
+    expect
+      .soft(boxes.apply.bottom, "Apply bottom ≤ 700")
+      .toBeLessThanOrEqual(700);
   });
 });
 
