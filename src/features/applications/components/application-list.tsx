@@ -14,6 +14,12 @@ import { parseSearchQuery } from "../search-filter";
 import { parseStatusFilter } from "../status-filter";
 import { STATUS_STYLES } from "../status-style";
 import { ArchivedBadge } from "./archived-badge";
+import {
+  AllArchived,
+  emptyBox,
+  emptyLink,
+  NoApplications,
+} from "./empty-states";
 import { LocalDate } from "./local-date";
 import {
   dateInputClass,
@@ -22,6 +28,7 @@ import {
   searchLabelClass,
   StatusFilterForm,
 } from "./status-filter-form";
+import { ViewSwitcher } from "./view-switcher";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -31,9 +38,16 @@ type SearchParams = Record<string, string | string[] | undefined>;
 // `items-start` keeps the column at its own height so it can stick, and
 // `minmax(0,1fr)` lets long names truncate instead of widening the grid. The
 // column has a fixed width, so the skeleton matches it without measuring text.
+// The view switcher (US-5) comes first: above the filter form below `lg`,
+// and from `lg` in row 1 of the list column, so it doesn't push the filter
+// column down. The filter column spans both rows; `auto_1fr` rows give the
+// extra height to row 2, so the switcher's row stays its own height.
 const listLayout =
-  "lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-6";
-const filterColumn = "mb-4 lg:sticky lg:top-4 lg:mb-0";
+  "lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-6 lg:gap-y-4";
+const switcherCell = "mb-4 lg:col-start-2 lg:row-start-1 lg:mb-0";
+const filterColumn =
+  "mb-4 lg:sticky lg:top-4 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:mb-0";
+const resultsCell = "lg:col-start-2 lg:row-start-2";
 
 // The list is a surface card: Rejected's grey edge reaches 3:1 on the
 // surface, not on the page background. Each row carries a 6px status edge;
@@ -44,10 +58,6 @@ const rowLayout =
   "flex flex-col gap-2 border-l-6 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4";
 const rowClass = `${rowLayout} hover:bg-row-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus`;
 const rowMeta = "flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm";
-const emptyBox =
-  "rounded-lg border border-dashed border-control px-4 py-12 text-center";
-const emptyLink =
-  "mt-4 inline-block text-sm font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
 // Reads searchParams inside the page's <Suspense>, so the header stays in the
 // static shell (SPEC.md decision log, 2026-11-11).
@@ -67,6 +77,9 @@ export async function ApplicationList({
     [value ?? []].flat()[0];
   return (
     <div className={listLayout}>
+      <div className={switcherCell}>
+        <ViewSwitcher current="list" />
+      </div>
       <div className={filterColumn}>
         <StatusFilterForm
           selected={statuses}
@@ -80,13 +93,15 @@ export async function ApplicationList({
           rawTimeZone={firstRaw(params.tz)}
         />
       </div>
-      <Results
-        statuses={statuses}
-        showArchived={showArchived}
-        search={search}
-        updated={updated}
-        dated={from !== undefined || to !== undefined}
-      />
+      <div className={resultsCell}>
+        <Results
+          statuses={statuses}
+          showArchived={showArchived}
+          search={search}
+          updated={updated}
+          dated={from !== undefined || to !== undefined}
+        />
+      </div>
     </div>
   );
 }
@@ -134,29 +149,10 @@ async function Results({
     !showArchived &&
     (await hasArchivedApplications(userId))
   ) {
-    return (
-      <div className={emptyBox}>
-        <p className="text-muted">All your applications are archived.</p>
-        <Link href={`/?archived=${SHOW_ARCHIVED_VALUE}`} className={emptyLink}>
-          Show archived
-        </Link>
-      </div>
-    );
+    return <AllArchived href={`/?archived=${SHOW_ARCHIVED_VALUE}`} />;
   }
 
-  if (applications.length === 0) {
-    return (
-      <div className={emptyBox}>
-        <p className="text-muted">No applications yet.</p>
-        <Link
-          href="/applications/new"
-          className="button-ink mt-4 px-4 py-2 text-sm"
-        >
-          Add your first application
-        </Link>
-      </div>
-    );
-  }
+  if (applications.length === 0) return <NoApplications />;
 
   return (
     <ul className={listBox}>
@@ -212,13 +208,17 @@ const textPulse = `${pulse} ${hiddenText}`;
 export function ApplicationListSkeleton() {
   return (
     <div className={`${listLayout} forced-color-adjust-none`}>
+      {/* Static, so the real switcher: it doesn't move when the list loads. */}
+      <div className={switcherCell}>
+        <ViewSwitcher current="list" />
+      </div>
       <div className={filterColumn}>
         <StatusFilterSkeleton />
       </div>
       <ul
         aria-busy="true"
         aria-label="Loading applications"
-        className={listBox}
+        className={`${listBox} ${resultsCell}`}
       >
         {[0, 1, 2].map((i) => (
           <li key={i}>

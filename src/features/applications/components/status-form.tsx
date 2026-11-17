@@ -1,5 +1,6 @@
 "use client";
 
+import { notFound } from "next/navigation";
 import { useActionState, useId, useState } from "react";
 import type { Status } from "@/generated/prisma/enums";
 import { changeStatusAction } from "../actions";
@@ -18,6 +19,10 @@ export function StatusForm({ id, status }: Props) {
   const [state, formAction, pending] = useActionState(changeStatusAction, null);
   const [selected, setSelected] = useState(status);
   const failure = state?.ok === false ? state.error : undefined;
+  // The action returns not-found instead of throwing it (the board must keep
+  // its page). Thrown while rendering, it reaches the segment's not-found
+  // boundary, which shows the same UI as a missing id.
+  if (failure?.notFound) notFound();
   const error = failure?.fieldErrors?.status?.[0] ?? failure?.message;
   // Unique per instance: a hidden detail page can stay in the document (#26).
   const baseId = useId();

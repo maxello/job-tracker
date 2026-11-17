@@ -213,7 +213,15 @@ export async function unarchiveApplicationAction(
   );
 }
 
-// The single entry point for status changes (detail page now, kanban in M5).
+// A missing or foreign application, or an unusable id: the same result for
+// all of them, never "forbidden".
+const STATUS_NOT_FOUND = { ok: false, error: { notFound: true } } as const;
+
+// The single entry point for status changes (detail page and board, US-5).
+// It never calls notFound(): that would replace the whole board with the
+// not-found UI. It returns a not-found result instead, and the detail page's
+// StatusForm calls notFound() while rendering (SPEC.md decision log,
+// 2026-11-17).
 export async function changeStatusAction(
   _prevState: ActionResult<void, "status"> | null,
   formData: FormData,
@@ -231,7 +239,7 @@ export async function changeStatusAction(
     // No usable id (field missing or not a string): not found, like an id that
     // doesn't exist.
     if (parsed.error.issues.some((issue) => issue.path[0] === "id")) {
-      notFound();
+      return STATUS_NOT_FOUND;
     }
     return {
       ok: false,
@@ -251,13 +259,16 @@ export async function changeStatusAction(
     return { ok: false, error: { message: STATUS_FAILED } };
   }
 
-  // Missing or another user's application: 404, never 403.
-  // notFound throws, so it stays outside the try/catch.
-  if (result === "not-found") notFound();
+  // Missing or another user's application: never 403. refresh() drops the
+  // card from the board in this same response.
+  if (result === "not-found") {
+    refresh();
+    return STATUS_NOT_FOUND;
+  }
 
-  // The detail page is request-time data with nothing cached to revalidate;
-  // refresh re-renders it in this response. Also on a no-op, so a page left
-  // stale by another tab catches up with the database.
+  // Detail page and board are request-time data with nothing cached to
+  // revalidate; refresh re-renders them in this response. Also on a no-op, so
+  // a page left stale by another tab catches up with the database.
   refresh();
   return { ok: true, data: undefined };
 }
