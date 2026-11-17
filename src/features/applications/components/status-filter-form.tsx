@@ -28,10 +28,13 @@ export const searchInputClass = "field w-full min-w-0 px-3 py-1.5 text-sm";
 // US-6 date range: an "Updated" fieldset (the word the list rows use for this
 // date) between Status and Archive, with From and To date inputs and no
 // min/max (2026-11-17). The label wraps the input, so no id is needed (#26).
-// The label column has a fixed width, so the two inputs line up.
+// The label column has a fixed width, so the two inputs line up. The input
+// has a fixed width below `lg` (the full column from it), shared with the
+// skeleton's box, which has no content width of its own and would otherwise
+// collapse to its padding.
 export const dateLabelClass =
   "grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-2 text-sm lg:w-full";
-export const dateInputClass = "field min-w-0 px-2 py-1 text-sm";
+export const dateInputClass = "field w-36 min-w-0 px-2 py-1 text-sm lg:w-full";
 
 const fieldsetClass =
   "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-line bg-surface px-4 py-3 lg:flex-col lg:items-start";

@@ -116,3 +116,59 @@ test.describe("mobile (390×844)", () => {
     );
   });
 });
+
+// US-6: the loading skeleton keeps the filter column's positions. Its date
+// boxes are spans with no content width, so they collapsed to their padding
+// below `lg` while the real date inputs kept their width. Without JavaScript
+// the streamed list never replaces the fallback, so the skeleton stays on
+// screen to be measured. The counts branch extends this check to the whole
+// filter column.
+test("US-6: the skeleton's date boxes are as wide as the loaded date inputs", async ({
+  page,
+  browser,
+}) => {
+  await openListWithOneApplication(page);
+  const loaded = page.getByRole("group", { name: "Updated", exact: true });
+  const loadedInputs = [
+    loaded.getByLabel("From", { exact: true }),
+    loaded.getByLabel("To", { exact: true }),
+  ];
+
+  const noJs = await browser.newContext({
+    javaScriptEnabled: false,
+    storageState: await page.context().storageState(),
+  });
+  try {
+    const skeleton = await noJs.newPage();
+    await skeleton.goto("/");
+    // The skeleton is aria-hidden, so it has no roles: CSS locators. The
+    // hidden streamed form is in the document too, after the skeleton.
+    const skeletonFieldset = skeleton
+      .locator('[aria-hidden="true"] fieldset')
+      .filter({ hasText: "Updated" })
+      .first();
+    const skeletonBoxes = skeletonFieldset.locator(
+      ":scope > div > span:nth-child(2)",
+    );
+    await expect(skeletonBoxes).toHaveCount(2);
+
+    for (const width of [390, 768, 1024]) {
+      await page.setViewportSize({ width, height: 900 });
+      await skeleton.setViewportSize({ width, height: 900 });
+      for (const [i, name] of ["From", "To"].entries()) {
+        await expect(loadedInputs[i]!).toBeVisible();
+        const real = await loadedInputs[i]!.boundingBox();
+        const fake = await skeletonBoxes.nth(i).boundingBox();
+        if (!real || !fake) throw new Error(`${name} has no bounding box`);
+        expect
+          .soft(
+            Math.abs(fake.width - real.width),
+            `${width}px ${name}: skeleton ${fake.width} vs loaded ${real.width}`,
+          )
+          .toBeLessThanOrEqual(1);
+      }
+    }
+  } finally {
+    await noJs.close();
+  }
+});
