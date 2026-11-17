@@ -64,10 +64,14 @@ export function BoardCard({
       <label htmlFor={selectId} className="mt-2 text-xs font-medium">
         Status
       </label>
-      {/* items-start and h-10.5: the select spans Move's face plus its lip.
-          Below about 12rem of content, Move wraps under the select. */}
-      <div className="flex flex-wrap items-start gap-2">
-        <span className="field-select min-w-28 flex-1">
+      {/* items-start: the select spans Move's face plus its lip (h-10.5 next
+          to a py-2 text-sm button; h-7.5 next to the compact py-1 text-xs one).
+          Below md the card is full width, the primary touch path, so the
+          controls keep their full size. From md the column can be 13rem
+          (about 159px of content), so both controls shrink and stay on one
+          row: the select drops its minimum width and takes what Move leaves. */}
+      <div className="flex flex-wrap items-start gap-2 md:flex-nowrap md:gap-1.5">
+        <span className="field-select min-w-28 flex-1 md:min-w-0">
           <select
             id={selectId}
             ref={selectRef}
@@ -75,7 +79,7 @@ export function BoardCard({
             value={selected}
             disabled={pending}
             onChange={(event) => setSelected(event.target.value as Status)}
-            className="field h-10.5 w-full min-w-0 px-3 py-2.5 text-sm font-medium"
+            className="field h-10.5 w-full min-w-0 px-3 py-2.5 text-sm font-medium md:h-7.5 md:py-1 md:pl-2 md:text-xs"
           >
             {Object.entries(STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -89,7 +93,7 @@ export function BoardCard({
           aria-label={`Move ${name}`}
           disabled={pending || selected === status}
           onClick={() => onMove(selected)}
-          className="button-quiet shrink-0 px-3 py-2 text-sm"
+          className="button-quiet shrink-0 px-3 py-2 text-sm md:px-2.5 md:py-1 md:text-xs"
         >
           Move
         </button>
