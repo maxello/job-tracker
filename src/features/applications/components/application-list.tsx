@@ -232,10 +232,15 @@ function StatusFilterSkeleton() {
       aria-hidden="true"
       className="flex flex-wrap items-end gap-3 lg:flex-col lg:flex-nowrap lg:items-stretch"
     >
-      {/* The empty search box is static chrome, drawn as itself. */}
+      {/* The search box keeps the real field's border and padding, but its
+          value comes from the URL like the checkbox states, so the inside
+          pulses. The bar is one text-sm line (h-5), the input's line height,
+          so the box is as tall as the loaded one. */}
       <div className={searchLabelClass}>
         <span className={textPulse}>Search company or role</span>
-        <span className={`block ${searchInputClass}`}>&nbsp;</span>
+        <span className={`block ${searchInputClass}`}>
+          <span className={`block h-5 ${pulse}`} />
+        </span>
       </div>
       <fieldset className={fieldset}>
         <legend className={legend}>
