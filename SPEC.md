@@ -195,10 +195,11 @@ As a job seeker, I want to see my applications on a board by status and move the
 - A moved card is placed first in its new column (the move updates `updatedAt`
   and the order is newest first), so it doesn't jump after the refresh
 - The move is shown optimistically
-- Several moves can be in flight at once, each card on its own: while a
-  card's move is pending, that card can't be dragged and its select and
-  "Move" button are disabled. Two quick moves of different cards both stay
-  after the refresh
+- Several moves can be started at once, each card on its own, and all of them
+  show optimistically; their requests are sent one after another (Next.js
+  dispatches Server Actions one at a time per client). While a card's move is
+  pending, that card can't be dragged and its select and "Move" button are
+  disabled. Two quick moves of different cards both stay after the refresh
 - A successful move, by either path, shows "Moved {company} ({role}) to
   {status}."
 - If the application no longer exists or belongs to another user (one
@@ -1120,6 +1121,20 @@ lives in `src/lib/auth.ts`.
   from the record id is #26's rule for Server Components. Rejected:
   `${useId()}-${id}` (`useId()` is already unique per instance; the record id
   adds nothing)
+- 2026-11-17: clarifies "several moves can be in flight at once" in the
+  board feedback entry above: several moves can be started at once and all of
+  them show optimistically, with every pending card locked, but their
+  requests go to the server one after another. Next.js dispatches Server
+  Actions one at a time per client
+  (`node_modules/next/dist/docs/01-app/02-guides/server-actions.md`,
+  "Sequential dispatch on the client"), so a slow first move delays the
+  second. Found when the e2e test that held the first response expected two
+  requests on the network. The test checks what the user sees (both cards in
+  their new columns and locked, both landing after the refresh), not the
+  number of requests in flight, which would pin Next's dispatcher, not a SPEC
+  requirement. Rejected: sending moves outside Next's dispatcher (a Route
+  Handler or parallel work in one action), which would add a second mutation
+  path beside the one status action (US-3)
 
 ## 11. End-to-end verification
 
