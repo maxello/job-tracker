@@ -258,3 +258,27 @@ test("E9 US-6: Back drops search text that was typed but not applied", async ({
   await expect(page).toHaveURL(searchUrl(null));
   await expect(searchBox(page)).toHaveValue("");
 });
+
+// An ignored `q` is not an active filter, so the later empty states still
+// apply (US-6 empty states 2 and 3).
+test("E10 US-6: with every application archived, an empty q still shows All your applications are archived", async ({
+  page,
+}) => {
+  const company = uniqueName("Archived Co");
+  await create(page, company);
+  await archive(page, company);
+
+  await page.goto("/?q=");
+
+  await expect(
+    page.getByText("All your applications are archived"),
+  ).toBeVisible();
+});
+
+test("E11 US-6: with no applications, a whitespace-only q still shows No applications yet", async ({
+  page,
+}) => {
+  await page.goto("/?q=%20");
+
+  await expect(page.getByText("No applications yet.")).toBeVisible();
+});
