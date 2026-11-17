@@ -1009,9 +1009,14 @@ lives in `src/lib/auth.ts`.
   valid when strictly `YYYY-MM-DD`, a real calendar date, with a year from
   0001 to 9999; one valid date alone applies and makes the filter active, and
   "`from` later than `to`" applies only when both are valid. For `tz`, `from`
-  and `to`, only the first value counts, like `q`. The raw first `from` and
-  `to` values join the filter form's wrapper key (same reason as the raw `q`,
-  2026-11-17); `tz` doesn't, because it isn't a visible field. The fieldset
+  and `to`, only the first value counts, like `q`. The raw first `from`, `to`
+  and `tz` values join the filter form's wrapper key (same reason as the raw
+  `q`, 2026-11-17): the key tells apart the list URLs the form must re-mount
+  between, not only its visible fields. `tz` is needed because Apply
+  replaces another zone (a bookmark, or `tz=` from a submit before
+  hydration) with the browser's, so two list URLs can differ only in `tz`,
+  and Back between them must still drop unapplied dates (found in review;
+  covered by `e2e/date-range.spec.ts` R11). The fieldset
   has the legend "Updated", the word the list rows use for this date, sits
   between Status and Archive, and holds
   "From" and "To" date inputs with no `min` or `max`: `from` later than `to`
