@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
+import { dateRange } from "./date-filter";
 import {
   archiveApplication,
   changeApplicationStatus,
@@ -475,6 +476,172 @@ describe("search (real database)", () => {
     await create(intruder, "Unrelated");
 
     expect(await search(intruder, "shared name")).toEqual(ids(own));
+  });
+});
+
+// US-6 date range: the boundaries from dateRange applied by the real database.
+// Rows can't be backdated through the app, so the fixture sets updatedAt with
+// raw SQL after every other write (archiving and status changes move it).
+describe("date range (real database)", () => {
+  async function create(
+    userId: string,
+    updatedAt: string,
+    company = "Dated Co",
+  ) {
+    const { id } = await createApplication(userId, {
+      company,
+      role: "Engineer",
+      stack: [],
+    });
+    await setUpdatedAt(id, updatedAt);
+    return id;
+  }
+
+  async function setUpdatedAt(id: string, updatedAt: string) {
+    await db.$executeRaw`
+      UPDATE "Application" SET "updatedAt" = ${new Date(updatedAt)}
+      WHERE id = ${id}`;
+  }
+
+  async function between(
+    userId: string,
+    [from, to, tz]: [string | undefined, string | undefined, string],
+    options: Omit<Parameters<typeof listApplications>[1] & {}, "updated"> = {},
+  ) {
+    const rows = await listApplications(userId, {
+      ...options,
+      updated: dateRange(from, to, tz),
+    });
+    return rows.map((row) => row.id).sort();
+  }
+
+  const ids = (...list: string[]) => [...list].sort();
+  const KYIV = "Europe/Kyiv";
+
+  // 2026-03-29 in Kyiv runs from 03-28T22:00Z (+02:00) to 03-29T21:00Z
+  // (+03:00 after 03:00 → 04:00): 23 hours.
+  it("D8 US-6: a 23-hour DST day in Kyiv is inclusive at both edges and nothing more", async () => {
+    const userId = await createUser();
+    await create(userId, "2026-03-28T21:59:59.999Z");
+    const first = await create(userId, "2026-03-28T22:00:00.000Z");
+    const last = await create(userId, "2026-03-29T20:59:59.999Z");
+    await create(userId, "2026-03-29T21:00:00.000Z");
+
+    expect(await between(userId, ["2026-03-29", "2026-03-29", KYIV])).toEqual(
+      ids(first, last),
+    );
+  });
+
+  // 2026-10-25 in Kyiv runs from 10-24T21:00Z (+03:00) to 10-25T22:00Z
+  // (+02:00 after 04:00 → 03:00): 25 hours.
+  it("D9 US-6: a 25-hour DST day in Kyiv is inclusive at both edges and nothing more", async () => {
+    const userId = await createUser();
+    await create(userId, "2026-10-24T20:59:59.999Z");
+    const first = await create(userId, "2026-10-24T21:00:00.000Z");
+    const last = await create(userId, "2026-10-25T21:59:59.999Z");
+    await create(userId, "2026-10-25T22:00:00.000Z");
+
+    expect(await between(userId, ["2026-10-25", "2026-10-25", KYIV])).toEqual(
+      ids(first, last),
+    );
+  });
+
+  it("D10 US-6: from alone and to alone are each inclusive at their edge", async () => {
+    const userId = await createUser();
+    const before = await create(userId, "2026-03-28T21:59:59.999Z");
+    const start = await create(userId, "2026-03-28T22:00:00.000Z");
+    const end = await create(userId, "2026-03-29T20:59:59.999Z");
+    const after = await create(userId, "2026-03-29T21:00:00.000Z");
+
+    expect(await between(userId, ["2026-03-29", undefined, KYIV])).toEqual(
+      ids(start, end, after),
+    );
+    expect(await between(userId, [undefined, "2026-03-29", KYIV])).toEqual(
+      ids(before, start, end),
+    );
+  });
+
+  it("D11 US-6: from later than to returns nothing, without an error and without a swap", async () => {
+    const userId = await createUser();
+    const first = await create(userId, "2026-11-17T12:00:00.000Z");
+    const second = await create(userId, "2026-11-18T12:00:00.000Z");
+
+    expect(await between(userId, ["2026-11-17", "2026-11-18", "UTC"])).toEqual(
+      ids(first, second),
+    );
+    expect(await between(userId, ["2026-11-18", "2026-11-17", "UTC"])).toEqual(
+      [],
+    );
+  });
+
+  it("D12 US-6: the date range combines with search, a status and Show archived (AND)", async () => {
+    const userId = await createUser();
+    const inRange = "2026-11-17T12:00:00.000Z";
+    const match = await create(userId, inRange, "Acme Match");
+    await changeApplicationStatus(userId, match, "APPLIED");
+    await setUpdatedAt(match, inRange);
+    await create(userId, inRange, "Acme Wishlist");
+    const early = await create(userId, "2026-11-10T12:00:00.000Z", "Acme Old");
+    await changeApplicationStatus(userId, early, "APPLIED");
+    await setUpdatedAt(early, "2026-11-10T12:00:00.000Z");
+    const other = await create(userId, inRange, "Globex");
+    await changeApplicationStatus(userId, other, "APPLIED");
+    await setUpdatedAt(other, inRange);
+    const archived = await create(userId, inRange, "Acme Archived");
+    await changeApplicationStatus(userId, archived, "APPLIED");
+    await archiveApplication(userId, archived);
+    await setUpdatedAt(archived, inRange);
+
+    const range: [string, string, string] = ["2026-11-17", "2026-11-17", "UTC"];
+    const filters = { search: "acme", statuses: ["APPLIED" as const] };
+    expect(await between(userId, range, filters)).toEqual(ids(match));
+    expect(
+      await between(userId, range, { ...filters, includeArchived: true }),
+    ).toEqual(ids(match, archived));
+  });
+
+  it("D13 US-0: another user's application in the range never comes back", async () => {
+    const owner = await createUser();
+    const intruder = await createUser();
+    await create(owner, "2026-11-17T12:00:00.000Z");
+    const own = await create(intruder, "2026-11-17T13:00:00.000Z");
+    await create(intruder, "2026-11-20T12:00:00.000Z");
+
+    expect(
+      await between(intruder, ["2026-11-17", "2026-11-17", "UTC"]),
+    ).toEqual(ids(own));
+  });
+
+  // ICU uses historical local mean time (LMT): Pago Pago is +12:37:12 in year
+  // 1 and −11:00 in 9999, so 0001-01-01 starts in 1 BC UTC and the day after
+  // 9999-12-31 starts in year 10000. The precondition is asserted first, so a
+  // change in ICU's data fails here instead of letting D14 pass without
+  // testing the edges.
+  it("D14 US-6: the extreme dates in Pago Pago reach 1 BC and year 10000, and the database accepts both", async () => {
+    const zone = "Pacific/Pago_Pago";
+    const range = dateRange("0001-01-01", "9999-12-31", zone);
+    expect(
+      range.gte?.getUTCFullYear(),
+      "gte is in 1 BC UTC",
+    ).toBeLessThanOrEqual(0);
+    expect(
+      range.lt?.getUTCFullYear(),
+      "lt is in year 10000 or later",
+    ).toBeGreaterThanOrEqual(10000);
+
+    const userId = await createUser();
+    const old = await create(userId, "2026-11-17T12:00:00.000Z");
+    const recent = await create(userId, new Date().toISOString());
+
+    expect(await between(userId, ["0001-01-01", "9999-12-31", zone])).toEqual(
+      ids(old, recent),
+    );
+    expect(await between(userId, ["0001-01-01", undefined, zone])).toEqual(
+      ids(old, recent),
+    );
+    expect(await between(userId, [undefined, "9999-12-31", zone])).toEqual(
+      ids(old, recent),
+    );
   });
 });
 

@@ -26,12 +26,13 @@ async function layoutBoxes(page: Page) {
     exact: true,
   });
   const status = page.getByRole("group", { name: "Status", exact: true });
+  const updated = page.getByRole("group", { name: "Updated", exact: true });
   const archive = page.getByRole("group", { name: "Archive", exact: true });
   const apply = page.getByRole("button", { name: "Apply", exact: true });
   const form = page.locator("form").filter({ has: status });
   const list = page.getByRole("list");
 
-  for (const locator of [search, status, archive, apply, form, list]) {
+  for (const locator of [search, status, updated, archive, apply, form, list]) {
     await expect(locator).toBeVisible();
   }
 
@@ -49,6 +50,7 @@ async function layoutBoxes(page: Page) {
   return {
     search: await box(search),
     status: await box(status),
+    updated: await box(updated),
     archive: await box(archive),
     apply: await box(apply),
     form: await box(form),
@@ -72,6 +74,12 @@ test.describe("desktop (1280×800)", () => {
     expect
       .soft(boxes.archive.top, "Archive top ≥ Status bottom")
       .toBeGreaterThanOrEqual(boxes.status.bottom);
+    expect
+      .soft(boxes.updated.top, "Updated top ≥ Status bottom")
+      .toBeGreaterThanOrEqual(boxes.status.bottom);
+    expect
+      .soft(boxes.archive.top, "Archive top ≥ Updated bottom")
+      .toBeGreaterThanOrEqual(boxes.updated.bottom);
     expect
       .soft(boxes.apply.top, "Apply top ≥ Archive bottom")
       .toBeGreaterThanOrEqual(boxes.archive.bottom);

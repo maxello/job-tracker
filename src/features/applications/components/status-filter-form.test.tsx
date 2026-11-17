@@ -60,14 +60,21 @@ describe("StatusFilterForm groups", () => {
       <StatusFilterForm selected={[]} showArchived={false} />,
     );
 
-    expect(fieldsets(html).map((f) => f.legend)).toEqual(["Status", "Archive"]);
+    expect(fieldsets(html).map((f) => f.legend)).toEqual([
+      "Status",
+      "Updated",
+      "Archive",
+    ]);
   });
 
   it("US-8: Show archived is in the Archive fieldset, not in Status", () => {
     const html = renderToStaticMarkup(
       <StatusFilterForm selected={[]} showArchived={false} />,
     );
-    const [status, archive] = fieldsets(html);
+    const byLegend = (legend: string) =>
+      fieldsets(html).find((f) => f.legend === legend);
+    const status = byLegend("Status");
+    const archive = byLegend("Archive");
 
     expect(status?.body.match(/name="status"/g)).toHaveLength(5);
     expect(status?.body).not.toContain('name="archived"');
@@ -125,5 +132,89 @@ describe("StatusFilterForm search", () => {
     expect(input).toBeDefined();
     if (value) expect(input).toContain(value);
     else expect(input).not.toMatch(/\svalue=/);
+  });
+});
+
+// US-6 date range: an "Updated" fieldset with From and To, and a hidden tz.
+function dateLabel(html: string, name: string) {
+  return [...html.matchAll(/<label[^>]*>([\s\S]*?)<\/label>/g)]
+    .map(([, body]) => body!)
+    .find((body) => new RegExp(`<input[^>]*name="${name}"`).test(body));
+}
+
+function namedInput(html: string, name: string) {
+  return html.match(new RegExp(`<input[^>]*name="${name}"[^>]*>`))?.[0];
+}
+
+describe("StatusFilterForm date range", () => {
+  it.each([
+    ["from", "From"],
+    ["to", "To"],
+  ])(
+    'F4 US-6: a date input named %s, labelled "%s", with no min, max or placeholder, inside the Updated fieldset',
+    (name, label) => {
+      const html = renderToStaticMarkup(
+        <StatusFilterForm selected={[]} showArchived={false} />,
+      );
+
+      const updated = fieldsets(html).find((f) => f.legend === "Updated");
+      expect(updated).toBeDefined();
+      const labelBody = dateLabel(updated!.body, name);
+      expect(labelBody).toBeDefined();
+      expect(labelBody!.replace(/<[^>]*>/g, "").trim()).toBe(label);
+      const input = namedInput(updated!.body, name);
+      expect(input).toContain('type="date"');
+      expect(input).not.toMatch(/\s(min|max|placeholder)=/);
+    },
+  );
+
+  it("F5 US-6: the fieldsets come in the order Status, Updated, Archive", () => {
+    const html = renderToStaticMarkup(
+      <StatusFilterForm selected={[]} showArchived={false} />,
+    );
+
+    expect(fieldsets(html).map((f) => f.legend)).toEqual([
+      "Status",
+      "Updated",
+      "Archive",
+    ]);
+  });
+
+  it.each([
+    ["2026-11-01", "2026-11-17"],
+    [undefined, undefined],
+  ])("F6 US-6: from=%j and to=%j show the parsed values", (from, to) => {
+    const html = renderToStaticMarkup(
+      <StatusFilterForm
+        selected={[]}
+        showArchived={false}
+        from={from}
+        to={to}
+      />,
+    );
+
+    for (const [name, value] of [
+      ["from", from],
+      ["to", to],
+    ] as const) {
+      const input = namedInput(html, name);
+      expect(input).toBeDefined();
+      if (value) expect(input).toContain(`value="${value}"`);
+      else expect(input).not.toMatch(/\svalue=/);
+    }
+  });
+
+  // The server can't know the browser's zone. Writing its own zone would be
+  // wrong and would mismatch on hydration, so the server markup is empty and
+  // the browser fills it in (plan, answer 4).
+  it("F7 US-6: a hidden tz input whose server-rendered value is empty", () => {
+    const html = renderToStaticMarkup(
+      <StatusFilterForm selected={[]} showArchived={false} />,
+    );
+
+    const input = namedInput(html, "tz");
+    expect(input).toBeDefined();
+    expect(input).toContain('type="hidden"');
+    expect(input).toContain('value=""');
   });
 });
