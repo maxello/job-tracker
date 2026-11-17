@@ -170,6 +170,13 @@ As a job seeker, I want to see my applications on a board by status and move the
   detail page; the card itself is not a link. The card carries the status edge
   (Offer tinted), like a list row, and no status badge: the column header
   names the status
+- The company link opens `/applications/{id}?from=board`. On the detail
+  page, `from=board` (the first value only, exact match) makes the back link
+  "Board" → `/board`, with the same arrow; any other or missing value keeps
+  "Applications" → `/`. The edit, new and not-found pages keep "Applications"
+  → `/`. The back link reads `searchParams`, so it sits in a `<Suspense>`
+  whose fallback is "Applications" → `/`: coming from the board, that label
+  can show briefly before "Board"
 - Cards can be moved between columns with native HTML drag-and-drop (no
   library). The whole card is the drag source; the company link is not
   draggable on its own, so dragging it moves the card. Drag-and-drop on touch
@@ -1135,6 +1142,27 @@ lives in `src/lib/auth.ts`.
   requirement. Rejected: sending moves outside Next's dispatcher (a Route
   Handler or parallel work in one action), which would add a second mutation
   path beside the one status action (US-3)
+- 2026-11-17: the detail page's back link returns to where the user came
+  from (US-5). The board card's company link adds `?from=board`; on the
+  detail page `from=board` (first value, exact) makes the back link "Board" →
+  `/board`, and any other or missing value keeps "Applications" → `/`. The
+  edit, new and not-found pages are unchanged. Reading `searchParams` is
+  request-time data, so with Cache Components the back link moves out of the
+  static shell into a `<Suspense>` (Next 16.4.6 docs,
+  `02-guides/migrating-to-cache-components.md`, "cookies, headers, and
+  searchParams"), rendered by a Server Component that receives the
+  `searchParams` promise; its fallback is "Applications" → `/`. Accepted
+  cost: coming from the board, "Applications" can show briefly before
+  "Board", and a click in that moment goes to `/`. Rejected: a placeholder
+  fallback (list visitors, most visits, would lose their instant back link),
+  a client `BackLink` with `useSearchParams` (it needs the same boundary and
+  is rendered on the server anyway on this request-bound route), a separate
+  `/board/[id]` route (two URLs for one record), `router.back()` (no target
+  for a page opened directly, and the link can't name where it goes), and
+  keeping `/` for everyone. Follow-up, not built now: the back link from a
+  filtered list loses its filters; the same mechanism can carry them later,
+  but only as validated list parameters, never a raw return URL (open
+  redirect)
 
 ## 11. End-to-end verification
 
