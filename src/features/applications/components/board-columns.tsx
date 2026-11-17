@@ -78,9 +78,14 @@ export function BoardColumns({
   // Runs after every commit. It waits until no move is pending: the result
   // arrives before the refreshed board, and a heading focused in between can
   // vanish when the refresh empties the board.
+  // Once the board has settled, the target is used once and dropped, found or
+  // not: a card that left the board (e.g. archived in another tab) must not
+  // be focused when it comes back later, also after the board is hidden and
+  // revealed again by <Activity>, which keeps refs and re-runs effects.
   useEffect(() => {
     const target = focusTarget.current;
     if (!target || pendingIds.length > 0) return;
+    focusTarget.current = null;
     const element =
       target.kind === "select"
         ? selects.current.get(target.id)
@@ -89,7 +94,6 @@ export function BoardColumns({
     if (!element || (element instanceof HTMLSelectElement && element.disabled))
       return;
     element.focus();
-    focusTarget.current = null;
   });
 
   function move(card: BoardApplication, to: Status, viaKeyboard: boolean) {

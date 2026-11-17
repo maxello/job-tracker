@@ -476,6 +476,54 @@ test("US-5: a later move's refresh doesn't pull focus to a card from an earlier 
   await expect(cardSelect(page, returns)).not.toBeFocused();
 });
 
+// Round-2 review finding: when no next move happens (the board went empty),
+// the unresolved focus target must still be dropped, or revealing the board
+// again (Activity keeps it mounted) would focus the returning card.
+test("US-5: coming back to the board doesn't pull focus to a card from an earlier keyboard Move", async ({
+  page,
+}) => {
+  const company = uniqueName("Only");
+  await create(page, company);
+  await openBoard(page);
+
+  const tab = await page.context().newPage();
+  try {
+    await tab.goto("/");
+    await tab.getByRole("link", { name: company }).click();
+    await tab.getByRole("button", { name: "Archive", exact: true }).click();
+    await expect(
+      tab.getByRole("button", { name: "Unarchive", exact: true }),
+    ).toBeVisible();
+
+    await keyboardMove(page, company, "Applied");
+    await expect(messages(page)).toHaveText(moved(company, "Applied"));
+    await expect(
+      page.getByRole("main").getByText("All your applications are archived."),
+    ).toBeVisible();
+
+    await tab.getByRole("button", { name: "Unarchive", exact: true }).click();
+    await expect(
+      tab.getByRole("button", { name: "Archive", exact: true }),
+    ).toBeVisible();
+  } finally {
+    await tab.close();
+  }
+
+  await views(page).getByRole("link", { name: "List", exact: true }).click();
+  await expect(page).toHaveURL("/");
+  await openBoard(page);
+  await expect(cardSelect(page, company)).toBeVisible();
+  // Two frames, so React's effects for the revealed board have run before
+  // focus is checked (a wait on the browser, not on a timeout).
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  await expect(cardSelect(page, company)).not.toBeFocused();
+});
+
 test("US-5: when the move fails, the card returns to its column, a generic error shows and focus stays on its select", async ({
   page,
 }) => {
