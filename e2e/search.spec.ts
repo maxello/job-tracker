@@ -239,3 +239,22 @@ test("E8 US-6: Apply with an empty search sends q= and shows the full list", asy
   await expect(page).toHaveURL(searchUrl(""));
   await expectRows(page, [company], []);
 });
+
+// `/?q=` and `/` parse to the same "no search", so only a key built from the
+// raw `q` re-mounts the form between them (SPEC.md decision log, 2026-11-17).
+test("E9 US-6: Back drops search text that was typed but not applied", async ({
+  page,
+}) => {
+  const company = uniqueName("Back Co");
+  await create(page, company);
+  await searchFor(page, "");
+  await expect(page).toHaveURL(searchUrl(""));
+
+  await searchBox(page).fill("unapplied");
+  await expect(searchBox(page)).toHaveValue("unapplied");
+
+  await page.goBack();
+
+  await expect(page).toHaveURL(searchUrl(null));
+  await expect(searchBox(page)).toHaveValue("");
+});

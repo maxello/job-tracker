@@ -59,6 +59,7 @@ export async function ApplicationList({
           selected={statuses}
           showArchived={showArchived}
           search={search}
+          rawQuery={[params.q ?? []].flat()[0]}
         />
       </div>
       <Results

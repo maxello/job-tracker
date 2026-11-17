@@ -237,7 +237,8 @@ log, 2026-11-11).
   the visible label "Search company or role" (no placeholder, no helper text),
   at the top of the filter column, above the Status fieldset. After a reload,
   Back or Forward it shows the parsed value: the trimmed text, or empty when
-  `q` was ignored
+  `q` was ignored. Text typed but not applied is dropped on Back and Forward;
+  Clear while already on `/` keeps it (see the decision log, 2026-11-17)
 - The Clear link (`/`) resets everything: search, dates, statuses and "Show
   archived"
 - The whole filter column, including Apply, fits a 1024×700 viewport, with
@@ -947,6 +948,15 @@ lives in `src/lib/auth.ts`.
   bypass the typed `where` and its `userId` scope), and a separator-joined
   string key (`q` is user text, so `?archived=1` and `?q=archived` could
   collide on "|archived" and Back between them wouldn't re-mount the form)
+- 2026-11-17: the filter form's wrapper key uses the raw first `q` value from
+  the URL, not the parsed one. `/` and `/?q=`, or `?q=acme` and
+  `?q=%20acme%20`, parse to the same search, so a parsed key kept text typed
+  but not applied after Back or Forward between them (found in review;
+  covered by `e2e/search.spec.ts` E9). Accepted limitation: typing and then
+  clicking Clear while already on `/` (the same URL, so the same key) keeps
+  the unapplied text, like unapplied checkboxes; it is inherent to the GET
+  form, and fixing it needs client JavaScript. Rejected: client JavaScript
+  that resets the form on Clear (a new client component for a rare case)
 
 ## 11. End-to-end verification
 

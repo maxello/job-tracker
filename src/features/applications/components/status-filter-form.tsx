@@ -31,17 +31,23 @@ export function StatusFilterForm({
   selected,
   showArchived,
   search,
+  rawQuery,
 }: {
   selected: Status[];
   showArchived: boolean;
   search?: string;
+  // The first `q` value as it is in the URL, before parsing.
+  rawQuery?: string;
 }) {
   // JSON, not a joined string: `q` is user text, so no separator is safe
-  // (`?archived=1` and `?q=archived` would collide on "|archived").
+  // (`?archived=1` and `?q=archived` would collide on "|archived"). The raw
+  // `q`, not the parsed one: `/` and `/?q=`, or `?q=acme` and `?q=%20acme%20`,
+  // parse the same, and Back between them must still drop unapplied text
+  // (SPEC.md decision log, 2026-11-17).
   const key = JSON.stringify([
     [...selected].sort(),
     showArchived,
-    search ?? null,
+    rawQuery ?? null,
   ]);
 
   return (
