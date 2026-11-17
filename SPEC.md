@@ -151,7 +151,11 @@ As a job seeker, I want to see my applications on a board by status and move the
   visible at every width. The links are plain `/` and `/board`: list filters
   are not carried over. The header doesn't change. From `lg`, on `/` the
   switcher sits above the list column, not above the whole grid, so it doesn't
-  push the filter column down
+  push the filter column down. On both pages the order is: the page header
+  row, the "Views" nav, then the content; on `/` below `lg` the nav sits
+  between the header row and the filter form
+- `/board` has the `h1` "Board", the page title "Board" and the same "New
+  application" button as `/`
 - One column per status; archived applications are never shown on the board.
   The board has no filters in M5: it shows all non-archived applications
 - Cards within a column are ordered by last updated, newest first (no manual
@@ -163,14 +167,25 @@ As a job seeker, I want to see my applications on a board by status and move the
   empty state as US-6 states 2 and 3 instead of the columns; for state 2 the
   link goes to `/?archived=1`, because the board has no "Show archived"
 - A card shows company, role and last updated. The company name links to the
-  detail page; the card itself is not a link
-- Cards can be moved between columns with drag-and-drop
+  detail page; the card itself is not a link. The card carries the status edge
+  (Offer tinted), like a list row, and no status badge: the column header
+  names the status
+- Cards can be moved between columns with native HTML drag-and-drop (no
+  library). The whole card is the drag source; the company link is not
+  draggable on its own, so dragging it moves the card. Drag-and-drop on touch
+  devices is not guaranteed: on phones the primary path is the status select
+  and "Move". The draggable card must not break its inner select (checked in
+  Firefox)
 - Keyboard and screen-reader alternative: each card has a status select and a
   "Move" button that perform the same move, with the same rules as the detail
   page (US-3): no auto-submit, and the button is disabled while the selected
-  status equals the current one. The select and the button have accessible
-  names that include the application (company and role), and their ids derive
-  from the record id (#26)
+  status equals the current one. The select has the visible label "Status"
+  and the accessible name "Status for {company}, {role}"; the button's
+  accessible name is "Move {company}, {role}". Their ids derive from the
+  record id (#26)
+- After a successful "Move", focus goes to the moved card's status select in
+  its new column. After any other failure the card returns and focus stays on
+  its select
 - Dropping a card into the column it is shown in sends no request: for the
   user it isn't a move, the same as the disabled "Move" button. The
   server-side no-op from US-3 stays for stale tabs
@@ -178,23 +193,35 @@ As a job seeker, I want to see my applications on a board by status and move the
 - A moved card is placed first in its new column (the move updates `updatedAt`
   and the order is newest first), so it doesn't jump after the refresh
 - The move is shown optimistically
+- Several moves can be in flight at once, each card on its own: while a
+  card's move is pending, that card can't be dragged and its select and
+  "Move" button are disabled. Two quick moves of different cards both stay
+  after the refresh
+- A successful move, by either path, shows "Moved {company} ({role}) to
+  {status}."
 - If the application no longer exists or belongs to another user (one
   response for both, never "forbidden"), the card disappears from the board
   after a refresh and the message "This application no longer exists" is shown
 - On any other failure the card returns to its previous column and a generic
   error message is shown
 - Messages appear in one live region above the board and stay until the next
-  move
+  move; with several moves in flight, it shows the result of the latest one
 - The board and the detail page still go through one server action and one
   data access layer function (US-3), and the detail page keeps its not-found
   UI. The action must not answer the board with `notFound()`, which would
-  replace the whole board with the not-found UI; how the action reports
-  not-found is decided in the M5 plan
-- Columns have a minimum width. When the five columns don't fit, the board
+  replace the whole board with the not-found UI. Instead it returns a
+  not-found result to every caller, and the detail page's status form calls
+  `notFound()` itself while it renders, which shows the same not-found UI
+- Columns have a minimum width of 13rem, so the five fit the 1120px page;
+  at 13rem a card's select and "Move" button fit without being clipped
+  (checked with a screenshot). When the five columns don't fit, the board
   container scrolls horizontally, at any width; the page itself never scrolls
   horizontally. Below 768px the board shows one column per screen width
   (scroll snap)
-- (end of M5, motion) With `prefers-reduced-motion`, view transitions and
+- The loading skeleton shows the five column frames with the real column
+  names as visible text; the counts and cards pulse. It keeps the same
+  positions as the loaded board
+- (end of M5, motion, on its own branch after the board is merged) With `prefers-reduced-motion`, view transitions and
   micro-interactions are off or reduced to a fade; dragging a card still
   follows the pointer. Whether drag-and-drop conflicts with view transitions
   is checked on the working board and recorded in the decision log (see the
@@ -1034,6 +1061,50 @@ lives in `src/lib/auth.ts`.
   replaces `tz` with the browser's zone. Rejected: showing dates in the URL's
   zone (one more rule for a rare case; dates follow the browser everywhere
   else)
+- 2026-11-17: board drag-and-drop (US-5) uses native HTML drag-and-drop, with
+  no new dependency; the whole card is the drag source. Drag-and-drop on touch
+  devices is not guaranteed: on phones the primary path is the status select
+  and "Move" (below 768px the board shows one column per screen anyway). The
+  draggable card must not break its inner select in Firefox. Rejected:
+  `@dnd-kit` (`@dnd-kit/react` 0.5.3 is pre-1.0 and `@dnd-kit/core` 6.3.1 has
+  had no release since Dec 2024; it would add touch dragging, but brings its
+  own keyboard mode we don't use), `@atlaskit/pragmatic-drag-and-drop` (a
+  layer over native drag-and-drop with the same touch limits, little gain for
+  five fixed drop targets), and `@hello-pangea/dnd` (pulls in Redux, built for
+  sortable lists)
+- 2026-11-17: `changeStatusAction` reports a missing or foreign application,
+  and an unusable id, with a not-found result instead of `notFound()`, for
+  every caller. The board shows "This application no longer exists"; the
+  detail page's status form calls `notFound()` while it renders, and the
+  segment's not-found boundary shows the same not-found UI. Checked in the
+  Next 16.4.6 source, not its docs (the `notFound` reference lists only
+  Server Components, Server Functions and Route Handlers): the boundary in
+  `client/components/http-access-fallback/error-boundary.js` is a client
+  error boundary that catches the 404 digest from any render and renders
+  `noindex` plus `not-found.js`. The `changeStatusAction` not-found unit
+  tests and the status-change case of `e2e/cross-user-isolation.spec.ts`
+  (HTTP 404 on the action POST) change on purpose. The other actions keep
+  `notFound()`. Rejected: a hidden field from the board that switches the
+  response (one action with two response modes)
+- 2026-11-17: board feedback (US-5). A successful move, by either path,
+  shows "Moved {company} ({role}) to {status}." in the live region. After a
+  keyboard "Move", focus goes to the moved card's select in its new column;
+  after any other failure the card returns and focus stays on its select.
+  Several moves can be in flight at once, each card on its own; the live
+  region shows the latest result. Rejected: error messages only (a screen
+  reader user gets no confirmation that a drag or move worked)
+- 2026-11-17: board layout (US-5). `/board` has the `h1` and title "Board"
+  and the "New application" button; on both pages the "Views" nav sits
+  between the page header row and the content (on `/` from `lg`, at the top
+  of the list column). Columns are at least 13rem, so the five fit the
+  1120px page; a screenshot confirms the select and "Move" fit unclipped.
+  Cards carry the status edge (Offer tinted) and no badge; the select's
+  visible label is "Status", its accessible name "Status for {company},
+  {role}", the button's "Move {company}, {role}". The skeleton shows the
+  column names as real text, pulses counts and cards, and keeps the loaded
+  board's positions. Motion ships on its own branch after the board is
+  merged. Rejected: wider columns that scroll on desktop, and a status badge
+  on cards (the column header already names the status)
 
 ## 11. End-to-end verification
 
