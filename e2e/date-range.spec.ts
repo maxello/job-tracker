@@ -321,6 +321,30 @@ test("R9 US-6: Back drops a date that was typed but not applied", async ({
   await expect(fromInput(page)).toHaveValue("");
 });
 
+// Two list URLs that differ only in `tz` (a bookmark from another zone, or a
+// submit before hydration sent `tz=`): Apply replaces it with the browser's
+// zone, so only the raw `tz` in the form's key tells them apart.
+test("R11 US-6: Back between list URLs that differ only in tz drops a date typed but not applied", async ({
+  page,
+}) => {
+  await create(page, uniqueName("Zone Back Co"));
+  await page.goto("/?q=&from=&to=&tz=Pacific/Kiritimati");
+  await apply(page);
+  await expect(page).toHaveURL(
+    (url) => rangeUrl("", "")(url) && url.searchParams.get("q") === "",
+  );
+
+  await fillDate(fromInput(page), "2026-11-01");
+  await expect(fromInput(page)).toHaveValue("2026-11-01");
+
+  await page.goBack();
+
+  await expect(page).toHaveURL(
+    (url) => url.searchParams.get("tz") === "Pacific/Kiritimati",
+  );
+  await expect(fromInput(page)).toHaveValue("");
+});
+
 // R10 checks what the browser ends up with. It can't see attribute
 // mismatches: a server that rendered its own zone into the input still passed
 // here. That `tz` is empty before hydration is guarded by the unit test F7

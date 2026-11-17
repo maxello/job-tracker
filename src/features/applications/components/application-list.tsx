@@ -77,6 +77,7 @@ export async function ApplicationList({
           to={to}
           rawFrom={firstRaw(params.from)}
           rawTo={firstRaw(params.to)}
+          rawTimeZone={firstRaw(params.tz)}
         />
       </div>
       <Results

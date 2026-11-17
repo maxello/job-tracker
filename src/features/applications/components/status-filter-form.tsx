@@ -48,6 +48,7 @@ export function StatusFilterForm({
   to,
   rawFrom,
   rawTo,
+  rawTimeZone,
 }: {
   selected: Status[];
   showArchived: boolean;
@@ -57,22 +58,28 @@ export function StatusFilterForm({
   // The parsed dates (YYYY-MM-DD), shown in the inputs.
   from?: string;
   to?: string;
-  // The first `from` and `to` values as they are in the URL, before parsing.
+  // The first `from`, `to` and `tz` values as they are in the URL, before
+  // parsing.
   rawFrom?: string;
   rawTo?: string;
+  rawTimeZone?: string;
 }) {
   // JSON, not a joined string: `q` is user text, so no separator is safe
-  // (`?archived=1` and `?q=archived` would collide on "|archived"). The raw
-  // `q`, `from` and `to`, not the parsed ones: `/` and `/?q=`, or `?q=acme`
-  // and `?q=%20acme%20`, parse the same, and Back between them must still
-  // drop unapplied input (SPEC.md decision log, 2026-11-17). `tz` isn't a
-  // visible field, so it stays out.
+  // (`?archived=1` and `?q=archived` would collide on "|archived"). The key
+  // tells apart every list URL the form must re-mount between, so Back and
+  // Forward drop unapplied input (SPEC.md decision log, 2026-11-17). Raw
+  // values, not parsed ones: `/` and `/?q=`, or `?q=acme` and
+  // `?q=%20acme%20`, parse the same. `tz` is in it although it isn't a
+  // visible field: Apply replaces another zone (a bookmark, or `tz=` from a
+  // submit before hydration) with the browser's, so two URLs can differ only
+  // in `tz`.
   const key = JSON.stringify([
     [...selected].sort(),
     showArchived,
     rawQuery ?? null,
     rawFrom ?? null,
     rawTo ?? null,
+    rawTimeZone ?? null,
   ]);
 
   return (
