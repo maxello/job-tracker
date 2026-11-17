@@ -1,4 +1,4 @@
-﻿// The US-1 limit for company and role; also the search input's maxLength.
+// The US-1 limit for company and role; also the search input's maxLength.
 export const SEARCH_MAX_LENGTH = 200;
 
 // Parses the `q` query param into the search text, or undefined for no search

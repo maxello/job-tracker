@@ -1,4 +1,4 @@
-﻿import type { Status } from "@/generated/prisma/enums";
+import type { Status } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
 import type { CreateApplicationInput } from "./schemas";
 
