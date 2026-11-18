@@ -96,16 +96,14 @@ function searchInput(html: string) {
 }
 
 describe("StatusFilterForm search", () => {
-  it('F1 US-6: a search input named q, max 200, labelled "Search company or role", with no placeholder', () => {
+  it('F1 US-6: a search input named q, max 200, labelled "Search", with no placeholder', () => {
     const html = renderToStaticMarkup(
       <StatusFilterForm selected={[]} showArchived={false} />,
     );
 
     const label = searchLabel(html);
     expect(label).toBeDefined();
-    expect(label!.replace(/<[^>]*>/g, "").trim()).toBe(
-      "Search company or role",
-    );
+    expect(label!.replace(/<[^>]*>/g, "").trim()).toBe("Search");
     const input = searchInput(html);
     expect(input).toContain('type="search"');
     expect(input).toContain('maxLength="200"');
@@ -120,6 +118,23 @@ describe("StatusFilterForm search", () => {
     const search = html.search(/<input[^>]*name="q"/);
     expect(search).toBeGreaterThanOrEqual(0);
     expect(search).toBeLessThan(html.indexOf("<fieldset"));
+  });
+
+  it('F7 US-6: the search input is described by the hint "company or role", outside its label', () => {
+    const html = renderToStaticMarkup(
+      <StatusFilterForm selected={[]} showArchived={false} />,
+    );
+
+    const describedBy = searchInput(html)?.match(
+      /aria-describedby="([^"]+)"/,
+    )?.[1];
+    expect(describedBy).toBeDefined();
+    const hint = html.match(
+      new RegExp(`<(\\w+)[^>]*id="${describedBy}"[^>]*>([\\s\\S]*?)</\\1>`),
+    );
+    expect(hint?.[2]).toBe("company or role");
+    // Outside the label, so it isn't part of the accessible name.
+    expect(searchLabel(html)).not.toContain("company or role");
   });
 
   it.each([

@@ -246,7 +246,7 @@ test("R7 §11 US-6: dates, search and status combine (AND) and survive a reload"
   const today = dateIn(TOKYO);
 
   await page
-    .getByRole("searchbox", { name: "Search company or role", exact: true })
+    .getByRole("searchbox", { name: "Search", exact: true })
     .fill(`${tag} Acme`);
   await page.getByRole("checkbox", { name: "Applied", exact: true }).check();
   await fillDate(fromInput(page), today);

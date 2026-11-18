@@ -22,7 +22,7 @@ async function openListWithOneApplication(page: Page) {
 // layout assertion.
 async function layoutBoxes(page: Page) {
   const search = page.getByRole("searchbox", {
-    name: "Search company or role",
+    name: "Search",
     exact: true,
   });
   const status = page.getByRole("group", { name: "Status", exact: true });
@@ -142,7 +142,7 @@ test("US-6: the skeleton's filter controls, bar and list top are where the loade
     [
       "search",
       page.getByRole("searchbox", {
-        name: "Search company or role",
+        name: "Search",
         exact: true,
       }),
       "search",
@@ -207,6 +207,10 @@ test("US-6: the skeleton's filter controls, bar and list top are where the loade
     for (const width of [390, 768, 1024, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await skeleton.setViewportSize({ width, height: 900 });
+      // After Save, Next keeps the scroll the form page had (the list's top
+      // is still in view), so the loaded page can start a few px down; the
+      // skeleton (no JS) is always at the top.
+      await page.evaluate(() => window.scrollTo(0, 0));
       for (const { what, loaded, fake, withHeight } of present) {
         const real = await loaded.boundingBox();
         const shown = await fake.boundingBox();

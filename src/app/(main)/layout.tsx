@@ -11,17 +11,20 @@ const ACCOUNT_MENU_ID = "account-menu";
 // form action's error reaches the nearest boundary above the form, and an
 // error.tsx doesn't catch errors from the layout at its own level.
 export default function MainLayout({ children }: LayoutProps<"/">) {
-  // The min-height includes pt-4 and fits UserMenu's tallest content, so the
-  // header doesn't grow when it streams in: the 44px account-menu trigger
-  // below sm (16 + 44 = min-h-15), 34px controls from sm (min-h-13).
+  // A full-width surface bar with a bottom border; the content stays in the
+  // page width (SPEC.md decision log, 2026-11-18). Its fixed 60px height fits
+  // UserMenu's tallest content (the 44px account-menu trigger below sm), so
+  // the header doesn't change height when UserMenu streams in (#44).
   return (
     <>
-      <header className="mx-auto flex min-h-15 w-full max-w-page items-center justify-between gap-3 px-4 pt-4 sm:min-h-13">
-        <Logo />
-        <div className="flex min-w-0 items-center gap-2">
-          <Suspense>
-            <UserMenu menuId={ACCOUNT_MENU_ID} />
-          </Suspense>
+      <header className="border-b border-line bg-surface">
+        <div className="mx-auto flex h-15 w-full max-w-page items-center justify-between gap-3 px-4">
+          <Logo />
+          <div className="flex min-w-0 items-center gap-2">
+            <Suspense>
+              <UserMenu menuId={ACCOUNT_MENU_ID} />
+            </Suspense>
+          </div>
         </div>
       </header>
       {children}

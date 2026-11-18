@@ -88,6 +88,15 @@
 
   /* Type: Archivo is variable width; headings, logo and legends are expanded */
   --font-stretch-display: 118%;
+  /* Page heading (h1): 40px, and 32px for the detail page's company name
+     below sm, so a long name doesn't take four lines at 360px */
+  --text-heading: 2.5rem;
+  --text-heading--line-height: 1;
+  --text-heading-sm: 2rem;
+  --text-heading-sm--line-height: 1;
+  --tracking-heading: -0.015em;
+  /* Legends and the search label: small, uppercase, letter-spaced */
+  --tracking-legend: 0.06em;
 
   /*
    * Button lip: a 1px hairline in the page background, then the lip below
@@ -161,6 +170,32 @@
 
 @utility font-display {
   font-stretch: var(--font-stretch-display);
+}
+
+/* The h1 on every page (Signal design artifact): extra bold, expanded. */
+@utility page-heading {
+  font-size: var(--text-heading);
+  line-height: var(--text-heading--line-height);
+  font-weight: var(--font-weight-extrabold);
+  font-stretch: var(--font-stretch-display);
+  letter-spacing: var(--tracking-heading);
+}
+
+/*
+ * Status and "Archived" badges: 24px tall, 6px radius, slightly expanded.
+ * Colours and weight come from STATUS_STYLES (or ArchivedBadge); the text
+ * always carries the status, never the colour alone.
+ */
+@utility badge {
+  display: inline-flex;
+  align-items: center;
+  height: --spacing(6);
+  padding-inline: --spacing(2.25);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  line-height: 1;
+  font-stretch: 110%;
+  white-space: nowrap;
 }
 
 /*

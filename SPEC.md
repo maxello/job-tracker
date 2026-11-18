@@ -290,8 +290,11 @@ log, 2026-11-11).
     applications match your filters", never a silent swap. This applies only
     when both are valid
 - The search input is `<input type="search" name="q" maxLength={200}>` with
-  the visible label "Search company or role" (no placeholder, no helper text),
-  at the top of the filter column, above the Status fieldset. After a reload,
+  the visible label "Search" in the legend style and the hint "company or
+  role", small and muted under the input, linked with `aria-describedby`
+  (accessible name "Search", description "company or role"; no
+  placeholder), at the top of the filter column, above the Status fieldset.
+  The hint's id comes from `useId()` in a client component (#26). After a reload,
   Back or Forward between list URLs it shows the parsed value: the trimmed
   text, or empty when `q` was ignored, so text typed but not applied is
   dropped. Returning to the list from another page that Next still preserves
@@ -369,7 +372,7 @@ log, 2026-11-11).
   the counts and the bar ship
   - Static labels are visible real text: the legends ("Status", "Updated",
     "Archive"), the five status names (in the filter and in the bar's
-    legend), "From", "To", "Show archived", "Search company or role",
+    legend), "From", "To", "Show archived", "Search", "company or role",
     "Clear" and "Apply". Only data-dependent parts pulse: checkbox state,
     the search and date values, the rows, the counts and the bar. The
     skeleton stays hidden from assistive technology
@@ -1303,6 +1306,57 @@ lives in `src/lib/auth.ts`.
   so hiding them shows less than the loaded page for no gain, while their
   width already comes from the font either way), and hiding the skeleton bar
   when there may be no bar (the skeleton can't know the counts)
+- 2026-11-18: Signal alignment of the list (style only; markup order, tab
+  order, the GET form and the keyed re-mount are unchanged). The filter
+  column is one surface card, matching the list card (8px radius, `line`
+  border; the design artifact's card has 10px and no border, a difference
+  kept on purpose). The fieldsets stay, with no border of their own; their
+  legends sit inside the card in the design's legend style (small,
+  uppercase, bold, expanded, letter-spaced). This supersedes "each with its
+  legend on the border" in the 2026-11-12 "Show archived" entry; the
+  fieldsets still name the groups, so "Show archived" still isn't announced
+  as a status. Clear and Apply sit inside the card; from `lg` a divider
+  separates them from the fieldsets. Clear takes the design's link style
+  (text colour, semibold, thick underline). Search: the visible label is
+  "Search" in the legend style, and "company or role" is a small muted hint
+  under the input, linked with `aria-describedby`. This supersedes "the
+  visible label 'Search company or role'" and the rejection of helper text
+  in the 2026-11-16 search entry, to follow the Signal design artifact;
+  there is still no placeholder. The hint's id comes from `useId()` in a small client
+  `SearchField` (#26): the filter form is a Server Component with no record
+  id to derive one from. Rejected: a fixed id (a second exception to #26
+  for no need) and `aria-description` (weaker support). Every `h1` takes
+  the design's page heading (40px, extra bold, expanded, tight tracking,
+  line height 1); the detail page's `h1`, the company name, is 32px below
+  `sm` and 40px from it, so a long name doesn't take four lines at 360px.
+  Status badges and the "Archived" badge take the design's shape (24px
+  tall, 6px radius) in the list, on the detail page and in the skeleton;
+  the "Archived" badge keeps the `control` outline and `muted` text. The
+  whole filter column still fits 1024×700, and the skeleton keeps the
+  loaded page's positions (`e2e/filter-layout.spec.ts`)
+- 2026-11-18: the site header is the design's bar: a full-width surface
+  background with a bottom `line` border, its content still in the 1120px
+  page width, 61px tall at every width in both themes (60px of content plus
+  the 1px bottom border, as in the design). A fixed height keeps
+  the #44 guarantee (the header doesn't change height when UserMenu streams
+  in) and fits the 44px account-menu trigger below `sm`; from `sm` the
+  header grows from 52px to 61px. The account menu's popover stays anchored
+  below the trigger. The header is in the `(main)` layout, so it covers the
+  list, board, detail, new, edit and auth pages; `app/error.tsx` replaces
+  that layout and shows no header (2026-11-04 entry), so it doesn't change
+- 2026-11-18: Chromium applies `text-transform` to the accessible name:
+  with the uppercase legend style, CDP `Accessibility.getFullAXTree` gave
+  the search field the name "SEARCH" (source `labelwrapped`, text
+  "SEARCH"), while Playwright's `getByRole` still matched "Search". So the
+  uppercase "Search" label and the "Status", "Updated" and "Archive"
+  legends also carry `aria-label` in normal case on the input and the
+  fieldsets, and the visible word and the `aria-label` come from one
+  constant per field, so they can't drift. The e2e check reads Chromium's
+  own tree (E-AX in `e2e/search.spec.ts`). Rejected: the visible word
+  `aria-hidden` plus an `sr-only` copy (duplicate DOM text), accepting the
+  uppercase names (they differ between browsers, and how screen readers
+  read them is unverified), and dropping the uppercase (a visible
+  difference from the design)
 
 ## 11. End-to-end verification
 

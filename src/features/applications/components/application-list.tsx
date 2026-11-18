@@ -30,12 +30,19 @@ import {
   dateInputClass,
   dateLabelClass,
   fieldsetClass,
+  filterCardClass,
   legendClass,
-  searchInputClass,
-  searchLabelClass,
+  LEGENDS,
   StatusFilterForm,
   statusLabelClass,
 } from "./status-filter-form";
+import {
+  searchFieldClass,
+  searchHintClass,
+  searchInputClass,
+  searchLabelClass,
+  SEARCH_LABEL,
+} from "./search-field-classes";
 import { ViewSwitcher } from "./view-switcher";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -191,9 +198,7 @@ async function Results({
                 </p>
               </div>
               <div className={rowMeta}>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${style.badge}`}
-                >
+                <span className={`badge ${style.badge}`}>
                   {STATUS_LABELS[application.status]}
                 </span>
                 {archived && <ArchivedBadge />}
@@ -251,7 +256,8 @@ export function ApplicationListSkeleton() {
                   </div>
                 </div>
                 <div className={rowMeta}>
-                  <span className="h-5 w-16 animate-pulse rounded-full bg-line" />
+                  {/* No `pulse`: its `rounded` would beat the badge's 6px. */}
+                  <span className="badge w-16 animate-pulse bg-line" />
                   <span className="text-xs whitespace-nowrap">
                     <span className={textPulse}>Updated</span>{" "}
                     <span className={`ml-1 inline-block h-3 w-20 ${pulse}`} />
@@ -273,20 +279,20 @@ export function ApplicationListSkeleton() {
 export function StatusFilterSkeleton() {
   const box = `size-4.5 shrink-0 ${pulse}`;
   return (
-    <div
-      aria-hidden="true"
-      className="flex flex-wrap items-end gap-3 lg:flex-col lg:flex-nowrap lg:items-stretch"
-    >
+    <div aria-hidden="true" className={filterCardClass}>
       {/* The field boxes keep the real border and padding; the value inside
           pulses, one text-sm line (h-5) tall like the input's text. */}
-      <div className={searchLabelClass}>
-        <span>Search company or role</span>
-        <span data-skeleton="search" className={`block ${searchInputClass}`}>
-          <span className={`block h-5 ${pulse}`} />
-        </span>
+      <div className={searchFieldClass}>
+        <div className={searchLabelClass}>
+          <span className={legendClass}>{SEARCH_LABEL}</span>
+          <span data-skeleton="search" className={`block ${searchInputClass}`}>
+            <span className={`block h-5 ${pulse}`} />
+          </span>
+        </div>
+        <p className={searchHintClass}>company or role</p>
       </div>
       <fieldset className={fieldsetClass}>
-        <legend className={legendClass}>Status</legend>
+        <legend className={legendClass}>{LEGENDS.status}</legend>
         {Object.values(Status).map((status) => (
           <div
             key={status}
@@ -302,7 +308,7 @@ export function StatusFilterSkeleton() {
         ))}
       </fieldset>
       <fieldset className={fieldsetClass}>
-        <legend className={legendClass}>Updated</legend>
+        <legend className={legendClass}>{LEGENDS.updated}</legend>
         {(
           [
             ["from", "From"],
@@ -318,7 +324,7 @@ export function StatusFilterSkeleton() {
         ))}
       </fieldset>
       <fieldset className={fieldsetClass}>
-        <legend className={legendClass}>Archive</legend>
+        <legend className={legendClass}>{LEGENDS.archive}</legend>
         <div data-skeleton="show-archived" className={checkLabelClass}>
           <span className={box} />
           <span>Show archived</span>

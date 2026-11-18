@@ -62,6 +62,25 @@ for (const viewport of [
       expect(loaded).toBe(fallback);
     });
 
+    // SPEC.md decision log, 2026-11-18: a full-width bar, 60px of content
+    // plus the 1px bottom border.
+    test("header bar: 61px tall and as wide as the viewport, signed in", async ({
+      page,
+    }) => {
+      await signUpFreshUser(page);
+      await page.goto("/");
+      const name = viewport.width < 640 ? "Account menu" : "Sign out";
+      await expect(
+        page.getByRole("banner").getByRole("button", { name, exact: true }),
+      ).toBeVisible();
+
+      const box = await page.getByRole("banner").boundingBox();
+      expect(box).not.toBeNull();
+      expect.soft(box!.height, "height").toBe(61);
+      expect.soft(box!.x, "left").toBe(0);
+      expect.soft(box!.width, "width").toBe(viewport.width);
+    });
+
     test("#41: the header keeps its height when UserMenu streams in, signed out", async ({
       browser,
       page,

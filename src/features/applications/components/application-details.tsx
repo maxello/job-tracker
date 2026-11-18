@@ -85,15 +85,13 @@ export async function ApplicationDetails({ id }: { id: string }) {
         className={`min-w-0 rounded-lg border border-l-6 border-line px-4 py-4 sm:px-6 ${style.panel}`}
       >
         <h1
-          className={`font-display text-2xl font-bold tracking-tight break-words ${archived ? "text-muted" : ""}`}
+          className={`page-heading break-words max-sm:text-heading-sm ${archived ? "text-muted" : ""}`}
         >
           {application.company}
         </h1>
         <p className="mt-1 break-words text-muted">{application.role}</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${style.badge}`}
-          >
+          <span className={`badge ${style.badge}`}>
             {STATUS_LABELS[application.status]}
           </span>
           {archived && <ArchivedBadge />}
@@ -232,9 +230,12 @@ export function ApplicationDetailsSkeleton() {
       <div
         className={`flex flex-col gap-3 border-l-6 border-l-line px-4 py-4 sm:px-6 ${card}`}
       >
-        <div className={`h-7 w-1/2 ${pulse}`} />
+        {/* The company line (the h1: 32px below sm, 40px from sm) and the
+            24px badge; no `pulse` on the badge, its `rounded` would beat
+            the badge's 6px. */}
+        <div className={`h-8 w-1/2 sm:h-10 ${pulse}`} />
         <div className={`h-4 w-1/3 ${pulse}`} />
-        <div className={`h-5 w-16 ${pulse}`} />
+        <div className="badge w-16 animate-pulse bg-line" />
       </div>
       <div className={`h-24 ${card}`} />
     </div>
