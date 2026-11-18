@@ -48,7 +48,9 @@ export function PipelineBar({ counts }: { counts: StatusCounts }) {
           />
         ))}
       </div>
-      <ul aria-label="Pipeline" className={legendClass}>
+      {/* role="list": Safari drops list semantics from a list styled
+          without markers. */}
+      <ul role="list" aria-label="Pipeline" className={legendClass}>
         {STATUSES.map((status) => (
           <li key={status} className={itemClass}>
             <span

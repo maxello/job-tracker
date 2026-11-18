@@ -113,12 +113,13 @@ test("C1 US-6: each status checkbox shows its count, keeps the status name as it
   await expectLegend(page, [2, 1, 0, 0, 0]);
 });
 
-test("C2 US-6: search and the status filter don't change the counts, and the bar shows above empty state 1", async ({
+test("C2 US-6: search, the status filter and the date range don't change the counts, and the bar shows above empty state 1", async ({
   page,
 }) => {
   await createWithStatus(page, uniqueName("Wish Co"), "Wishlist");
   await createWithStatus(page, uniqueName("Applied Co"), "Applied");
-  await page.goto("/?status=applied&q=zzz-no-match");
+  // A date range that excludes everything: it must not reach the counts.
+  await page.goto("/?status=applied&q=zzz-no-match&from=2999-01-01");
   await waitForCounts(page);
 
   const empty = page.getByText("No applications match your filters.");
