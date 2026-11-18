@@ -256,7 +256,8 @@ export function ApplicationListSkeleton() {
                   </div>
                 </div>
                 <div className={rowMeta}>
-                  <span className={`badge w-16 ${pulse}`} />
+                  {/* No `pulse`: its `rounded` would beat the badge's 6px. */}
+                  <span className="badge w-16 animate-pulse bg-line" />
                   <span className="text-xs whitespace-nowrap">
                     <span className={textPulse}>Updated</span>{" "}
                     <span className={`ml-1 inline-block h-3 w-20 ${pulse}`} />
