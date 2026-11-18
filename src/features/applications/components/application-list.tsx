@@ -2,16 +2,15 @@ import Link from "next/link";
 import { Status } from "@/generated/prisma/enums";
 import { getCurrentUserId } from "@/lib/current-user";
 import { parseShowArchived, SHOW_ARCHIVED_VALUE } from "../archived-filter";
+import { dateRange, parseDateParam, parseTimeZone } from "../date-filter";
 import {
-  dateRange,
-  parseDateParam,
-  parseTimeZone,
-  type UpdatedRange,
-} from "../date-filter";
-import { hasArchivedApplications, listApplications } from "../queries";
+  countApplicationsByStatus,
+  hasArchivedApplications,
+  listApplications,
+} from "../queries";
 import { STATUS_LABELS } from "../status";
 import { parseSearchQuery } from "../search-filter";
-import { parseStatusFilter } from "../status-filter";
+import { parseStatusFilter, statusFilterValue } from "../status-filter";
 import { STATUS_STYLES } from "../status-style";
 import { ArchivedBadge } from "./archived-badge";
 import {
@@ -21,12 +20,21 @@ import {
   NoApplications,
 } from "./empty-states";
 import { LocalDate } from "./local-date";
+import { CountPulse, PipelineBar, PipelineBarSkeleton } from "./pipeline-bar";
 import {
+  actionsClass,
+  applyClass,
+  checkboxCountClass,
+  checkLabelClass,
+  clearClass,
   dateInputClass,
   dateLabelClass,
+  fieldsetClass,
+  legendClass,
   searchInputClass,
   searchLabelClass,
   StatusFilterForm,
+  statusLabelClass,
 } from "./status-filter-form";
 import { ViewSwitcher } from "./view-switcher";
 
@@ -75,6 +83,19 @@ export async function ApplicationList({
   const updated = dateRange(from, to, parseTimeZone(params.tz));
   const firstRaw = (value: string | string[] | undefined) =>
     [value ?? []].flat()[0];
+  // US-6: the counts and the list start together in this one <Suspense>, so
+  // there is no waterfall and no second boundary (SPEC.md decision log,
+  // 2026-11-18). The counts respect only "Show archived".
+  const userId = await getCurrentUserId();
+  const [counts, applications] = await Promise.all([
+    countApplicationsByStatus(userId, { includeArchived: showArchived }),
+    listApplications(userId, {
+      statuses,
+      includeArchived: showArchived,
+      search,
+      updated,
+    }),
+  ]);
   return (
     <div className={listLayout}>
       <div className={switcherCell}>
@@ -91,15 +112,21 @@ export async function ApplicationList({
           rawFrom={firstRaw(params.from)}
           rawTo={firstRaw(params.to)}
           rawTimeZone={firstRaw(params.tz)}
+          counts={counts}
         />
       </div>
       <div className={resultsCell}>
+        <PipelineBar counts={counts} />
         <Results
-          statuses={statuses}
+          userId={userId}
+          applications={applications}
           showArchived={showArchived}
-          search={search}
-          updated={updated}
-          dated={from !== undefined || to !== undefined}
+          filtered={
+            statuses.length > 0 ||
+            search !== undefined ||
+            from !== undefined ||
+            to !== undefined
+          }
         />
       </div>
     </div>
@@ -107,30 +134,18 @@ export async function ApplicationList({
 }
 
 async function Results({
-  statuses,
+  userId,
+  applications,
   showArchived,
-  search,
-  updated,
-  dated,
+  filtered,
 }: {
-  statuses: Status[];
+  userId: string;
+  applications: Awaited<ReturnType<typeof listApplications>>;
   showArchived: boolean;
-  search: string | undefined;
-  updated: UpdatedRange;
-  // A valid `from` or `to` is set; `tz` alone is never a filter.
-  dated: boolean;
+  // Empty state 1 (US-6): a valid status, search or date (`from` or `to`)
+  // filter is active; "Show archived" and `tz` don't count as filters.
+  filtered: boolean;
 }) {
-  const userId = await getCurrentUserId();
-  const applications = await listApplications(userId, {
-    statuses,
-    includeArchived: showArchived,
-    search,
-    updated,
-  });
-
-  // Empty state 1 (US-6): a valid status, search or date filter is active;
-  // "Show archived" and `tz` don't count as filters.
-  const filtered = statuses.length > 0 || search !== undefined || dated;
   if (applications.length === 0 && filtered) {
     return (
       <div className={emptyBox}>
@@ -197,17 +212,17 @@ async function Results({
   );
 }
 
-// Static labels are the real words, transparent on the pulse, so the font sets
-// their width and the skeleton wraps like the form at every width; only
+// The list rows are data placeholders: their one static word ("Updated") is
+// transparent on the pulse, so the font sets its width, and
+// forced-color-adjust-none keeps it transparent in forced colors. Only
 // dynamic text has fixed sizes. Each element repeats the real one's classes.
-// forced-color-adjust-none keeps the words transparent in forced colors.
 const pulse = "animate-pulse rounded bg-line";
 const hiddenText = "text-transparent select-none";
 const textPulse = `${pulse} ${hiddenText}`;
 
 export function ApplicationListSkeleton() {
   return (
-    <div className={`${listLayout} forced-color-adjust-none`}>
+    <div className={listLayout}>
       {/* Static, so the real switcher: it doesn't move when the list loads. */}
       <div className={switcherCell}>
         <ViewSwitcher current="list" />
@@ -215,99 +230,111 @@ export function ApplicationListSkeleton() {
       <div className={filterColumn}>
         <StatusFilterSkeleton />
       </div>
-      <ul
-        aria-busy="true"
-        aria-label="Loading applications"
-        className={`${listBox} ${resultsCell}`}
-      >
-        {[0, 1, 2].map((i) => (
-          <li key={i}>
-            <div aria-hidden="true" className={`${rowLayout} border-l-line`}>
-              {/* Company (a 24px line) and role (20px), as in a real row. */}
-              <div className="min-w-0 flex-1">
-                <div className="flex h-6 items-center">
-                  <div className={`h-4 w-1/3 ${pulse}`} />
+      <div className={resultsCell}>
+        <PipelineBarSkeleton />
+        <ul
+          aria-busy="true"
+          aria-label="Loading applications"
+          data-skeleton="list"
+          className={`${listBox} forced-color-adjust-none`}
+        >
+          {[0, 1, 2].map((i) => (
+            <li key={i}>
+              <div aria-hidden="true" className={`${rowLayout} border-l-line`}>
+                {/* Company (a 24px line) and role (20px), as in a real row. */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex h-6 items-center">
+                    <div className={`h-4 w-1/3 ${pulse}`} />
+                  </div>
+                  <div className="flex h-5 items-center">
+                    <div className={`h-3 w-1/2 ${pulse}`} />
+                  </div>
                 </div>
-                <div className="flex h-5 items-center">
-                  <div className={`h-3 w-1/2 ${pulse}`} />
+                <div className={rowMeta}>
+                  <span className="h-5 w-16 animate-pulse rounded-full bg-line" />
+                  <span className="text-xs whitespace-nowrap">
+                    <span className={textPulse}>Updated</span>{" "}
+                    <span className={`ml-1 inline-block h-3 w-20 ${pulse}`} />
+                  </span>
                 </div>
               </div>
-              <div className={rowMeta}>
-                <span className="h-5 w-16 animate-pulse rounded-full bg-line" />
-                <span className="text-xs whitespace-nowrap">
-                  <span className={textPulse}>Updated</span>{" "}
-                  <span className={`ml-1 inline-block h-3 w-20 ${pulse}`} />
-                </span>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
 
-function StatusFilterSkeleton() {
-  const fieldset =
-    "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-line bg-surface px-4 py-3 lg:flex-col lg:items-start";
-  const legend = "px-1 font-display text-sm font-semibold";
-  const label = "flex items-center gap-2 text-sm";
+// Static labels are visible real text with the real classes; only what
+// comes from the URL or the data pulses: checkbox state, the search and
+// date values, and the counts (SPEC.md decision log, 2026-11-18). The
+// data-skeleton hooks let e2e/filter-layout.spec.ts compare positions.
+export function StatusFilterSkeleton() {
   const box = `size-4.5 shrink-0 ${pulse}`;
   return (
     <div
       aria-hidden="true"
       className="flex flex-wrap items-end gap-3 lg:flex-col lg:flex-nowrap lg:items-stretch"
     >
-      {/* The search box keeps the real field's border and padding, but its
-          value comes from the URL like the checkbox states, so the inside
-          pulses. The bar is one text-sm line (h-5), the input's line height,
-          so the box is as tall as the loaded one. */}
+      {/* The field boxes keep the real border and padding; the value inside
+          pulses, one text-sm line (h-5) tall like the input's text. */}
       <div className={searchLabelClass}>
-        <span className={textPulse}>Search company or role</span>
-        <span className={`block ${searchInputClass}`}>
+        <span>Search company or role</span>
+        <span data-skeleton="search" className={`block ${searchInputClass}`}>
           <span className={`block h-5 ${pulse}`} />
         </span>
       </div>
-      <fieldset className={fieldset}>
-        <legend className={legend}>
-          <span className={textPulse}>Status</span>
-        </legend>
+      <fieldset className={fieldsetClass}>
+        <legend className={legendClass}>Status</legend>
         {Object.values(Status).map((status) => (
-          <div key={status} className={label}>
+          <div
+            key={status}
+            data-skeleton={`status-${statusFilterValue(status)}`}
+            className={statusLabelClass}
+          >
             <span className={box} />
-            <span className={textPulse}>{STATUS_LABELS[status]}</span>
+            <span>{STATUS_LABELS[status]}</span>
+            <span className={checkboxCountClass}>
+              <CountPulse />
+            </span>
           </div>
         ))}
       </fieldset>
-      {/* Date inputs keep the real field box; their value comes from the URL,
-          so the inside pulses, like the search box. */}
-      <fieldset className={fieldset}>
-        <legend className={legend}>
-          <span className={textPulse}>Updated</span>
-        </legend>
-        {["From", "To"].map((label) => (
-          <div key={label} className={dateLabelClass}>
-            <span className={textPulse}>{label}</span>
-            <span className={`block ${dateInputClass}`}>
+      <fieldset className={fieldsetClass}>
+        <legend className={legendClass}>Updated</legend>
+        {(
+          [
+            ["from", "From"],
+            ["to", "To"],
+          ] as const
+        ).map(([name, label]) => (
+          <div key={name} className={dateLabelClass}>
+            <span>{label}</span>
+            <span data-skeleton={name} className={`block ${dateInputClass}`}>
               <span className={`block h-5 ${pulse}`} />
             </span>
           </div>
         ))}
       </fieldset>
-      <fieldset className={fieldset}>
-        <legend className={legend}>
-          <span className={textPulse}>Archive</span>
-        </legend>
-        <div className={label}>
+      <fieldset className={fieldsetClass}>
+        <legend className={legendClass}>Archive</legend>
+        <div data-skeleton="show-archived" className={checkLabelClass}>
           <span className={box} />
-          <span className={textPulse}>Show archived</span>
+          <span>Show archived</span>
         </div>
       </fieldset>
-      <div className="ml-auto flex items-center gap-3 py-3 lg:ml-0 lg:justify-between">
-        <span className={`text-sm ${textPulse}`}>Clear</span>
-        {/* Box classes mirror button-ink (globals.css); change them together. */}
+      {/* Not interactive: no pointer, no hover. */}
+      <div className={actionsClass}>
         <span
-          className={`inline-flex items-center justify-center rounded-md border border-transparent px-3 py-1.5 text-sm font-semibold animate-pulse bg-line ${hiddenText}`}
+          data-skeleton="clear"
+          className={`${clearClass} pointer-events-none`}
+        >
+          Clear
+        </span>
+        <span
+          data-skeleton="apply"
+          className={`${applyClass} pointer-events-none`}
         >
           Apply
         </span>

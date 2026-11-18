@@ -5,6 +5,7 @@ import { dateRange } from "./date-filter";
 import {
   archiveApplication,
   changeApplicationStatus,
+  countApplicationsByStatus,
   createApplication,
   deleteApplication,
   getApplication,
@@ -668,3 +669,70 @@ async function waitUntilBlocked(holderPid: number, count: number) {
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
 }
+
+describe("status counts (real database)", () => {
+  const input = { company: "Acme", role: "Engineer", stack: [] };
+
+  async function createWithStatus(
+    userId: string,
+    status: Parameters<typeof changeApplicationStatus>[2],
+  ) {
+    const { id } = await createApplication(userId, input);
+    if (status !== "WISHLIST") {
+      await changeApplicationStatus(userId, id, status);
+    }
+    return id;
+  }
+
+  it("D15 US-6: counts every status, with 0 for a status that has no applications", async () => {
+    const userId = await createUser();
+    await createWithStatus(userId, "WISHLIST");
+    await createWithStatus(userId, "WISHLIST");
+    await createWithStatus(userId, "APPLIED");
+    await createWithStatus(userId, "OFFER");
+
+    await expect(countApplicationsByStatus(userId)).resolves.toEqual({
+      WISHLIST: 2,
+      APPLIED: 1,
+      INTERVIEW: 0,
+      OFFER: 1,
+      REJECTED: 0,
+    });
+  });
+
+  it("D16 US-6: archived applications are left out by default and counted with includeArchived", async () => {
+    const userId = await createUser();
+    await createWithStatus(userId, "INTERVIEW");
+    const archived = await createWithStatus(userId, "INTERVIEW");
+    await archiveApplication(userId, archived);
+
+    expect((await countApplicationsByStatus(userId)).INTERVIEW).toBe(1);
+    expect(
+      (await countApplicationsByStatus(userId, { includeArchived: true }))
+        .INTERVIEW,
+    ).toBe(2);
+  });
+
+  it("D17 US-0: another user's applications are never counted", async () => {
+    const userId = await createUser();
+    const otherUserId = await createUser();
+    await createWithStatus(userId, "REJECTED");
+    await createWithStatus(otherUserId, "REJECTED");
+    await createWithStatus(otherUserId, "APPLIED");
+    const foreignArchived = await createWithStatus(otherUserId, "REJECTED");
+    await archiveApplication(otherUserId, foreignArchived);
+
+    for (const includeArchived of [false, true]) {
+      await expect(
+        countApplicationsByStatus(userId, { includeArchived }),
+        `includeArchived=${includeArchived}`,
+      ).resolves.toEqual({
+        WISHLIST: 0,
+        APPLIED: 0,
+        INTERVIEW: 0,
+        OFFER: 0,
+        REJECTED: 1,
+      });
+    }
+  });
+});

@@ -1,6 +1,8 @@
 import type { ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { countNumberClass } from "../status-counts";
+import { countClass } from "./board-styles";
 import { StatusFilterForm } from "./status-filter-form";
 
 // next/form needs the App Router; a plain form renders the same fields.
@@ -216,5 +218,67 @@ describe("StatusFilterForm date range", () => {
     expect(input).toBeDefined();
     expect(input).toContain('type="hidden"');
     expect(input).toContain('value=""');
+  });
+});
+
+// US-6 status counts: the number at the end of each status row, hidden from
+// assistive technology, so the checkbox's name stays the status name (SPEC.md
+// decision log, 2026-11-18).
+function statusLabel(html: string, value: string) {
+  return [...html.matchAll(/<label[^>]*>([\s\S]*?)<\/label>/g)]
+    .map(([, body]) => body!)
+    .find((body) =>
+      new RegExp(`<input[^>]*name="status"[^>]*value="${value}"`).test(body),
+    );
+}
+
+// No separator: the count span holds only the 3ch number span.
+const COUNT_PART = /<span([^>]*)><span class="([^"]*)">(\d+)<\/span><\/span>/;
+
+describe("StatusFilterForm counts", () => {
+  const counts = {
+    WISHLIST: 2,
+    APPLIED: 3,
+    INTERVIEW: 0,
+    OFFER: 120,
+    REJECTED: 1,
+  };
+
+  it("F8 US-6: each status label shows an aria-hidden count at the row's end, with the number alone in the 3ch span, and its other text is just the name", () => {
+    const html = renderToStaticMarkup(
+      <StatusFilterForm selected={[]} showArchived={false} counts={counts} />,
+    );
+
+    for (const [value, name, n] of [
+      ["wishlist", "Wishlist", 2],
+      ["applied", "Applied", 3],
+      ["offer", "Offer", 120],
+      ["rejected", "Rejected", 1],
+    ] as const) {
+      const label = statusLabel(html, value);
+      expect(label, value).toBeDefined();
+      const part = label!.match(COUNT_PART);
+      expect(part, value).not.toBeNull();
+      expect(part![1]).toContain('aria-hidden="true"');
+      const className = part![1]!.match(/class="([^"]*)"/)?.[1] ?? "";
+      expect(className).toContain(countClass);
+      expect(className.split(" ")).toEqual(
+        expect.arrayContaining(["ml-auto", "tabular-nums"]),
+      );
+      expect(part![2]).toBe(countNumberClass);
+      expect(part![3]).toBe(String(n));
+      expect(
+        label!.replace(COUNT_PART, "").replace(/<[^>]*>/g, ""),
+        value,
+      ).toBe(name);
+    }
+  });
+
+  it("F9 US-6: a status with none shows 0", () => {
+    const html = renderToStaticMarkup(
+      <StatusFilterForm selected={[]} showArchived={false} counts={counts} />,
+    );
+
+    expect(statusLabel(html, "interview")?.match(COUNT_PART)?.[3]).toBe("0");
   });
 });

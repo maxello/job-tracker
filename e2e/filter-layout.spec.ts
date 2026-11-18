@@ -30,7 +30,8 @@ async function layoutBoxes(page: Page) {
   const archive = page.getByRole("group", { name: "Archive", exact: true });
   const apply = page.getByRole("button", { name: "Apply", exact: true });
   const form = page.locator("form").filter({ has: status });
-  const list = page.getByRole("list");
+  // The rows list: the Pipeline legend (US-6) is a list too, with no links.
+  const list = page.getByRole("list").filter({ has: page.getByRole("link") });
 
   for (const locator of [search, status, updated, archive, apply, form, list]) {
     await expect(locator).toBeVisible();
@@ -117,22 +118,70 @@ test.describe("mobile (390×844)", () => {
   });
 });
 
-// US-6: the loading skeleton keeps the filter column's positions. Its date
-// boxes are spans with no content width, so they collapsed to their padding
-// below `lg` while the real date inputs kept their width. Without JavaScript
-// the streamed list never replaces the fallback, so the skeleton stays on
-// screen to be measured. The counts branch extends this check to the whole
-// filter column.
-test("US-6: the skeleton's date boxes are as wide as the loaded date inputs", async ({
+// US-6: the loading skeleton keeps the positions of the loaded page for every
+// filter-column control, the pipeline bar and the list's top edge (SPEC.md
+// decision log, 2026-11-18; it replaces the date-box width check from the
+// date-range branch). Without JavaScript the streamed list never replaces
+// the fallback, so the skeleton stays on screen to be measured; the hidden
+// streamed content has no data-skeleton hooks. The user has one Wishlist
+// application, so the loaded page shows the bar and every count is one digit.
+test("US-6: the skeleton's filter controls, bar and list top are where the loaded page has them", async ({
   page,
   browser,
 }) => {
   await openListWithOneApplication(page);
-  const loaded = page.getByRole("group", { name: "Updated", exact: true });
-  const loadedInputs = [
-    loaded.getByLabel("From", { exact: true }),
-    loaded.getByLabel("To", { exact: true }),
-  ];
+  const main = page.getByRole("main");
+  const checkboxLabel = (name: string) =>
+    main.locator("label").filter({
+      has: page.getByRole("checkbox", { name, exact: true }),
+    });
+  const updated = page.getByRole("group", { name: "Updated", exact: true });
+
+  // [what, loaded locator, skeleton hook, compare height]
+  const pairs = [
+    [
+      "search",
+      page.getByRole("searchbox", {
+        name: "Search company or role",
+        exact: true,
+      }),
+      "search",
+      true,
+    ],
+    ...["Wishlist", "Applied", "Interview", "Offer", "Rejected"].map(
+      (name) =>
+        [
+          name,
+          checkboxLabel(name),
+          `status-${name.toLowerCase()}`,
+          true,
+        ] as const,
+    ),
+    ["From", updated.getByLabel("From", { exact: true }), "from", true],
+    ["To", updated.getByLabel("To", { exact: true }), "to", true],
+    ["Show archived", checkboxLabel("Show archived"), "show-archived", true],
+    [
+      "Clear",
+      main.getByRole("link", { name: "Clear", exact: true }),
+      "clear",
+      true,
+    ],
+    [
+      "Apply",
+      main.getByRole("button", { name: "Apply", exact: true }),
+      "apply",
+      true,
+    ],
+    // The bar is aria-hidden, so it has no role: a CSS locator.
+    ["bar", page.locator("[data-pipeline-bar]"), "bar", true],
+    // The list's top edge: the rows list (the Pipeline legend has no links).
+    [
+      "list",
+      main.getByRole("list").filter({ has: page.getByRole("link") }),
+      "list",
+      false,
+    ],
+  ] as const;
 
   const noJs = await browser.newContext({
     javaScriptEnabled: false,
@@ -141,31 +190,38 @@ test("US-6: the skeleton's date boxes are as wide as the loaded date inputs", as
   try {
     const skeleton = await noJs.newPage();
     await skeleton.goto("/");
-    // The skeleton is aria-hidden, so it has no roles: CSS locators. The
-    // hidden streamed form is in the document too, after the skeleton.
-    const skeletonFieldset = skeleton
-      .locator('[aria-hidden="true"] fieldset')
-      .filter({ hasText: "Updated" })
-      .first();
-    const skeletonBoxes = skeletonFieldset.locator(
-      ":scope > div > span:nth-child(2)",
-    );
-    await expect(skeletonBoxes).toHaveCount(2);
+    // Every element on both pages once, so a missing one is reported once
+    // and skipped below, instead of waiting at every width.
+    const present = [];
+    for (const [what, loaded, hook, withHeight] of pairs) {
+      const fake = skeleton.locator(`[data-skeleton="${hook}"]`);
+      await expect.soft(loaded, `${what}: loaded`).toBeVisible();
+      await expect
+        .soft(fake, `${what}: skeleton`)
+        .toBeVisible({ timeout: 1000 });
+      if ((await loaded.isVisible()) && (await fake.isVisible())) {
+        present.push({ what, loaded, fake, withHeight });
+      }
+    }
 
-    for (const width of [390, 768, 1024]) {
+    for (const width of [390, 768, 1024, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await skeleton.setViewportSize({ width, height: 900 });
-      for (const [i, name] of ["From", "To"].entries()) {
-        await expect(loadedInputs[i]!).toBeVisible();
-        const real = await loadedInputs[i]!.boundingBox();
-        const fake = await skeletonBoxes.nth(i).boundingBox();
-        if (!real || !fake) throw new Error(`${name} has no bounding box`);
-        expect
-          .soft(
-            Math.abs(fake.width - real.width),
-            `${width}px ${name}: skeleton ${fake.width} vs loaded ${real.width}`,
-          )
-          .toBeLessThanOrEqual(1);
+      for (const { what, loaded, fake, withHeight } of present) {
+        const real = await loaded.boundingBox();
+        const shown = await fake.boundingBox();
+        if (!real || !shown) throw new Error(`${what} has no bounding box`);
+        const keys = withHeight
+          ? (["x", "y", "width", "height"] as const)
+          : (["x", "y", "width"] as const);
+        for (const key of keys) {
+          expect
+            .soft(
+              Math.abs(shown[key] - real[key]),
+              `${width}px ${what} ${key}: skeleton ${shown[key]} vs loaded ${real[key]}`,
+            )
+            .toBeLessThanOrEqual(1);
+        }
       }
     }
   } finally {
