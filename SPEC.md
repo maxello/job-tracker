@@ -343,11 +343,15 @@ log, 2026-11-11).
   same counts as segments in the status colours, in the order Wishlist,
   Applied, Interview, Offer, Rejected, one per status with at least one
   application. Each segment's width is proportional to its count, with a
-  minimum of about 4px so a count of 1 stays visible; a single status fills
-  the bar. The bar is decorative (hidden from assistive technology); a text
-  legend next to it, a list named "Pipeline", gives all five statuses with
-  their counts, including 0, each as "Applied · 3" (the count style and
-  3ch width of the checkboxes).
+  minimum of 8px so a count of 1 stays visible; a single status fills the
+  bar. The segments are separate: 10px tall, 3px apart, each with a 2px
+  radius, and the bar as a whole has no rounding. The bar sits on a surface
+  card. The bar is decorative (hidden from assistive technology); a text
+  legend under it, a list named "Pipeline", gives all five statuses with
+  their counts, including 0, each as the number first and then the name,
+  with no separator ("3 Applied"), after an 8px square status dot with a
+  2px radius. The whole legend is mono, small and muted; the number is
+  medium weight in the text colour, 1ch wide
   The bar and the legend show only when at least one count is greater than 0
   under the current "Show archived" setting; otherwise neither is shown (this
   covers no applications at all and all archived with "Show archived" off).
@@ -370,6 +374,9 @@ log, 2026-11-11).
   - The skeleton always shows the bar. Accepted limitation: when the loaded
     page has no bar (no applications at all, or empty state 2), the list
     moves up when it loads
+  - Accepted limitation: the legend's numbers are 1ch wide, so with a
+    two-digit count the legend can wrap differently from the skeleton at
+    narrow widths, and the list moves when it loads
 
 ### US-7 AI job posting parsing (M6)
 
@@ -1233,17 +1240,36 @@ lives in `src/lib/auth.ts`.
 - 2026-11-18: pipeline bar (US-6). It sits at the top of the results cell,
   above the list or any empty state (below `lg`, between the filter form and
   the list), and shows above empty state 1 when a count is above 0. Segments
-  are proportional to the count with a minimum of about 4px, in the order
-  Wishlist → Rejected. The bar is `aria-hidden`; its legend is a
+  are proportional to the count (`flex: {count} 1 0`), in the order
+  Wishlist → Rejected, and follow the Signal design artifact: separate
+  segments 10px tall (`h-2.5`), 3px apart (`gap-0.75`), each with a 2px
+  radius (`rounded-xs`) and a minimum width of 8px (`min-w-2`), with no
+  rounding on the whole bar. The bar is `aria-hidden`; its legend is a
   `<ul aria-label="Pipeline">` listing all five statuses with their counts,
-  including 0, as "Applied · 3", with the checkboxes' count style and 3ch
-  width. All
-  five, so the legend's height doesn't depend on the data (at 390px a
-  five-item legend wraps differently from a two-item one, so the skeleton
-  couldn't match it), its status names are static text the skeleton shows
-  for real, and screen-reader users hear the zeros the checkboxes hide.
-  Rejected: only the statuses with a segment (a data-dependent height), and
-  equal-width segments (the bar would not show proportions)
+  including 0. Each item is an 8px square dot with a 2px radius, then the
+  number, then the name, with no separator ("3 Applied"). The whole legend
+  is `font-mono text-xs text-muted`, names included; the number is
+  `font-medium text-text`, in a 1ch minimum width (the filter keeps 3ch): a
+  3ch span would leave a gap before the name after a one-digit count.
+  Accepted limitation: with a two-digit count the legend can wrap
+  differently from the skeleton at narrow widths. All five statuses, so the
+  legend's height doesn't depend on the data (at 390px a five-item legend
+  wraps differently from a two-item one, so the skeleton couldn't match it),
+  its status names are static text the skeleton shows for real, and
+  screen-reader users hear the zeros the checkboxes hide. Deviation from the
+  design artifact: the bar keeps its surface card instead of sitting on the
+  page background, by the project rule that status colours sit on
+  `bg-surface`. Rejected's grey (`#848c9a`) reaches 3.39:1 on the surface
+  and only 2.96:1 on the page background (`#edf0f4`) in the light theme; in
+  the dark theme it is 3.71:1 and 4.05:1. With separate segments the
+  background between them is part of every segment's boundary. The bar
+  could be treated as exempt from WCAG 1.4.11, since the legend carries the
+  same counts as text, but the card keeps 3:1 without relying on that.
+  Rejected: only the statuses with a segment (a data-dependent height),
+  equal-width segments (the bar would not show proportions), one rounded
+  bar with touching segments (the first version), "Applied · 3" with the
+  name first (the first version; the design artifact puts the number
+  first), and a 3ch legend number (a gap before the name)
 - 2026-11-18: freshness of the counts. Per the Next 16.4.6 docs (glossary,
   "Client Cache"), pages are not cached on client navigation
   (`staleTimes.dynamic` defaults to 0) but are reused on browser Back and
