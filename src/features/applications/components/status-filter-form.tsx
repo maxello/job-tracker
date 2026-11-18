@@ -44,6 +44,13 @@ export const fieldsetClass =
 
 export const legendClass = "px-1 font-display text-sm font-semibold";
 export const checkLabelClass = "flex items-center gap-2 text-sm";
+// US-6: a status row is as wide as the column from `lg`, so its count sits
+// at the right edge and the numbers line up; below `lg` the rows wrap side
+// by side and the count follows the name (SPEC.md decision log, 2026-11-18).
+export const statusLabelClass = `${checkLabelClass} lg:w-full`;
+// The count after a status checkbox: right-aligned digits in the 3ch number
+// span (text-align inherits into it), tabular so they line up.
+export const checkboxCountClass = `${countClass} ml-auto text-right tabular-nums`;
 export const actionsClass =
   "ml-auto flex items-center gap-3 py-3 lg:ml-0 lg:justify-between";
 export const clearClass = "text-sm text-muted underline underline-offset-2";
@@ -114,7 +121,7 @@ export function StatusFilterForm({
         <fieldset className={fieldsetClass}>
           <legend className={legendClass}>Status</legend>
           {Object.values(Status).map((status) => (
-            <label key={status} className={checkLabelClass}>
+            <label key={status} className={statusLabelClass}>
               <input
                 type="checkbox"
                 name="status"
@@ -122,19 +129,15 @@ export function StatusFilterForm({
                 defaultChecked={selected.includes(status)}
                 className={`check ${STATUS_STYLES[status].check}`}
               />
-              {/* One flex item, so " · " stays inline text after the name.
-                  The count is aria-hidden: the checkbox's name stays the
-                  status name, and the Pipeline legend reads the counts
-                  (SPEC.md decision log, 2026-11-18). */}
-              <span>
-                {STATUS_LABELS[status]}
-                {counts && (
-                  <span aria-hidden="true" className={countClass}>
-                    {" · "}
-                    <span className={countNumberClass}>{counts[status]}</span>
-                  </span>
-                )}
-              </span>
+              {STATUS_LABELS[status]}
+              {/* aria-hidden: the checkbox's name stays the status name, and
+                  the Pipeline legend reads the counts (SPEC.md decision
+                  log, 2026-11-18). */}
+              {counts && (
+                <span aria-hidden="true" className={checkboxCountClass}>
+                  <span className={countNumberClass}>{counts[status]}</span>
+                </span>
+              )}
             </label>
           ))}
         </fieldset>

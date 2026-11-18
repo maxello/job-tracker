@@ -89,15 +89,21 @@ describe("ApplicationListSkeleton labels and counts", () => {
     expect.soft(pipeline).not.toContain("text-transparent");
   });
 
-  it("S3 US-6: the skeleton has the bar and pulses only the numbers of ten counts, after a real ' · '", () => {
+  it("S3 US-6: the skeleton has the bar and pulses only the numbers of ten counts: five after a real ' · ' in the legend, five at the end of the status rows", () => {
     const html = renderToStaticMarkup(<ApplicationListSkeleton />);
 
     expect(html).toMatch(/data-skeleton="bar"/);
-    const pulses = [...html.matchAll(/ · <span class="([^"]*)"><\/span>/g)].map(
+    const legend = [...html.matchAll(/ · <span class="([^"]*)"><\/span>/g)].map(
       ([, className]) => className!,
     );
-    expect(pulses).toHaveLength(10);
-    for (const className of pulses) {
+    const rows = [
+      ...html.matchAll(
+        /<span class="([^"]*\bml-auto\b[^"]*\btabular-nums\b[^"]*)"><span class="([^"]*)"><\/span><\/span>/g,
+      ),
+    ].map(([, , className]) => className!);
+    expect(legend).toHaveLength(5);
+    expect(rows).toHaveLength(5);
+    for (const className of [...legend, ...rows]) {
       expect(className).toContain(countNumberClass);
       expect(className).toContain("animate-pulse");
     }

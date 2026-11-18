@@ -13,7 +13,6 @@ import { parseSearchQuery } from "../search-filter";
 import { parseStatusFilter, statusFilterValue } from "../status-filter";
 import { STATUS_STYLES } from "../status-style";
 import { ArchivedBadge } from "./archived-badge";
-import { countClass } from "./board-styles";
 import {
   AllArchived,
   emptyBox,
@@ -25,6 +24,7 @@ import { CountPulse, PipelineBar, PipelineBarSkeleton } from "./pipeline-bar";
 import {
   actionsClass,
   applyClass,
+  checkboxCountClass,
   checkLabelClass,
   clearClass,
   dateInputClass,
@@ -34,6 +34,7 @@ import {
   searchInputClass,
   searchLabelClass,
   StatusFilterForm,
+  statusLabelClass,
 } from "./status-filter-form";
 import { ViewSwitcher } from "./view-switcher";
 
@@ -290,15 +291,12 @@ export function StatusFilterSkeleton() {
           <div
             key={status}
             data-skeleton={`status-${statusFilterValue(status)}`}
-            className={checkLabelClass}
+            className={statusLabelClass}
           >
             <span className={box} />
-            <span>
-              {STATUS_LABELS[status]}
-              <span className={countClass}>
-                {" · "}
-                <CountPulse />
-              </span>
+            <span>{STATUS_LABELS[status]}</span>
+            <span className={checkboxCountClass}>
+              <CountPulse />
             </span>
           </div>
         ))}

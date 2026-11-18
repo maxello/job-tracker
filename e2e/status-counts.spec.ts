@@ -51,7 +51,7 @@ function checkbox(page: Page, label: string) {
   return page.getByRole("checkbox", { name: label, exact: true });
 }
 
-// The checkbox's label, whose visible text includes the aria-hidden count.
+// The checkbox's label, which also holds the aria-hidden count.
 function statusLabel(page: Page, label: string) {
   return page
     .getByRole("main")
@@ -59,11 +59,16 @@ function statusLabel(page: Page, label: string) {
     .filter({ has: checkbox(page, label) });
 }
 
+// The count at the end of the status row: aria-hidden, so it has no role.
+function checkboxCount(page: Page, label: string) {
+  return statusLabel(page, label).locator('[aria-hidden="true"]');
+}
+
 function pipeline(page: Page) {
   return page.getByRole("list", { name: "Pipeline", exact: true });
 }
 
-// Visible texts, Wishlist → Rejected, e.g. ["Wishlist · 2", …].
+// The legend's visible texts, Wishlist → Rejected, e.g. ["Wishlist · 2", …].
 function texts(counts: number[]) {
   return LABELS.map((label, i) => `${label} · ${counts[i]}`);
 }
@@ -73,15 +78,15 @@ function texts(counts: number[]) {
 async function expectCheckboxCounts(page: Page, counts: number[]) {
   for (const [i, label] of LABELS.entries()) {
     await expect
-      .soft(statusLabel(page, label), label)
-      .toHaveText(texts(counts)[i]!, { timeout: 1000 });
+      .soft(checkboxCount(page, label), label)
+      .toHaveText(String(counts[i]), { timeout: 1000 });
   }
 }
 
 // One hard wait with the default timeout after a navigation, before the 1s
-// soft checks: the counts have rendered once a label shows its " · ".
+// soft checks: the counts have rendered once a row shows its count.
 async function waitForCounts(page: Page) {
-  await expect(statusLabel(page, "Wishlist")).toContainText("·");
+  await expect(checkboxCount(page, "Wishlist")).toBeVisible();
 }
 
 async function expectLegend(page: Page, counts: number[]) {

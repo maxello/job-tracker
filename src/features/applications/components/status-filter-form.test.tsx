@@ -221,9 +221,9 @@ describe("StatusFilterForm date range", () => {
   });
 });
 
-// US-6 status counts: " · n" after each status name, hidden from assistive
-// technology, so the checkbox's name stays the status name (SPEC.md decision
-// log, 2026-11-18).
+// US-6 status counts: the number at the end of each status row, hidden from
+// assistive technology, so the checkbox's name stays the status name (SPEC.md
+// decision log, 2026-11-18).
 function statusLabel(html: string, value: string) {
   return [...html.matchAll(/<label[^>]*>([\s\S]*?)<\/label>/g)]
     .map(([, body]) => body!)
@@ -232,9 +232,8 @@ function statusLabel(html: string, value: string) {
     );
 }
 
-// " · " is plain inline text and only the number sits in the 3ch span.
-const COUNT_PART =
-  /<span([^>]*)> · <span class="([^"]*)">(\d+)<\/span><\/span>/;
+// No separator: the count span holds only the 3ch number span.
+const COUNT_PART = /<span([^>]*)><span class="([^"]*)">(\d+)<\/span><\/span>/;
 
 describe("StatusFilterForm counts", () => {
   const counts = {
@@ -245,7 +244,7 @@ describe("StatusFilterForm counts", () => {
     REJECTED: 1,
   };
 
-  it("F8 US-6: each status label shows an aria-hidden ' · n' with the number alone in the 3ch span, and its other text is just the name", () => {
+  it("F8 US-6: each status label shows an aria-hidden count at the row's end, with the number alone in the 3ch span, and its other text is just the name", () => {
     const html = renderToStaticMarkup(
       <StatusFilterForm selected={[]} showArchived={false} counts={counts} />,
     );
@@ -261,7 +260,11 @@ describe("StatusFilterForm counts", () => {
       const part = label!.match(COUNT_PART);
       expect(part, value).not.toBeNull();
       expect(part![1]).toContain('aria-hidden="true"');
-      expect(part![1]).toContain(`class="${countClass}"`);
+      const className = part![1]!.match(/class="([^"]*)"/)?.[1] ?? "";
+      expect(className).toContain(countClass);
+      expect(className.split(" ")).toEqual(
+        expect.arrayContaining(["ml-auto", "tabular-nums"]),
+      );
       expect(part![2]).toBe(countNumberClass);
       expect(part![3]).toBe(String(n));
       expect(
@@ -271,7 +274,7 @@ describe("StatusFilterForm counts", () => {
     }
   });
 
-  it("F9 US-6: a status with none shows · 0", () => {
+  it("F9 US-6: a status with none shows 0", () => {
     const html = renderToStaticMarkup(
       <StatusFilterForm selected={[]} showArchived={false} counts={counts} />,
     );
