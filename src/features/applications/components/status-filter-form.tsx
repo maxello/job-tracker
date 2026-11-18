@@ -48,9 +48,11 @@ export const checkLabelClass = "flex items-center gap-2 text-sm";
 // at the right edge and the numbers line up; below `lg` the rows wrap side
 // by side and the count follows the name (SPEC.md decision log, 2026-11-18).
 export const statusLabelClass = `${checkLabelClass} lg:w-full`;
-// The count after a status checkbox: right-aligned digits in the 3ch number
-// span (text-align inherits into it), tabular so they line up.
-export const checkboxCountClass = `${countClass} ml-auto text-right tabular-nums`;
+// The count after a status checkbox, tabular digits in the 3ch number span
+// (text-align inherits into it). From `lg` they're right-aligned at the row's
+// edge, so they line up; below `lg` left-aligned, so a one-digit count
+// doesn't leave a wide gap after the name.
+export const checkboxCountClass = `${countClass} ml-auto text-left tabular-nums lg:text-right`;
 export const actionsClass =
   "ml-auto flex items-center gap-3 py-3 lg:ml-0 lg:justify-between";
 export const clearClass = "text-sm text-muted underline underline-offset-2";

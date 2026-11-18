@@ -330,10 +330,11 @@ log, 2026-11-11).
   that status. The counts respect only "Show archived": search, the selected
   statuses and the date range don't change them. A status with none shows 0
   - The count is the number alone, with no separator, in the board's count
-    style with tabular digits, right-aligned in a 3ch minimum width, so one
-    to three digits take the same width. From `lg`, where the status rows
-    stack, it sits at the right edge of the row, so the numbers line up;
-    below `lg`, where the rows wrap side by side, it follows the name
+    style with tabular digits, in a 3ch minimum width, so one to three
+    digits take the same width. From `lg`, where the status rows stack, it
+    sits right-aligned at the right edge of the row, so the numbers line up;
+    below `lg`, where the rows wrap side by side, it follows the name,
+    left-aligned, so a one-digit count leaves no wide gap
   - The count is hidden from assistive technology: the checkbox's accessible
     name stays the status name ("Applied"), while the row also shows "3".
     Screen-reader users get the counts from the legend
@@ -1207,11 +1208,12 @@ lives in `src/lib/auth.ts`.
   user back through the nav before the message's context)
 - 2026-11-18: status counts (US-6). Each status checkbox shows its count as
   the number alone at the end of the row: in the board's count style
-  (`countClass`) with `tabular-nums`, right-aligned in a 3ch minimum width,
-  so one to three digits take the same width. From `lg` the status rows are
-  as wide as the column (`lg:w-full`) and the count is pushed to the right
-  edge (`ml-auto`), so the numbers line up; below `lg` the rows wrap side by
-  side, so the count follows the name. The skeleton's status rows use the
+  (`countClass`) with `tabular-nums`, in a 3ch minimum width, so one to
+  three digits take the same width. From `lg` the status rows are as wide
+  as the column (`lg:w-full`) and the count is pushed to the right edge
+  (`ml-auto`), right-aligned, so the numbers line up; below `lg` the rows
+  wrap side by side, so the count follows the name, left-aligned
+  (`text-left lg:text-right`), so a one-digit count leaves no wide gap. The skeleton's status rows use the
   same classes. The count is `aria-hidden`: the checkbox's accessible name
   stays the status name ("Applied"), while the row also shows "3". This
   differs on purpose: the name starts with the visible word, and the counts
