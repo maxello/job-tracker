@@ -358,9 +358,11 @@ log, 2026-11-11).
   The status checkboxes still show their counts, including 0. With a filter
   that matches nothing (empty state 1) the bar still shows when a count is
   above 0
-- Counts and the list come from the same request, so the counts are never
-  staler than the rows; after a status change elsewhere, returning to the list
-  shows the new counts, also with the browser's Back
+- Counts and the list come from the same request; after a status change
+  elsewhere, returning to the list shows the new counts, also with the
+  browser's Back. Accepted limitation: the two are separate reads, so a
+  change committed between them can show in one and not the other until the
+  next request
 - The loading skeleton includes the bar and the counts; the list and the
   filter column have the same positions in the skeleton and in the loaded page.
   The skeleton includes the date fieldset from the date-range branch, before
@@ -1245,8 +1247,9 @@ lives in `src/lib/auth.ts`.
   segments 10px tall (`h-2.5`), 3px apart (`gap-0.75`), each with a 2px
   radius (`rounded-xs`) and a minimum width of 8px (`min-w-2`), with no
   rounding on the whole bar. The bar is `aria-hidden`; its legend is a
-  `<ul aria-label="Pipeline">` listing all five statuses with their counts,
-  including 0. Each item is an 8px square dot with a 2px radius, then the
+  `<ul role="list" aria-label="Pipeline">` (the explicit role keeps list
+  semantics in Safari, which drops them from a list styled without markers;
+  found in review) listing all five statuses with their counts, including 0. Each item is an 8px square dot with a 2px radius, then the
   number, then the name, with no separator ("3 Applied"). The whole legend
   is `font-mono text-xs text-muted`, names included; the number is
   `font-medium text-text`, in a 1ch minimum width (the filter keeps 3ch): a
@@ -1275,9 +1278,14 @@ lives in `src/lib/auth.ts`.
   (`staleTimes.dynamic` defaults to 0) but are reused on browser Back and
   Forward; the docs don't say whether `refresh()` from an action invalidates
   a route hidden by `<Activity>`. The counts render in the same tree and
-  request as the rows, so they are never staler than the list. An e2e test
-  pins that after a status change on the detail page, Back to `/` shows the
-  new counts; if it doesn't, that is a new decision, not a test change
+  request as the rows. An e2e test pins that after a status change on the
+  detail page, Back to `/` shows the new counts; if it doesn't, that is a
+  new decision, not a test change. Accepted limitation (found in review):
+  the counts and the rows are two reads run in parallel (`Promise.all`), so
+  a change committed between them (another tab) can show in one and not the
+  other; the next request shows both. Rejected: a `RepeatableRead`
+  transaction around both reads (one snapshot, but it serialises the two
+  queries on one connection for a rare, self-correcting case)
 - 2026-11-18: the list skeleton shows static labels as visible real text
   (agreed 2026-11-17): the legends, the five status names, "From", "To",
   "Show archived", "Search company or role", "Clear", "Apply", and the five
