@@ -4,6 +4,8 @@ import { Status } from "@/generated/prisma/enums";
 import { SHOW_ARCHIVED_VALUE } from "../archived-filter";
 import { SEARCH_MAX_LENGTH } from "../search-filter";
 import { STATUS_LABELS } from "../status";
+import { countNumberClass, type StatusCounts } from "../status-counts";
+import { countClass } from "./board-styles";
 import { STATUS_STYLES } from "../status-style";
 import { statusFilterValue } from "../status-filter";
 import { TimeZoneInput } from "./time-zone-input";
@@ -36,8 +38,16 @@ export const dateLabelClass =
   "grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-2 text-sm lg:w-full";
 export const dateInputClass = "field w-36 min-w-0 px-2 py-1 text-sm lg:w-full";
 
-const fieldsetClass =
+// Shared with the skeleton, so its boxes match by construction (US-6).
+export const fieldsetClass =
   "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-line bg-surface px-4 py-3 lg:flex-col lg:items-start";
+
+export const legendClass = "px-1 font-display text-sm font-semibold";
+export const checkLabelClass = "flex items-center gap-2 text-sm";
+export const actionsClass =
+  "ml-auto flex items-center gap-3 py-3 lg:ml-0 lg:justify-between";
+export const clearClass = "text-sm text-muted underline underline-offset-2";
+export const applyClass = "button-ink px-3 py-1.5 text-sm";
 
 export function StatusFilterForm({
   selected,
@@ -49,8 +59,11 @@ export function StatusFilterForm({
   rawFrom,
   rawTo,
   rawTimeZone,
+  counts,
 }: {
   selected: Status[];
+  // US-6: shown after each status name, hidden from assistive technology.
+  counts?: StatusCounts;
   showArchived: boolean;
   search?: string;
   // The first `q` value as it is in the URL, before parsing.
@@ -99,11 +112,9 @@ export function StatusFilterForm({
           />
         </label>
         <fieldset className={fieldsetClass}>
-          <legend className="px-1 font-display text-sm font-semibold">
-            Status
-          </legend>
+          <legend className={legendClass}>Status</legend>
           {Object.values(Status).map((status) => (
-            <label key={status} className="flex items-center gap-2 text-sm">
+            <label key={status} className={checkLabelClass}>
               <input
                 type="checkbox"
                 name="status"
@@ -111,14 +122,24 @@ export function StatusFilterForm({
                 defaultChecked={selected.includes(status)}
                 className={`check ${STATUS_STYLES[status].check}`}
               />
-              {STATUS_LABELS[status]}
+              {/* One flex item, so " · " stays inline text after the name.
+                  The count is aria-hidden: the checkbox's name stays the
+                  status name, and the Pipeline legend reads the counts
+                  (SPEC.md decision log, 2026-11-18). */}
+              <span>
+                {STATUS_LABELS[status]}
+                {counts && (
+                  <span aria-hidden="true" className={countClass}>
+                    {" · "}
+                    <span className={countNumberClass}>{counts[status]}</span>
+                  </span>
+                )}
+              </span>
             </label>
           ))}
         </fieldset>
         <fieldset className={fieldsetClass}>
-          <legend className="px-1 font-display text-sm font-semibold">
-            Updated
-          </legend>
+          <legend className={legendClass}>Updated</legend>
           {(
             [
               ["from", "From", from],
@@ -138,10 +159,8 @@ export function StatusFilterForm({
         </fieldset>
         <TimeZoneInput />
         <fieldset className={fieldsetClass}>
-          <legend className="px-1 font-display text-sm font-semibold">
-            Archive
-          </legend>
-          <label className="flex items-center gap-2 text-sm">
+          <legend className={legendClass}>Archive</legend>
+          <label className={checkLabelClass}>
             <input
               type="checkbox"
               name="archived"
@@ -152,14 +171,14 @@ export function StatusFilterForm({
             Show archived
           </label>
         </fieldset>
-        <div className="ml-auto flex items-center gap-3 py-3 lg:ml-0 lg:justify-between">
+        <div className={actionsClass}>
           <Link
             href="/"
-            className="text-sm text-muted underline underline-offset-2 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className={`${clearClass} hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus`}
           >
             Clear
           </Link>
-          <button type="submit" className="button-ink px-3 py-1.5 text-sm">
+          <button type="submit" className={applyClass}>
             Apply
           </button>
         </div>

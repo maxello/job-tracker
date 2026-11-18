@@ -155,7 +155,11 @@ test("US-5: from lg the switcher sits above the list column without moving the f
     .getByRole("main")
     .locator("form")
     .filter({ has: page.getByRole("searchbox") });
-  const rows = page.getByRole("main").getByRole("list");
+  // The rows list: the Pipeline legend (US-6) is a list too, with no links.
+  const rows = page
+    .getByRole("main")
+    .getByRole("list")
+    .filter({ has: page.getByRole("link") });
 
   await page.setViewportSize({ width: 1280, height: 800 });
   await expect(rows).toBeVisible();

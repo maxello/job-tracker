@@ -2,6 +2,7 @@ import type { Status } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
 import type { UpdatedRange } from "./date-filter";
 import type { CreateApplicationInput } from "./schemas";
+import { toStatusCounts, type StatusCounts } from "./status-counts";
 
 // Data access layer: every function takes the current user's id explicitly.
 
@@ -183,6 +184,22 @@ export async function hasArchivedApplications(userId: string) {
     select: { id: true },
   });
   return archived !== null;
+}
+
+// US-6 status counts for the filter and the pipeline bar: scoped to the user
+// and, unless "Show archived" is on, to non-archived applications. Search,
+// the status filter and the dates don't apply (SPEC.md decision log,
+// 2026-11-18).
+export async function countApplicationsByStatus(
+  userId: string,
+  { includeArchived = false }: { includeArchived?: boolean } = {},
+): Promise<StatusCounts> {
+  const rows = await db.application.groupBy({
+    by: ["status"],
+    where: { userId, ...(!includeArchived && { archivedAt: null }) },
+    _count: { _all: true },
+  });
+  return toStatusCounts(rows);
 }
 
 export type ChangeStatusResult = "changed" | "unchanged" | "not-found";
