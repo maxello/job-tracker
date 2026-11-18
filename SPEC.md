@@ -329,12 +329,14 @@ log, 2026-11-11).
 - Status counts: each status checkbox shows how many of my applications have
   that status. The counts respect only "Show archived": search, the selected
   statuses and the date range don't change them. A status with none shows 0
-  - The count follows the status name as " · 3", styled like the board's
-    column counts, with a minimum width of 3ch, so one to three digits take
-    the same width
+  - The count is the number alone, with no separator, in the board's count
+    style with tabular digits, right-aligned in a 3ch minimum width, so one
+    to three digits take the same width. From `lg`, where the status rows
+    stack, it sits at the right edge of the row, so the numbers line up;
+    below `lg`, where the rows wrap side by side, it follows the name
   - The count is hidden from assistive technology: the checkbox's accessible
-    name stays the status name ("Applied"), while its visible text is
-    "Applied · 3". Screen-reader users get the counts from the legend
+    name stays the status name ("Applied"), while the row also shows "3".
+    Screen-reader users get the counts from the legend
 - A pipeline bar at the top of the results area (above the list, or above
   any empty state; below `lg` between the filter form and the list) shows the
   same counts as segments in the status colours, in the order Wishlist,
@@ -343,7 +345,8 @@ log, 2026-11-11).
   minimum of about 4px so a count of 1 stays visible; a single status fills
   the bar. The bar is decorative (hidden from assistive technology); a text
   legend next to it, a list named "Pipeline", gives all five statuses with
-  their counts, including 0 (same count style and width as the checkboxes).
+  their counts, including 0, each as "Applied · 3" (the count style and
+  3ch width of the checkboxes).
   The bar and the legend show only when at least one count is greater than 0
   under the current "Show archived" setting; otherwise neither is shown (this
   covers no applications at all and all archived with "Show archived" off).
@@ -1202,21 +1205,27 @@ lives in `src/lib/auth.ts`.
   a reload the same board shows the empty state, so the criterion would
   depend on how the user got there), and focus on the `h1` (it sends the
   user back through the nav before the message's context)
-- 2026-11-18: status counts (US-6). Each status checkbox shows " · {count}"
-  after its name, in the board's count style (`countClass`) with a 3ch
-  minimum width, so one to three digits take the same width. The count is
-  `aria-hidden`: the checkbox's accessible name stays the status name
-  ("Applied"), while its visible text is "Applied · 3". This differs on
-  purpose: the name starts with the visible word, and the counts reach screen
-  readers through the pipeline legend. The existing e2e locators
+- 2026-11-18: status counts (US-6). Each status checkbox shows its count as
+  the number alone at the end of the row: in the board's count style
+  (`countClass`) with `tabular-nums`, right-aligned in a 3ch minimum width,
+  so one to three digits take the same width. From `lg` the status rows are
+  as wide as the column (`lg:w-full`) and the count is pushed to the right
+  edge (`ml-auto`), so the numbers line up; below `lg` the rows wrap side by
+  side, so the count follows the name. The skeleton's status rows use the
+  same classes. The count is `aria-hidden`: the checkbox's accessible name
+  stays the status name ("Applied"), while the row also shows "3". This
+  differs on purpose: the name starts with the visible word, and the counts
+  reach screen readers through the pipeline legend. The existing e2e locators
   (`{ name: "Applied", exact: true }`) stay unchanged. The counts come from
   one owner-scoped `groupBy` on `status` in the DAL, filtered only by
   `userId` and, unless "Show archived" is on, `archivedAt: null`; missing
   statuses count as 0. `ApplicationList` starts the counts and the list
   queries together, inside the list's existing `<Suspense>`, so there is no
   waterfall and no second boundary; the header stays in the static shell.
-  Rejected: the count in the accessible name ("Applied 3", the name would
-  change with the data and five specs' locators would change), and
+  Rejected: " · {count}" right after the name (shipped first on this
+  branch; the numbers don't line up), the count in the accessible name
+  ("Applied 3", the name would change with the data and five specs'
+  locators would change), and
   `aria-describedby` (it needs ids, which #26 makes awkward in a Server
   Component)
 - 2026-11-18: pipeline bar (US-6). It sits at the top of the results cell,
@@ -1225,7 +1234,8 @@ lives in `src/lib/auth.ts`.
   are proportional to the count with a minimum of about 4px, in the order
   Wishlist → Rejected. The bar is `aria-hidden`; its legend is a
   `<ul aria-label="Pipeline">` listing all five statuses with their counts,
-  including 0, with the same count style and width as the checkboxes. All
+  including 0, as "Applied · 3", with the checkboxes' count style and 3ch
+  width. All
   five, so the legend's height doesn't depend on the data (at 390px a
   five-item legend wraps differently from a two-item one, so the skeleton
   couldn't match it), its status names are static text the skeleton shows
