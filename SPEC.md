@@ -1344,6 +1344,19 @@ lives in `src/lib/auth.ts`.
   below the trigger. The header is in the `(main)` layout, so it covers the
   list, board, detail, new, edit and auth pages; `app/error.tsx` replaces
   that layout and shows no header (2026-11-04 entry), so it doesn't change
+- 2026-11-18: Chromium applies `text-transform` to the accessible name:
+  with the uppercase legend style, CDP `Accessibility.getFullAXTree` gave
+  the search field the name "SEARCH" (source `labelwrapped`, text
+  "SEARCH"), while Playwright's `getByRole` still matched "Search". So the
+  uppercase "Search" label and the "Status", "Updated" and "Archive"
+  legends also carry `aria-label` in normal case on the input and the
+  fieldsets, and the visible word and the `aria-label` come from one
+  constant per field, so they can't drift. The e2e check reads Chromium's
+  own tree (E-AX in `e2e/search.spec.ts`). Rejected: the visible word
+  `aria-hidden` plus an `sr-only` copy (duplicate DOM text), accepting the
+  uppercase names (they differ between browsers, and how screen readers
+  read them is unverified), and dropping the uppercase (a visible
+  difference from the design)
 
 ## 11. End-to-end verification
 
