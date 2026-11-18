@@ -329,18 +329,43 @@ log, 2026-11-11).
 - Status counts: each status checkbox shows how many of my applications have
   that status. The counts respect only "Show archived": search, the selected
   statuses and the date range don't change them. A status with none shows 0
-- A pipeline bar above the list shows the same counts as segments in the
-  status colours, one per status with at least one application. The bar is
-  decorative (hidden from assistive technology); a text legend next to it
-  gives each status with its count. The bar and the legend show only when at
-  least one count is greater than 0 under the current "Show archived"
-  setting; otherwise neither is shown (this covers no applications at all and
-  all archived with "Show archived" off). The status checkboxes still show
-  their counts, including 0
+  - The count follows the status name as " · 3", styled like the board's
+    column counts, with a minimum width of 3ch, so one to three digits take
+    the same width
+  - The count is hidden from assistive technology: the checkbox's accessible
+    name stays the status name ("Applied"), while its visible text is
+    "Applied · 3". Screen-reader users get the counts from the legend
+- A pipeline bar at the top of the results area (above the list, or above
+  any empty state; below `lg` between the filter form and the list) shows the
+  same counts as segments in the status colours, in the order Wishlist,
+  Applied, Interview, Offer, Rejected, one per status with at least one
+  application. Each segment's width is proportional to its count, with a
+  minimum of about 4px so a count of 1 stays visible; a single status fills
+  the bar. The bar is decorative (hidden from assistive technology); a text
+  legend next to it, a list named "Pipeline", gives all five statuses with
+  their counts, including 0 (same count style and width as the checkboxes).
+  The bar and the legend show only when at least one count is greater than 0
+  under the current "Show archived" setting; otherwise neither is shown (this
+  covers no applications at all and all archived with "Show archived" off).
+  The status checkboxes still show their counts, including 0. With a filter
+  that matches nothing (empty state 1) the bar still shows when a count is
+  above 0
+- Counts and the list come from the same request, so the counts are never
+  staler than the rows; after a status change elsewhere, returning to the list
+  shows the new counts, also with the browser's Back
 - The loading skeleton includes the bar and the counts; the list and the
   filter column have the same positions in the skeleton and in the loaded page.
   The skeleton includes the date fieldset from the date-range branch, before
   the counts and the bar ship
+  - Static labels are visible real text: the legends ("Status", "Updated",
+    "Archive"), the five status names (in the filter and in the bar's
+    legend), "From", "To", "Show archived", "Search company or role",
+    "Clear" and "Apply". Only data-dependent parts pulse: checkbox state,
+    the search and date values, the rows, the counts and the bar. The
+    skeleton stays hidden from assistive technology
+  - The skeleton always shows the bar. Accepted limitation: when the loaded
+    page has no bar (no applications at all, or empty state 2), the list
+    moves up when it loads
 
 ### US-7 AI job posting parsing (M6)
 
@@ -1177,6 +1202,61 @@ lives in `src/lib/auth.ts`.
   a reload the same board shows the empty state, so the criterion would
   depend on how the user got there), and focus on the `h1` (it sends the
   user back through the nav before the message's context)
+- 2026-11-18: status counts (US-6). Each status checkbox shows " · {count}"
+  after its name, in the board's count style (`countClass`) with a 3ch
+  minimum width, so one to three digits take the same width. The count is
+  `aria-hidden`: the checkbox's accessible name stays the status name
+  ("Applied"), while its visible text is "Applied · 3". This differs on
+  purpose: the name starts with the visible word, and the counts reach screen
+  readers through the pipeline legend. The existing e2e locators
+  (`{ name: "Applied", exact: true }`) stay unchanged. The counts come from
+  one owner-scoped `groupBy` on `status` in the DAL, filtered only by
+  `userId` and, unless "Show archived" is on, `archivedAt: null`; missing
+  statuses count as 0. `ApplicationList` starts the counts and the list
+  queries together, inside the list's existing `<Suspense>`, so there is no
+  waterfall and no second boundary; the header stays in the static shell.
+  Rejected: the count in the accessible name ("Applied 3", the name would
+  change with the data and five specs' locators would change), and
+  `aria-describedby` (it needs ids, which #26 makes awkward in a Server
+  Component)
+- 2026-11-18: pipeline bar (US-6). It sits at the top of the results cell,
+  above the list or any empty state (below `lg`, between the filter form and
+  the list), and shows above empty state 1 when a count is above 0. Segments
+  are proportional to the count with a minimum of about 4px, in the order
+  Wishlist → Rejected. The bar is `aria-hidden`; its legend is a
+  `<ul aria-label="Pipeline">` listing all five statuses with their counts,
+  including 0, with the same count style and width as the checkboxes. All
+  five, so the legend's height doesn't depend on the data (at 390px a
+  five-item legend wraps differently from a two-item one, so the skeleton
+  couldn't match it), its status names are static text the skeleton shows
+  for real, and screen-reader users hear the zeros the checkboxes hide.
+  Rejected: only the statuses with a segment (a data-dependent height), and
+  equal-width segments (the bar would not show proportions)
+- 2026-11-18: freshness of the counts. Per the Next 16.4.6 docs (glossary,
+  "Client Cache"), pages are not cached on client navigation
+  (`staleTimes.dynamic` defaults to 0) but are reused on browser Back and
+  Forward; the docs don't say whether `refresh()` from an action invalidates
+  a route hidden by `<Activity>`. The counts render in the same tree and
+  request as the rows, so they are never staler than the list. An e2e test
+  pins that after a status change on the detail page, Back to `/` shows the
+  new counts; if it doesn't, that is a new decision, not a test change
+- 2026-11-18: the list skeleton shows static labels as visible real text
+  (agreed 2026-11-17): the legends, the five status names, "From", "To",
+  "Show archived", "Search company or role", "Clear", "Apply", and the five
+  status names in the pipeline legend. Only data-dependent parts pulse:
+  checkbox state, the search and date values, the rows, the counts (a 3ch
+  pulse, the count's width) and the bar. The skeleton stays `aria-hidden`.
+  The skeleton always shows the bar; accepted limitation: when the loaded
+  page has no bar (no applications at all, or empty state 2, all archived
+  with "Show archived" off), the list moves up when it loads. The JS-off
+  e2e check in `e2e/filter-layout.spec.ts` compares the skeleton with the
+  loaded page for every filter-column control, the list's top edge and the
+  bar, at 390, 768, 1024 and 1280 (within 1px); it replaces the date-box
+  width check, which it covers. The skeleton gets `data-skeleton` hooks for
+  it. Rejected: transparent text on the pulse (PR #43; the words are static,
+  so hiding them shows less than the loaded page for no gain, while their
+  width already comes from the font either way), and hiding the skeleton bar
+  when there may be no bar (the skeleton can't know the counts)
 
 ## 11. End-to-end verification
 
