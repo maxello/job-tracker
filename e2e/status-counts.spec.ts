@@ -68,9 +68,9 @@ function pipeline(page: Page) {
   return page.getByRole("list", { name: "Pipeline", exact: true });
 }
 
-// The legend's visible texts, Wishlist → Rejected, e.g. ["Wishlist · 2", …].
+// The legend's visible texts, Wishlist → Rejected, e.g. ["2 Wishlist", …].
 function texts(counts: number[]) {
-  return LABELS.map((label, i) => `${label} · ${counts[i]}`);
+  return LABELS.map((label, i) => `${counts[i]} ${label}`);
 }
 
 // Soft with a short timeout, so one run reports every status and five misses

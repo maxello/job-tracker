@@ -1,8 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { countNumberClass, type StatusCounts } from "../status-counts";
-import { countClass } from "./board-styles";
-import { PipelineBar } from "./pipeline-bar";
+import type { StatusCounts } from "../status-counts";
+import { legendNumberClass, PipelineBar } from "./pipeline-bar";
 
 const ZERO: StatusCounts = {
   WISHLIST: 0,
@@ -35,10 +34,9 @@ function legendItems(html: string) {
   );
 }
 
-// " · " is plain inline text inside the count's span, and only the number
-// sits in the 3ch inline-block (SPEC.md US-6).
-const COUNT_PART =
-  /<span([^>]*)> · <span class="([^"]*)">(\d+)<\/span><\/span>/;
+// The number first, alone in its span, then a space and the name in its own
+// span, with no separator (SPEC.md US-6).
+const COUNT_PART = /<span class="([^"]*)">(\d+)<\/span> <span>([^<]+)<\/span>$/;
 
 describe("PipelineBar", () => {
   it("P1 US-6: renders nothing when every count is 0", () => {
@@ -63,7 +61,7 @@ describe("PipelineBar", () => {
       "flex:5 1 0",
       "flex:1 1 0",
     ]);
-    for (const segment of found) expect(segment.className).toContain("min-w-1");
+    for (const segment of found) expect(segment.className).toContain("min-w-2");
   });
 
   it("P3 US-6: a single status gives a single segment", () => {
@@ -81,19 +79,30 @@ describe("PipelineBar", () => {
 
     expect(bar(html)?.[0]).toMatch(/^<div[^>]*aria-hidden="true"/);
 
+    // The whole legend is mono and muted; only the number is in the text
+    // colour.
+    const legendClass =
+      html.match(/<ul[^>]*aria-label="Pipeline"[^>]*class="([^"]*)"/)?.[1] ??
+      "";
+    expect(legendClass.split(" ")).toEqual(
+      expect.arrayContaining(["font-mono", "text-xs", "text-muted"]),
+    );
+
     const items = legendItems(html);
     expect(items.map((item) => item.replace(/<[^>]*>/g, ""))).toEqual([
-      "Wishlist · 0",
-      "Applied · 12",
-      "Interview · 0",
-      "Offer · 0",
-      "Rejected · 0",
+      "0 Wishlist",
+      "12 Applied",
+      "0 Interview",
+      "0 Offer",
+      "0 Rejected",
     ]);
     for (const item of items) {
       const part = item.match(COUNT_PART);
       expect(part, item).not.toBeNull();
-      expect(part![1]).toContain(`class="${countClass}"`);
-      expect(part![2]).toBe(countNumberClass);
+      expect(part![1]).toBe(legendNumberClass);
+      expect(part![1]!.split(" ")).toEqual(
+        expect.arrayContaining(["min-w-[1ch]", "font-medium", "text-text"]),
+      );
     }
   });
 });
