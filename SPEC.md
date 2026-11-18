@@ -1336,10 +1336,11 @@ lives in `src/lib/auth.ts`.
   loaded page's positions (`e2e/filter-layout.spec.ts`)
 - 2026-11-18: the site header is the design's bar: a full-width surface
   background with a bottom `line` border, its content still in the 1120px
-  page width, 60px tall at every width in both themes. A fixed height keeps
+  page width, 61px tall at every width in both themes (60px of content plus
+  the 1px bottom border, as in the design). A fixed height keeps
   the #44 guarantee (the header doesn't change height when UserMenu streams
   in) and fits the 44px account-menu trigger below `sm`; from `sm` the
-  header grows from 52px to 60px. The account menu's popover stays anchored
+  header grows from 52px to 61px. The account menu's popover stays anchored
   below the trigger. The header is in the `(main)` layout, so it covers the
   list, board, detail, new, edit and auth pages; `app/error.tsx` replaces
   that layout and shows no header (2026-11-04 entry), so it doesn't change
