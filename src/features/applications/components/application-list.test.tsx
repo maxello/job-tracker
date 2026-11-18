@@ -48,7 +48,8 @@ describe("ApplicationListSkeleton", () => {
 // real text, only data-dependent parts pulse, and the skeleton stays hidden
 // from assistive technology.
 const FILTER_WORDS = [
-  "Search company or role",
+  "Search",
+  "company or role",
   "Status",
   "Wishlist",
   "Applied",

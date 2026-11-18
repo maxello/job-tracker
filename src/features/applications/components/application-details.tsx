@@ -85,15 +85,13 @@ export async function ApplicationDetails({ id }: { id: string }) {
         className={`min-w-0 rounded-lg border border-l-6 border-line px-4 py-4 sm:px-6 ${style.panel}`}
       >
         <h1
-          className={`font-display text-2xl font-bold tracking-tight break-words ${archived ? "text-muted" : ""}`}
+          className={`page-heading break-words max-sm:text-heading-sm ${archived ? "text-muted" : ""}`}
         >
           {application.company}
         </h1>
         <p className="mt-1 break-words text-muted">{application.role}</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${style.badge}`}
-          >
+          <span className={`badge ${style.badge}`}>
             {STATUS_LABELS[application.status]}
           </span>
           {archived && <ArchivedBadge />}

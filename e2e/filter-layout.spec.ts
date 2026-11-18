@@ -22,7 +22,7 @@ async function openListWithOneApplication(page: Page) {
 // layout assertion.
 async function layoutBoxes(page: Page) {
   const search = page.getByRole("searchbox", {
-    name: "Search company or role",
+    name: "Search",
     exact: true,
   });
   const status = page.getByRole("group", { name: "Status", exact: true });
@@ -142,7 +142,7 @@ test("US-6: the skeleton's filter controls, bar and list top are where the loade
     [
       "search",
       page.getByRole("searchbox", {
-        name: "Search company or role",
+        name: "Search",
         exact: true,
       }),
       "search",

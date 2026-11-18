@@ -14,7 +14,7 @@ export default function SignInPage() {
       <Suspense>
         <RedirectIfSignedIn />
       </Suspense>
-      <h1 className="mb-6 font-display text-2xl font-bold tracking-tight">Sign in</h1>
+      <h1 className="mb-6 page-heading">Sign in</h1>
       <SignInForm />
       <p className="mt-6 text-sm text-muted">
         No account yet?{" "}

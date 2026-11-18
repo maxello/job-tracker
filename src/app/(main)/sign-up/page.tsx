@@ -14,7 +14,7 @@ export default function SignUpPage() {
       <Suspense>
         <RedirectIfSignedIn />
       </Suspense>
-      <h1 className="mb-6 font-display text-2xl font-bold tracking-tight">Sign up</h1>
+      <h1 className="mb-6 page-heading">Sign up</h1>
       <SignUpForm />
       <p className="mt-6 text-sm text-muted">
         Already have an account?{" "}

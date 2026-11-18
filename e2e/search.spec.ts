@@ -4,7 +4,7 @@ import { signUpFreshUser, uniqueName } from "./fresh-user";
 // US-6 search (`q`), SPEC.md section 4 and the decision log, 2026-11-16.
 // Each test signs up its own user and creates its own applications.
 
-const SEARCH_LABEL = "Search company or role";
+const SEARCH_LABEL = "Search";
 
 async function create(page: Page, company: string, role = "Engineer") {
   await page.goto("/applications/new");
@@ -70,6 +70,33 @@ const NO_MATCH = "No applications match your filters";
 
 test.beforeEach(async ({ page }) => {
   await signUpFreshUser(page);
+});
+
+// Playwright computes accessible names from the DOM, so a getByRole match
+// doesn't show what Chromium exposes (e.g. with text-transform: uppercase on
+// the label). This reads Chromium's own accessibility tree.
+test('E-AX US-6: Chromium exposes the search field as "Search", described by "company or role", and the filter groups in normal case', async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.getByRole("searchbox")).toBeVisible();
+
+  const cdp = await page.context().newCDPSession(page);
+  const { nodes } = await cdp.send("Accessibility.getFullAXTree");
+  const boxes = nodes.filter(
+    (node) => node.role?.value === "searchbox" && !node.ignored,
+  );
+  console.log(JSON.stringify(boxes, null, 2));
+  expect(boxes).toHaveLength(1);
+  expect(boxes[0]!.name?.value).toBe("Search");
+  expect(boxes[0]!.description?.value).toBe("company or role");
+
+  // The uppercase legends name the filter groups in normal case too.
+  const groups = nodes
+    .filter((node) => node.role?.value === "group" && !node.ignored)
+    .map((node) => node.name?.value);
+  console.log("groups", JSON.stringify(groups));
+  expect(groups).toEqual(["Status", "Updated", "Archive"]);
 });
 
 test("E1 US-6: search matches company or role, is in the URL and survives a reload", async ({
