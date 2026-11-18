@@ -207,6 +207,10 @@ test("US-6: the skeleton's filter controls, bar and list top are where the loade
     for (const width of [390, 768, 1024, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await skeleton.setViewportSize({ width, height: 900 });
+      // After Save, Next keeps the scroll the form page had (the list's top
+      // is still in view), so the loaded page can start a few px down; the
+      // skeleton (no JS) is always at the top.
+      await page.evaluate(() => window.scrollTo(0, 0));
       for (const { what, loaded, fake, withHeight } of present) {
         const real = await loaded.boundingBox();
         const shown = await fake.boundingBox();

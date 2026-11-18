@@ -47,11 +47,12 @@ export async function UserMenu({ menuId }: { menuId: string }) {
       {/* Right after the trigger, so the menu follows it in reading and tab
           order. No display utility here: it would override the UA's
           display: none and show the closed menu. inset-auto and m-0 undo the
-          UA's centring (inset: 0, margin: auto) before positioning. */}
+          UA's centring (inset: 0, margin: auto) before positioning. top-16:
+          12px below the trigger, which sits at 8–52px in the 60px header. */}
       <div
         id={menuId}
         popover="auto"
-        className="inset-auto top-18 right-4 m-0 max-w-[calc(100vw-2rem)] rounded-md border border-control bg-surface p-3 text-text sm:hidden"
+        className="inset-auto top-16 right-4 m-0 max-w-[calc(100vw-2rem)] rounded-md border border-control bg-surface p-3 text-text sm:hidden"
       >
         <div className="flex flex-col items-end gap-3">
           <p className="font-mono text-xs text-muted wrap-anywhere">

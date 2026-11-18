@@ -113,6 +113,33 @@ test.describe("below sm (360px)", () => {
     await expect(menu).toBeHidden();
   });
 
+  // SPEC.md decision log, 2026-11-18: with the 61px header bar, the menu
+  // stays anchored just below the trigger.
+  test("account menu below sm: opens below the header, close to the trigger", async ({
+    page,
+  }) => {
+    const user = await signUpFreshUser(page);
+    const { banner, trigger, menu } = header(page, user.email);
+
+    await trigger.click();
+    await expect(menu).toBeVisible();
+
+    const bannerBox = await banner.boundingBox();
+    const triggerBox = await trigger.boundingBox();
+    const menuBox = await menu.boundingBox();
+    if (!bannerBox || !triggerBox || !menuBox) throw new Error("no box");
+    const triggerBottom = triggerBox.y + triggerBox.height;
+    expect
+      .soft(menuBox.y, "menu top ≥ header bottom")
+      .toBeGreaterThanOrEqual(bannerBox.y + bannerBox.height);
+    expect
+      .soft(menuBox.y - triggerBottom, "gap below the trigger ≤ 16px")
+      .toBeLessThanOrEqual(16);
+    expect
+      .soft(menuBox.y + menuBox.height, "menu bottom inside the viewport")
+      .toBeLessThanOrEqual(800);
+  });
+
   test("#26: the fixed account-menu id stays unique across client-side navigation", async ({
     page,
   }) => {
