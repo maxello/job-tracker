@@ -38,6 +38,9 @@ type Props = {
   initialValues?: ApplicationFormValues;
   submitLabel: string;
   cancelHref: string;
+  // Edit only: the list's filters or the board, sent back to the action as
+  // the hidden `return` input (US-5, US-6). Omitted when empty.
+  returnQuery?: string;
 };
 
 export function ApplicationForm({
@@ -46,6 +49,7 @@ export function ApplicationForm({
   initialValues,
   submitLabel,
   cancelHref,
+  returnQuery,
 }: Props) {
   const [state, formAction, pending] = useActionState(action, null);
   const failure = state?.ok === false ? state : undefined;
@@ -126,6 +130,9 @@ export function ApplicationForm({
       className={formCardClass}
     >
       {id !== undefined && <input type="hidden" name="id" value={id} />}
+      {returnQuery ? (
+        <input type="hidden" name="return" value={returnQuery} />
+      ) : null}
 
       <p className={requiredNoteClass}>
         Fields marked <span aria-hidden="true">*</span>

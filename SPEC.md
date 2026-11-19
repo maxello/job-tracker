@@ -1407,7 +1407,10 @@ lives in `src/lib/auth.ts`.
   Edit link, the edit page's back link, Cancel and the redirect after Save
   carry it on. The query is rebuilt from the values the list's own parsers
   accept, never copied from the URL, and its path is always `/` or `/board`
-  (no open redirect). `view=board` (first value, exact) wins over list
+  (no open redirect). One builder makes every such query, the list rows'
+  included (they parse the URL again with it rather than reuse the list's
+  parsed values), and statuses come out in the form's checkbox order (the
+  enum's), whatever their order in the URL. `view=board` (first value, exact) wins over list
   filters, because the board has no filters. `tz` is kept whenever valid,
   because `from` and `to` are read in it: without it the dates would be read
   in UTC and the list could show different rows. The edit form sends the

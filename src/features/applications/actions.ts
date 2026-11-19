@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import type { ActionResult } from "@/lib/action-result";
 import { tryGetCurrentUserId } from "@/lib/current-user";
+import { listReturnQuery, parseListReturnQuery } from "./list-return";
 import {
   archiveApplication,
   changeApplicationStatus,
@@ -122,9 +123,13 @@ export async function updateApplicationAction(
   // Missing or another user's application: 404, never 403.
   if (outcome === "not-found") notFound();
 
+  // The list's filters or the board (US-5, US-6): the hidden `return` input
+  // came from the client, so it is parsed again and rebuilt, never used as is.
+  const query = listReturnQuery(parseListReturnQuery(formData.get("return")));
+
   // redirect alone keeps the client cache, so Back could show the old data.
   refresh();
-  redirect(`/applications/${id.data}`);
+  redirect(`/applications/${id.data}${query}`);
 }
 
 export async function deleteApplicationAction(

@@ -67,16 +67,23 @@ function zoneFormatter(timeZone: string) {
 }
 
 // The first `tz` value, trimmed, when Intl accepts it as a time zone
-// (aliases, any case, UTC and offsets such as +02:00); otherwise UTC.
-export function parseTimeZone(value: string | string[] | undefined): string {
+// (aliases, any case, UTC and offsets such as +02:00); otherwise undefined.
+export function parseTimeZoneParam(
+  value: string | string[] | undefined,
+): string | undefined {
   const zone = first(value)?.trim();
-  if (!zone || zone.includes("\0")) return "UTC";
+  if (!zone || zone.includes("\0")) return undefined;
   try {
     zoneFormatter(zone);
     return zone;
   } catch {
-    return "UTC";
+    return undefined;
   }
+}
+
+// The zone the list's dates are read in: a valid `tz`, otherwise UTC.
+export function parseTimeZone(value: string | string[] | undefined): string {
+  return parseTimeZoneParam(value) ?? "UTC";
 }
 
 // The local calendar day of `instant` as one comparable number. Intl writes
