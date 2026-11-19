@@ -204,13 +204,21 @@ test("LR-E4 US-6: a deep link's back link keeps only valid list parameters; an o
   const company = uniqueName("Deep");
   await create(page, company);
   const id = await openRow(page, company);
+  // The correct back link here can look like the Suspense fallback
+  // ("Applications" → /), so the link checks wait for the details first.
+  // This relies on stream order: the back link waits only on searchParams,
+  // the details also on the session and the database. If that order ever
+  // changed, a failure would show up as a false pass, not a flake.
+  const details = page.getByRole("heading", { level: 1, name: company });
 
   await page.goto(
     `/applications/${id}?q=x&status=foo&from=board&next=https://evil.example`,
   );
+  await expect(details).toBeVisible();
   await expect(backTo(page, "Applications")).toHaveAttribute("href", "/?q=x");
 
   await page.goto(`/applications/${id}?from=board`);
+  await expect(details).toBeVisible();
   await expect(backTo(page, "Applications")).toHaveAttribute("href", "/");
   // Paired with LR-E3, where the same locator finds the Board link.
   await expect(backTo(page, "Board")).toHaveCount(0);
