@@ -126,11 +126,14 @@ test("LR-E2 US-6: Edit, Cancel and Save keep the list's filters", async ({
   // Filtered by company, so the edited application stays inside the filter.
   await searchBox(page).fill(company);
   await apply(page);
+  // The row is also in the unfiltered list: wait for the filtered one.
+  await expect(page).toHaveURL((url) => url.searchParams.get("q") === company);
   const filters = query([
     ["q", company],
     ["tz", TOKYO],
   ]);
   const id = await openRow(page, company);
+  await expect(page).toHaveURL(`/applications/${id}${filters}`);
 
   await main(page).getByRole("link", { name: "Edit", exact: true }).click();
   await expect(page).toHaveURL(`/applications/${id}/edit${filters}`);
@@ -148,7 +151,7 @@ test("LR-E2 US-6: Edit, Cancel and Save keep the list's filters", async ({
   await page.getByRole("button", { name: "Save changes" }).click();
 
   await expect(page).toHaveURL(`/applications/${id}${filters}`);
-  await expect(main(page).getByText(role)).toBeVisible();
+  await expect(main(page).getByText(role, { exact: true })).toBeVisible();
   const back = backTo(page, "Applications");
   await expect(back).toHaveAttribute("href", `/${filters}`);
   await back.click();
@@ -188,7 +191,7 @@ test("LR-E3 US-5: from the board, the detail page, Edit and Save link back to th
   await page.getByRole("textbox", { name: "Role", exact: true }).fill(role);
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page).toHaveURL(`/applications/${id}?view=board`);
-  await expect(main(page).getByText(role)).toBeVisible();
+  await expect(main(page).getByText(role, { exact: true })).toBeVisible();
 
   await backTo(page, "Board").click();
   await expect(page).toHaveURL("/board");
