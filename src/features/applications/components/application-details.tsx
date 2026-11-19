@@ -228,16 +228,20 @@ export function ApplicationDetailsSkeleton() {
     >
       {/* Same card boxes as the real page, so their borders don't pop in. */}
       <div
+        data-skeleton="header"
         className={`flex flex-col gap-3 border-l-6 border-l-line px-4 py-4 sm:px-6 ${card}`}
       >
         {/* The company line (the h1: 32px below sm, 40px from sm) and the
             24px badge; no `pulse` on the badge, its `rounded` would beat
             the badge's 6px. */}
-        <div className={`h-8 w-1/2 sm:h-10 ${pulse}`} />
-        <div className={`h-4 w-1/3 ${pulse}`} />
-        <div className="badge w-16 animate-pulse bg-line" />
+        <div data-skeleton="company" className={`h-8 w-1/2 sm:h-10 ${pulse}`} />
+        <div data-skeleton="role" className={`h-4 w-1/3 ${pulse}`} />
+        <div
+          data-skeleton="badge"
+          className="badge w-16 animate-pulse bg-line"
+        />
       </div>
-      <div className={`h-24 ${card}`} />
+      <div data-skeleton="status-form" className={`h-24 ${card}`} />
     </div>
   );
 }
