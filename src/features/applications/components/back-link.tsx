@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ListReturn } from "../list-return";
 import { ArrowIcon } from "./arrow-icon";
 
 type SearchParam = string | string[] | undefined;
@@ -19,8 +20,9 @@ const TARGETS = {
 // new, edit and not-found pages: "Applications" → / by default, "Board" →
 // /board on a detail page opened from the board. The arrow is decoration, so
 // the link's name is the label.
-export function BackLink({ to }: { to?: "board" } = {}) {
-  const { href, label } = TARGETS[to ?? "list"];
+// RED-PHASE STUB: `to` accepts a ListReturn but ignores it.
+export function BackLink({ to }: { to?: "board" | ListReturn } = {}) {
+  const { href, label } = TARGETS[to === "board" ? "board" : "list"];
   return (
     <Link
       href={href}

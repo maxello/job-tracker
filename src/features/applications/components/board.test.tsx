@@ -81,9 +81,9 @@ describe("BoardColumns", () => {
 
     const links = elements(card.inner, "a");
     expect(links).toHaveLength(1);
-    // US-5: from=board makes the detail page link back to the board.
+    // US-5: view=board makes the detail page link back to the board.
     expect(attr(links[0]!.open, "href")).toBe(
-      "/applications/app-acme?from=board",
+      "/applications/app-acme?view=board",
     );
     expect(text(links[0]!.inner)).toBe("Acme");
     // The card itself isn't inside a link.

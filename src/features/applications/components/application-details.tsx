@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentUserId } from "@/lib/current-user";
+import type { ListReturn } from "../list-return";
 import { getApplication } from "../queries";
 import { applicationIdSchema } from "../schemas";
 import { STATUS_LABELS } from "../status";
@@ -84,7 +85,13 @@ const historyListClass = `divide-y divide-line ${card}`;
 const historyRowClass =
   "flex flex-col gap-1 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4";
 
-export async function ApplicationDetails({ id }: { id: string }) {
+// RED-PHASE STUB: `returnTo` is accepted but ignored.
+export async function ApplicationDetails({
+  id,
+}: {
+  id: string;
+  returnTo?: ListReturn;
+}) {
   const userId = await getCurrentUserId();
   const parsedId = applicationIdSchema.safeParse(id);
   if (!parsedId.success) notFound();
