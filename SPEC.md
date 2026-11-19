@@ -1382,8 +1382,9 @@ lives in `src/lib/auth.ts`.
   like the empty form and nothing in it pulses (it shows no data), so a
   click in a field while it loads does nothing until the form streams in
   (the window is the session check only). The JS-off check in
-  `e2e/skeleton-layout.spec.ts` compares the detail page (one-line data)
-  and the new form with their skeletons at 360, 768 and 1280 (within 1px).
+  `e2e/skeleton-layout.spec.ts` compares the detail page (one-line data),
+  the new form and the edit form (one-line values in every field) with
+  their skeletons at 360, 768 and 1280 (within 1px).
   Rejected: a fixed-width select on the loaded page (changes loaded
   markup), `pr-*` next to `px-*` for the chevron space (two classes setting
   one property; a content spacer reserves it), a separate edit skeleton

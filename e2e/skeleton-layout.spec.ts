@@ -235,18 +235,12 @@ test("US-4: the detail skeleton keeps the loaded page's boxes", async ({
   });
 });
 
-test("US-1: the new-form skeleton keeps the loaded form's boxes", async ({
-  page,
-  browser,
-}) => {
-  await signUpFreshUser(page);
-  await page
-    .getByRole("link", { name: "New application", exact: true })
-    .click();
-  await expect(page).toHaveURL("/applications/new");
-
+// The form's boxes, shared by the new and the edit test: the card, the
+// required note, every label and control, the hint, the legend and the two
+// buttons.
+function formPairs(page: Page, submitLabel: string): Pair[] {
   const main = page.getByRole("main");
-  const pairs: Pair[] = [
+  return [
     ["form card", main.locator("form"), "form", ALL],
     ["required note", main.getByText(/^Fields marked/), "required-note", ALL],
     ...FORM_FIELDS.flatMap(
@@ -276,8 +270,8 @@ test("US-1: the new-form skeleton keeps the loaded form's boxes", async ({
     ],
     ["Salary legend", main.locator("legend"), "legend", ALL],
     [
-      "Save application",
-      main.getByRole("button", { name: "Save application", exact: true }),
+      submitLabel,
+      main.getByRole("button", { name: submitLabel, exact: true }),
       "save",
       ALL,
     ],
@@ -288,6 +282,68 @@ test("US-1: the new-form skeleton keeps the loaded form's boxes", async ({
       ALL,
     ],
   ];
+}
 
-  await compareWithSkeleton(page, browser, "/applications/new", pairs);
+test("US-1: the new-form skeleton keeps the loaded form's boxes", async ({
+  page,
+  browser,
+}) => {
+  await signUpFreshUser(page);
+  await page
+    .getByRole("link", { name: "New application", exact: true })
+    .click();
+  await expect(page).toHaveURL("/applications/new");
+
+  await compareWithSkeleton(
+    page,
+    browser,
+    "/applications/new",
+    formPairs(page, "Save application"),
+  );
+});
+
+// Every field has a value that fits on one line (the notes too), so the
+// edit form's boxes don't depend on the data and can be compared.
+test("US-4: the edit-form skeleton keeps the loaded form's boxes", async ({
+  page,
+  browser,
+}) => {
+  await signUpFreshUser(page);
+  const company = uniqueName("Co");
+  await page
+    .getByRole("link", { name: "New application", exact: true })
+    .click();
+  for (const [role, name, value] of [
+    ["textbox", "Company", company],
+    ["textbox", "Role", "Dev"],
+    ["textbox", "Job URL", "https://example.com/j"],
+    ["textbox", "Location", "Kyiv"],
+    ["textbox", "Level", "Senior"],
+    ["textbox", "Stack", "React"],
+    ["textbox", "Min", "100000"],
+    ["textbox", "Max", "120000"],
+    ["combobox", "Currency", "USD"],
+    ["textbox", "Notes", "Short note"],
+  ] as const) {
+    await page.getByRole(role, { name, exact: true }).fill(value);
+  }
+  await page.getByRole("button", { name: "Save application" }).click();
+  await expect(page).toHaveURL("/");
+  await page.getByRole("link", { name: company }).click();
+  await expect(page).toHaveURL(/\/applications\/[^/]+$/);
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: "Edit", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/applications\/[^/]+\/edit$/);
+  await expect(
+    page.getByRole("textbox", { name: "Notes", exact: true }),
+  ).toHaveValue("Short note");
+
+  await compareWithSkeleton(
+    page,
+    browser,
+    new URL(page.url()).pathname,
+    formPairs(page, "Save changes"),
+  );
 });
