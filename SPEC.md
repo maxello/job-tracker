@@ -1357,6 +1357,39 @@ lives in `src/lib/auth.ts`.
   uppercase names (they differ between browsers, and how screen readers
   read them is unverified), and dropping the uppercase (a visible
   difference from the design)
+- 2026-11-19: the detail and form skeletons follow the list skeleton rule
+  (2026-11-18): static labels are visible real text with the loaded page's
+  classes, shared through plain class modules (a Server Component can't
+  import a string from a `"use client"` file), and only data pulses.
+  Detail: the header card with the company and role lines, the badge, and
+  Edit/Archive/Delete; the status form ("Status", the select with its
+  chevron, "Update status" shown disabled as at load); the `dl` with all
+  eight labels and a one-line value each; "Status history" with one row
+  (every application has its "Created as" row). Form: every label, the
+  required note, the Stack hint, the Salary legend and the buttons; new
+  fields are empty except the static placeholders "https://" and "USD" in
+  the placeholder colour, edit fields pulse, and the submit label follows
+  the page. The visual skeleton is `aria-hidden`; an `sr-only` "Loading
+  application"/"Loading form" sits outside it (replacing `aria-label` on a
+  `div`, which ARIA 1.2 prohibits on `generic`). Accepted limitations: the
+  skeleton shows "Archive" and no "Archived" badge; in Chromium, where the
+  select uses `appearance: base-select`, its width follows the selected
+  status, and the skeleton sizes it for "Wishlist", so "Update status" can
+  shift when the page loads, up to 19px left (Offer, 81px) or 7px right
+  (Interview, 107px), against 100px for Wishlist; without base-select the
+  select presumably sizes to its widest option (unverified); a multi-line
+  URL, notes or stack grow the loaded page; the new-form skeleton looks
+  like the empty form and nothing in it pulses (it shows no data), so a
+  click in a field while it loads does nothing until the form streams in
+  (the window is the session check only). The JS-off check in
+  `e2e/skeleton-layout.spec.ts` compares the detail page (one-line data),
+  the new form and the edit form (one-line values in every field) with
+  their skeletons at 360, 768 and 1280 (within 1px).
+  Rejected: a fixed-width select on the loaded page (changes loaded
+  markup), `pr-*` next to `px-*` for the chevron space (two classes setting
+  one property; a content spacer reserves it), a separate edit skeleton
+  (differs only by the label, the placeholders and the pulses), a pulse on
+  the new form's Save (its label is static text; only data pulses)
 
 ## 11. End-to-end verification
 

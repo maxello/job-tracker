@@ -2,6 +2,7 @@
 
 import { useActionState, useId, useRef } from "react";
 import { deleteApplicationAction } from "../actions";
+import { quietButtonClass } from "./button-classes";
 
 type Props = {
   id: string;
@@ -30,7 +31,7 @@ export function DeleteApplication({ id, name }: Props) {
       <button
         type="button"
         onClick={() => dialogRef.current?.showModal()}
-        className="button-quiet px-4 py-2 text-sm text-danger"
+        className={`${quietButtonClass} text-danger`}
       >
         Delete
       </button>

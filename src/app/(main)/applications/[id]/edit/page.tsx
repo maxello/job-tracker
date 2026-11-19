@@ -20,7 +20,7 @@ export default function EditApplicationPage({
         <h1 className="mt-3 mb-6 page-heading">
           Edit application
         </h1>
-        <Suspense fallback={<NewApplicationFormSkeleton />}>
+        <Suspense fallback={<NewApplicationFormSkeleton mode="edit" />}>
           {params.then(({ id }) => (
             <EditApplicationForm id={id} />
           ))}
