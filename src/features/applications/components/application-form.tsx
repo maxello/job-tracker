@@ -11,10 +11,23 @@ import {
 import type { ActionResult } from "@/lib/action-result";
 import type { ApplicationFieldName } from "../actions";
 import type { ApplicationFormValues } from "../form-values";
+import {
+  actionsClass,
+  controlClass,
+  fieldClass,
+  fieldsetClass,
+  formCardClass,
+  hintClass,
+  labelClass,
+  legendClass,
+  pairGridClass,
+  requiredMarkClass,
+  requiredNoteClass,
+  salaryGridClass,
+} from "./application-form-classes";
+import { inkButtonClass, quietButtonClass } from "./button-classes";
 
 const CURRENCY_SUGGESTIONS = ["USD", "EUR", "UAH", "GBP", "PLN"];
-
-const controlClass = "field w-full min-w-0 px-3 py-2 text-sm";
 
 type FormResult = ActionResult<never, ApplicationFieldName>;
 
@@ -79,11 +92,11 @@ export function ApplicationForm({
   ) {
     const error = failure?.error.fieldErrors?.[name]?.[0];
     return (
-      <div className="flex min-w-0 flex-col gap-1">
-        <label htmlFor={fieldId(name)} className="text-sm font-medium">
+      <div className={fieldClass}>
+        <label htmlFor={fieldId(name)} className={labelClass}>
           {label}
           {options.required && (
-            <span aria-hidden="true" className="text-muted">
+            <span aria-hidden="true" className={requiredMarkClass}>
               {" "}
               *
             </span>
@@ -91,7 +104,7 @@ export function ApplicationForm({
         </label>
         {input}
         {options.hint && (
-          <p id={fieldId(`${name}-hint`)} className="text-xs text-muted">
+          <p id={fieldId(`${name}-hint`)} className={hintClass}>
             {options.hint}
           </p>
         )}
@@ -110,16 +123,16 @@ export function ApplicationForm({
       action={formAction}
       // Validation runs on the server only; the browser must not block submit.
       noValidate
-      className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-4 sm:p-6"
+      className={formCardClass}
     >
       {id !== undefined && <input type="hidden" name="id" value={id} />}
 
-      <p className="text-sm text-muted">
+      <p className={requiredNoteClass}>
         Fields marked <span aria-hidden="true">*</span>
         <span className="sr-only">as required</span> are required.
       </p>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className={pairGridClass}>
         {field(
           "company",
           "Company",
@@ -150,7 +163,7 @@ export function ApplicationForm({
         <input type="url" placeholder="https://" {...control("url")} />,
       )}
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className={pairGridClass}>
         {field(
           "location",
           "Location",
@@ -166,11 +179,11 @@ export function ApplicationForm({
         { hint: "Comma-separated, e.g. React, Node" },
       )}
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 font-display text-sm font-semibold">
+      <fieldset className={fieldsetClass}>
+        <legend className={legendClass}>
           Salary (annual gross)
         </legend>
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className={salaryGridClass}>
           {field(
             "salaryMin",
             "Min",
@@ -212,15 +225,15 @@ export function ApplicationForm({
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className={actionsClass}>
         <button
           type="submit"
           disabled={pending}
-          className="button-ink px-4 py-2 text-sm"
+          className={inkButtonClass}
         >
           {pending ? "Saving…" : submitLabel}
         </button>
-        <Link href={cancelHref} className="button-quiet px-4 py-2 text-sm">
+        <Link href={cancelHref} className={quietButtonClass}>
           Cancel
         </Link>
       </div>

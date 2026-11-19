@@ -18,7 +18,7 @@ export default function NewApplicationPage() {
         <h1 className="mt-3 mb-6 page-heading">
           New application
         </h1>
-        <Suspense fallback={<NewApplicationFormSkeleton />}>
+        <Suspense fallback={<NewApplicationFormSkeleton mode="new" />}>
           <NewApplicationForm />
         </Suspense>
       </div>
