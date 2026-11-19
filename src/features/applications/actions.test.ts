@@ -224,6 +224,67 @@ describe("updateApplicationAction", () => {
   });
 });
 
+describe("updateApplicationAction with the list's filters", () => {
+  const submit = (fields: Record<string, string>) =>
+    updateApplicationAction(null, form(fields));
+
+  beforeEach(() => {
+    mocks.updateApplication.mockResolvedValue("updated");
+  });
+
+  it("A1 US-6: the redirect keeps the list's filters from the return input", async () => {
+    await expect(
+      submit({ id: ID, ...valid, return: "?q=acme&status=applied&archived=1" }),
+    ).rejects.toEqual(
+      new RedirectSignal(`/applications/${ID}?q=acme&status=applied&archived=1`),
+    );
+  });
+
+  it("A2 US-6: the return input is parsed again: invalid and unknown values are dropped, the rest rebuilt", async () => {
+    await expect(
+      submit({
+        id: ID,
+        ...valid,
+        return:
+          "?next=https://evil.example&archived=yes&tz=Foo/Bar&to=2026-11-30&from=board&status=OFFER&status=foo&q=%20acme%20",
+      }),
+    ).rejects.toEqual(
+      new RedirectSignal(`/applications/${ID}?q=acme&status=offer&to=2026-11-30`),
+    );
+  });
+
+  it("A3 US-5: view=board in the return input wins over list filters", async () => {
+    await expect(
+      submit({ id: ID, ...valid, return: "?q=acme&view=board" }),
+    ).rejects.toEqual(new RedirectSignal(`/applications/${ID}?view=board`));
+  });
+
+  it.each([
+    ["a full URL", "https://evil.example"],
+    ["a protocol-relative URL", "//evil.example"],
+    ["empty", ""],
+  ])(
+    "A4 US-6: a return input that is %s redirects to the plain detail page",
+    async (_, value) => {
+      await expect(
+        submit({ id: ID, ...valid, return: value }),
+      ).rejects.toEqual(new RedirectSignal(`/applications/${ID}`));
+    },
+  );
+
+  it("A5 US-6: the return input isn't sent back in values after a field error", async () => {
+    const result = await submit({
+      id: ID,
+      company: "",
+      role: "Engineer",
+      return: "?q=acme",
+    });
+
+    expect(result).toMatchObject({ ok: false, values: { company: "" } });
+    expect(result.ok === false && result.values).not.toHaveProperty("return");
+  });
+});
+
 describe("deleteApplicationAction", () => {
   const submit = (fields: Record<string, string>) =>
     deleteApplicationAction(null, form(fields));

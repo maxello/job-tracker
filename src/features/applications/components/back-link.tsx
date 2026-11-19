@@ -1,26 +1,23 @@
 import Link from "next/link";
+import { listReturnHref, type ListReturn } from "../list-return";
 import { ArrowIcon } from "./arrow-icon";
 
-type SearchParam = string | string[] | undefined;
-
-// `from` on the detail page (US-5): only an exact first value of "board"
-// counts, like the list's other parameters; anything else is the list. Never
-// a URL, so it can't become an open redirect.
-export function parseFrom(value: SearchParam): "board" | undefined {
-  return [value ?? []].flat()[0] === "board" ? "board" : undefined;
-}
-
-const TARGETS = {
-  list: { href: "/", label: "Applications" },
-  board: { href: "/board", label: "Board" },
-} as const;
+const UNFILTERED: ListReturn = {
+  view: "list",
+  statuses: [],
+  showArchived: false,
+};
 
 // The back arrow and the view the user came from, at the top of the detail,
-// new, edit and not-found pages: "Applications" → / by default, "Board" →
-// /board on a detail page opened from the board. The arrow is decoration, so
-// the link's name is the label.
-export function BackLink({ to }: { to?: "board" } = {}) {
-  const { href, label } = TARGETS[to ?? "list"];
+// new, edit and not-found pages: "Applications" → / by default, or with the
+// list's filters; "Board" → /board on a detail or edit page opened from the
+// board (US-5, US-6). The href comes from listReturnHref, so it is always /
+// or /board. The arrow is decoration, so the link's name is the label.
+export function BackLink({ to }: { to?: "board" | ListReturn } = {}) {
+  const target: ListReturn =
+    to === "board" ? { view: "board" } : (to ?? UNFILTERED);
+  const href = listReturnHref(target);
+  const label = target.view === "board" ? "Board" : "Applications";
   return (
     <Link
       href={href}

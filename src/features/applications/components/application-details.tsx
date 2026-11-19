@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentUserId } from "@/lib/current-user";
+import { listReturnQuery, type ListReturn } from "../list-return";
 import { getApplication } from "../queries";
 import { applicationIdSchema } from "../schemas";
 import { STATUS_LABELS } from "../status";
@@ -84,7 +85,15 @@ const historyListClass = `divide-y divide-line ${card}`;
 const historyRowClass =
   "flex flex-col gap-1 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4";
 
-export async function ApplicationDetails({ id }: { id: string }) {
+// `returnTo`: the list's filters or the board, kept by the Edit link (US-5,
+// US-6). Without it, the unfiltered list.
+export async function ApplicationDetails({
+  id,
+  returnTo,
+}: {
+  id: string;
+  returnTo?: ListReturn;
+}) {
   const userId = await getCurrentUserId();
   const parsedId = applicationIdSchema.safeParse(id);
   if (!parsedId.success) notFound();
@@ -121,7 +130,7 @@ export async function ApplicationDetails({ id }: { id: string }) {
         </div>
         <div className={actionsRowClass}>
           <Link
-            href={`/applications/${application.id}/edit`}
+            href={`/applications/${application.id}/edit${returnTo ? listReturnQuery(returnTo) : ""}`}
             className={quietButtonClass}
           >
             Edit

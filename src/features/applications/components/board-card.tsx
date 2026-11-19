@@ -6,7 +6,10 @@ import type { Status } from "@/generated/prisma/enums";
 import type { BoardApplication } from "../board";
 import { STATUS_LABELS } from "../status";
 import { STATUS_STYLES } from "../status-style";
+import { listReturnQuery } from "../list-return";
 import { LocalDate } from "./local-date";
+
+const BOARD_QUERY = listReturnQuery({ view: "board" });
 
 type Props = {
   application: BoardApplication;
@@ -47,8 +50,8 @@ export function BoardCard({
       } ${STATUS_STYLES[status].panel}`}
     >
       <Link
-        // from=board: the detail page's back link returns to the board.
-        href={`/applications/${application.id}?from=board`}
+        // view=board: the detail page's back link returns to the board.
+        href={`/applications/${application.id}${BOARD_QUERY}`}
         draggable={false}
         className="truncate font-semibold underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >

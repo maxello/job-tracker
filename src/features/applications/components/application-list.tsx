@@ -3,6 +3,7 @@ import { Status } from "@/generated/prisma/enums";
 import { getCurrentUserId } from "@/lib/current-user";
 import { parseShowArchived, SHOW_ARCHIVED_VALUE } from "../archived-filter";
 import { dateRange, parseDateParam, parseTimeZone } from "../date-filter";
+import { listReturnQuery, parseListReturn } from "../list-return";
 import {
   countApplicationsByStatus,
   hasArchivedApplications,
@@ -128,6 +129,7 @@ export async function ApplicationList({
           userId={userId}
           applications={applications}
           showArchived={showArchived}
+          returnQuery={listReturnQuery(parseListReturn(params))}
           filtered={
             statuses.length > 0 ||
             search !== undefined ||
@@ -144,11 +146,14 @@ async function Results({
   userId,
   applications,
   showArchived,
+  returnQuery,
   filtered,
 }: {
   userId: string;
   applications: Awaited<ReturnType<typeof listApplications>>;
   showArchived: boolean;
+  // The list's filters, carried by each row link (US-6).
+  returnQuery: string;
   // Empty state 1 (US-6): a valid status, search or date (`from` or `to`)
   // filter is active; "Show archived" and `tz` don't count as filters.
   filtered: boolean;
@@ -184,7 +189,7 @@ async function Results({
         return (
           <li key={application.id}>
             <Link
-              href={`/applications/${application.id}`}
+              href={`/applications/${application.id}${returnQuery}`}
               className={`${rowClass} ${style.edge}`}
             >
               <div className="min-w-0">

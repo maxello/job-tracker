@@ -165,3 +165,32 @@ describe("ApplicationDetailsSkeleton", () => {
       );
   });
 });
+
+describe("ApplicationDetails Edit link", () => {
+  it("D1 US-6: the Edit link keeps the list's filters", async () => {
+    const html = renderToStaticMarkup(
+      await ApplicationDetails({
+        id: ID,
+        returnTo: {
+          view: "list",
+          statuses: ["OFFER"],
+          showArchived: false,
+          q: "acme",
+          tz: "Asia/Tokyo",
+        },
+      }),
+    );
+
+    expect(html).toContain(
+      `href="/applications/${ID}/edit?q=acme&amp;status=offer&amp;tz=Asia%2FTokyo"`,
+    );
+  });
+
+  it("D2 US-5: opened from the board, the Edit link keeps view=board", async () => {
+    const html = renderToStaticMarkup(
+      await ApplicationDetails({ id: ID, returnTo: { view: "board" } }),
+    );
+
+    expect(html).toContain(`href="/applications/${ID}/edit?view=board"`);
+  });
+});

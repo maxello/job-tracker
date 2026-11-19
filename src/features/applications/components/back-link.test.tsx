@@ -1,7 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import ApplicationPage from "@/app/(main)/applications/[id]/page";
-import { BackLink, parseFrom } from "./back-link";
+import EditApplicationPage from "@/app/(main)/applications/[id]/edit/page";
+import { parseView } from "../list-return";
+import { BackLink } from "./back-link";
 
 // The detail page module also loads the details, which read the session and
 // the database; the page's fallbacks use neither.
@@ -45,10 +47,10 @@ describe("BackLink", () => {
   });
 });
 
-describe("parseFrom", () => {
+describe("parseView", () => {
   it("BL3 US-5: only an exact first value of board counts", () => {
-    expect(parseFrom("board")).toBe("board");
-    expect(parseFrom(["board", "list"])).toBe("board");
+    expect(parseView("board")).toBe("board");
+    expect(parseView(["board", "list"])).toBe("board");
 
     for (const value of [
       undefined,
@@ -61,8 +63,39 @@ describe("parseFrom", () => {
       ["list", "board"],
       [],
     ]) {
-      expect(parseFrom(value), JSON.stringify(value)).toBeUndefined();
+      expect(parseView(value), JSON.stringify(value)).toBeUndefined();
     }
+  });
+});
+
+describe("BackLink with the list's filters", () => {
+  it("BL5 US-6: from a filtered list it is Applications → / with the same filters", () => {
+    expect(
+      links(
+        renderToStaticMarkup(
+          <BackLink
+            to={{
+              view: "list",
+              statuses: ["APPLIED"],
+              showArchived: true,
+              q: "acme",
+            }}
+          />,
+        ),
+      ),
+    ).toEqual([
+      {
+        href: "/?q=acme&amp;status=applied&amp;archived=1",
+        text: "Applications",
+        arrow: true,
+      },
+    ]);
+  });
+
+  it("BL6 US-5: a board target is Board → /board", () => {
+    expect(
+      links(renderToStaticMarkup(<BackLink to={{ view: "board" }} />)),
+    ).toEqual([{ href: "/board", text: "Board", arrow: true }]);
   });
 });
 
@@ -77,6 +110,25 @@ describe("the detail page's back link fallback", () => {
         params={pending as PageProps<"/applications/[id]">["params"]}
         searchParams={
           pending as PageProps<"/applications/[id]">["searchParams"]
+        }
+      />,
+    );
+
+    expect(links(html)).toEqual([
+      { href: "/", text: "Applications", arrow: true },
+    ]);
+  });
+});
+
+describe("the edit page's back link fallback", () => {
+  const pending = new Promise<never>(() => {});
+
+  it("BL7 US-6: while searchParams is pending, the back link is Applications → /", () => {
+    const html = renderToStaticMarkup(
+      <EditApplicationPage
+        params={pending as PageProps<"/applications/[id]/edit">["params"]}
+        searchParams={
+          pending as PageProps<"/applications/[id]/edit">["searchParams"]
         }
       />,
     );

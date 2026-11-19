@@ -170,13 +170,14 @@ As a job seeker, I want to see my applications on a board by status and move the
   detail page; the card itself is not a link. The card carries the status edge
   (Offer tinted), like a list row, and no status badge: the column header
   names the status
-- The company link opens `/applications/{id}?from=board`. On the detail
-  page, `from=board` (the first value only, exact match) makes the back link
-  "Board" → `/board`, with the same arrow; any other or missing value keeps
-  "Applications" → `/`. The edit, new and not-found pages keep "Applications"
-  → `/`. The back link reads `searchParams`, so it sits in a `<Suspense>`
-  whose fallback is "Applications" → `/`: coming from the board, that label
-  can show briefly before "Board"
+- The company link opens `/applications/{id}?view=board`. On the detail and
+  edit pages, `view=board` (the first value only, exact match) makes the back
+  link "Board" → `/board`, with the same arrow, and list filters are then
+  ignored. Any other or missing value keeps "Applications" (with the list's
+  filters, see US-6). The new and not-found pages keep "Applications" → `/`.
+  The back link reads `searchParams`, so it sits in a `<Suspense>` whose
+  fallback is "Applications" → `/`: coming from the board or a filtered list,
+  that link can show briefly
 - Cards can be moved between columns with native HTML drag-and-drop (no
   library). The whole card is the drag source; the company link is not
   draggable on its own, so dragging it moves the card. Drag-and-drop on touch
@@ -318,6 +319,14 @@ log, 2026-11-11).
   archived" is on (US-8)
 - Search and filter state is stored in the URL query string, so it survives a
   reload and can be bookmarked
+- Opening an application from a filtered list keeps the filters: the row
+  links to `/applications/{id}` with the list's query, and the detail page's
+  back link returns to `/` with the same filters. The Edit link, the edit
+  page's back link, Cancel and the redirect after Save keep them too. Delete
+  returns to plain `/`. The query is rebuilt from the parsed values (`q`,
+  `status`, `from`, `to`, `tz`, `archived`, defaults omitted), never copied
+  from the URL; invalid values are dropped, never an error. The path is
+  always `/` or `/board` (no open redirect)
 - Empty states, in this order (the first that applies wins). "Show archived"
   doesn't count as a filter here:
   1. At least one filter is active (status, `q`, `from` or `to`, counting
@@ -1390,6 +1399,36 @@ lives in `src/lib/auth.ts`.
   one property; a content spacer reserves it), a separate edit skeleton
   (differs only by the label, the placeholders and the pulses), a pulse on
   the new form's Save (its label is static text; only data pulses)
+- 2026-11-19: the detail and edit pages keep the list's filters (US-5,
+  US-6). This supersedes the "Follow-up, not built now" part and the
+  `from=board` marker of the 2026-11-17 back-link entry: `from` is the
+  list's date parameter, so the board marker is now `view=board`. The list
+  row links to the detail page with the list's query; the back link, the
+  Edit link, the edit page's back link, Cancel and the redirect after Save
+  carry it on. The query is rebuilt from the values the list's own parsers
+  accept, never copied from the URL, and its path is always `/` or `/board`
+  (no open redirect). One builder makes every such query, the list rows'
+  included (they parse the URL again with it rather than reuse the list's
+  parsed values), and statuses come out in the form's checkbox order (the
+  enum's), whatever their order in the URL. `view=board` (first value, exact) wins over list
+  filters, because the board has no filters. `tz` is kept whenever valid,
+  because `from` and `to` are read in it: without it the dates would be read
+  in UTC and the list could show different rows. The edit form sends the
+  query in one hidden input, `return`; the action parses it again with the
+  same parsers, drops invalid values one by one (never an error) and
+  redirects with the rebuilt query. The edit page's back link names the list
+  or the board, like the detail page's, and sits in its own `<Suspense>`
+  with the same "Applications" → `/` fallback. Old `?from=board` links now
+  open a plain detail page (`board` is an invalid date). Delete, the new
+  page and the not-found page are unchanged. Expected behaviour: an
+  application that no longer matches the filters after a status change or
+  an edit is not in the list the back link returns to; the filters still
+  apply, so this is not a bug. Rejected: a raw `returnTo` URL (open
+  redirect), `router.back()` (already rejected on 2026-11-17), keeping
+  `from=board` (it collides with the date filter), one hidden input per
+  list parameter (names like `status` can collide with form fields), and
+  returning to plain `/` after a change (it drops the filters this change
+  exists to keep)
 
 ## 11. End-to-end verification
 

@@ -68,3 +68,49 @@ describe("EditApplicationForm", () => {
     expect(mocks.getApplication).not.toHaveBeenCalled();
   });
 });
+
+describe("EditApplicationForm with the list's filters", () => {
+  // The hidden input that carries the filters to the action.
+  const returnInputs = (html: string) =>
+    [...html.matchAll(/<input[^>]*name="return"[^>]*>/g)].map(
+      ([input]) => input.match(/\svalue="([^"]*)"/)?.[1],
+    );
+
+  it("E1 US-6: Cancel and the hidden return input keep the list's filters", async () => {
+    const html = renderToStaticMarkup(
+      await EditApplicationForm({
+        id: ID,
+        returnTo: {
+          view: "list",
+          statuses: ["APPLIED"],
+          showArchived: true,
+          q: "acme",
+        },
+      }),
+    );
+
+    expect(html).toContain(
+      `href="/applications/${ID}?q=acme&amp;status=applied&amp;archived=1"`,
+    );
+    expect(returnInputs(html)).toEqual([
+      "?q=acme&amp;status=applied&amp;archived=1",
+    ]);
+  });
+
+  it("E2 US-5: from the board, Cancel and the return input keep view=board", async () => {
+    const html = renderToStaticMarkup(
+      await EditApplicationForm({ id: ID, returnTo: { view: "board" } }),
+    );
+
+    expect(html).toContain(`href="/applications/${ID}?view=board"`);
+    expect(returnInputs(html)).toEqual(["?view=board"]);
+  });
+
+  it("E3 US-6: with no filters there is no return input", async () => {
+    const html = renderToStaticMarkup(await EditApplicationForm({ id: ID }));
+
+    // Paired with E1: the same locator finds the input when there are filters.
+    expect(html).toMatch(/<input[^>]*name="id"/);
+    expect(returnInputs(html)).toEqual([]);
+  });
+});
