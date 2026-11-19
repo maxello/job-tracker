@@ -5,6 +5,13 @@ import { useActionState, useId, useState } from "react";
 import type { Status } from "@/generated/prisma/enums";
 import { changeStatusAction } from "../actions";
 import { STATUS_LABELS } from "../status";
+import { inkButtonClass } from "./button-classes";
+import {
+  statusFormClass,
+  statusLabelClass,
+  statusRowClass,
+  statusSelectClass,
+} from "./status-form-classes";
 
 type Props = {
   id: string;
@@ -30,18 +37,12 @@ export function StatusForm({ id, status }: Props) {
   const errorId = `${baseId}-error`;
 
   return (
-    // p-4 leaves room for the button's lip and 7px focus ring.
-    <form
-      action={formAction}
-      className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-4"
-    >
+    <form action={formAction} className={statusFormClass}>
       <input type="hidden" name="id" value={id} />
-      <label htmlFor={selectId} className="text-sm font-medium">
+      <label htmlFor={selectId} className={statusLabelClass}>
         Status
       </label>
-      {/* items-start and h-10.5 (42px): the select spans the button's face
-          (38px) plus its 4px lip, so both look the same height. */}
-      <div className="flex flex-wrap items-start gap-3">
+      <div className={statusRowClass}>
         <span className="field-select">
           <select
             id={selectId}
@@ -50,7 +51,7 @@ export function StatusForm({ id, status }: Props) {
             onChange={(event) => setSelected(event.target.value as Status)}
             aria-invalid={Boolean(error)}
             aria-describedby={error ? errorId : undefined}
-            className="field h-10.5 min-w-0 px-3 py-2.5 text-sm font-medium"
+            className={statusSelectClass}
           >
             {Object.entries(STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -62,7 +63,7 @@ export function StatusForm({ id, status }: Props) {
         <button
           type="submit"
           disabled={pending || selected === status}
-          className="button-ink px-4 py-2 text-sm"
+          className={inkButtonClass}
         >
           {pending ? "Updating…" : "Update status"}
         </button>

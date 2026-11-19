@@ -11,6 +11,7 @@ import {
   archiveApplicationAction,
   unarchiveApplicationAction,
 } from "../actions";
+import { quietButtonClass } from "./button-classes";
 
 type Props = {
   id: string;
@@ -104,7 +105,7 @@ function ArchiveButtonForm({
         type="submit"
         disabled={pending}
         onClick={onSubmit}
-        className="button-quiet px-4 py-2 text-sm"
+        className={quietButtonClass}
       >
         {pending ? pendingLabel : label}
       </button>
