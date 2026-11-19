@@ -1378,13 +1378,17 @@ lives in `src/lib/auth.ts`.
   shift when the page loads, up to 19px left (Offer, 81px) or 7px right
   (Interview, 107px), against 100px for Wishlist; without base-select the
   select presumably sizes to its widest option (unverified); a multi-line
-  URL, notes or stack grow the loaded page. The JS-off check in
+  URL, notes or stack grow the loaded page; the new-form skeleton looks
+  like the empty form and nothing in it pulses (it shows no data), so a
+  click in a field while it loads does nothing until the form streams in
+  (the window is the session check only). The JS-off check in
   `e2e/skeleton-layout.spec.ts` compares the detail page (one-line data)
   and the new form with their skeletons at 360, 768 and 1280 (within 1px).
   Rejected: a fixed-width select on the loaded page (changes loaded
   markup), `pr-*` next to `px-*` for the chevron space (two classes setting
   one property; a content spacer reserves it), a separate edit skeleton
-  (differs only by the label, the placeholders and the pulses)
+  (differs only by the label, the placeholders and the pulses), a pulse on
+  the new form's Save (its label is static text; only data pulses)
 
 ## 11. End-to-end verification
 
