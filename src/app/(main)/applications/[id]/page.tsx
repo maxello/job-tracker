@@ -17,8 +17,9 @@ export const metadata: Metadata = {
 // The back link reads searchParams (the list's filters or `view=board`,
 // US-5, US-6), so it streams in its own <Suspense>; the fallback is the
 // default link, so list visitors keep an instant back link (SPEC decision
-// log, 2026-11-17 and 2026-11-19). The details read them too, for the Edit
-// link.
+// log, 2026-11-17 and 2026-11-19); focus on the fallback moves to the real
+// link (2026-11-20, "back-link focus"). The details read them too, for the
+// Edit link.
 export default function ApplicationPage({
   params,
   searchParams,
@@ -27,9 +28,9 @@ export default function ApplicationPage({
     <PageTransition>
       <main className="mx-auto w-full max-w-page px-4 py-8">
         <div className="max-w-3xl">
-          <Suspense fallback={<BackLink />}>
+          <Suspense fallback={<BackLink handoff="give" />}>
             {searchParams.then((query) => (
-              <BackLink to={parseListReturn(query)} />
+              <BackLink to={parseListReturn(query)} handoff="take" />
             ))}
           </Suspense>
           <div className="mt-3">
