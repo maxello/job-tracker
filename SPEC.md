@@ -101,7 +101,8 @@ As a job seeker, I want to quickly add an application I've sent, so that I have 
 
 As a job seeker, I want to see all my applications in one list, so that I know at a glance where each one stands.
 
-- The list is the home page
+- The list is the home page; its page title is "Applications", like its `h1`
+  (decision log, 2026-11-20, "back-link focus")
 - Each row shows company, role, status and last updated date
 - Sorted by last updated, newest first
 - Archived applications are hidden by default (see US-8)
@@ -178,6 +179,15 @@ As a job seeker, I want to see my applications on a board by status and move the
   The back link reads `searchParams`, so it sits in a `<Suspense>` whose
   fallback is "Applications" → `/`: coming from the board or a filtered list,
   that link can show briefly
+- Keyboard focus on the back link (decision log, 2026-11-20, "back-link
+  focus"): after a client navigation, if the fallback back link of the
+  detail or edit page has focus when the real back link replaces it, focus
+  moves to the real back link, not to the page body. The same holds when
+  the not-found page replaces the page while its fallback back link has
+  focus: focus moves to the not-found page's back link. If focus is
+  anywhere else when the swap happens (the user has tabbed away from the
+  fallback), it stays where it is. Showing a cached page again (browser
+  back or forward) never moves focus to its back link
 - Cards can be moved between columns with native HTML drag-and-drop (no
   library). The whole card is the drag source; the company link is not
   draggable on its own, so dragging it moves the card. Drag-and-drop on touch
@@ -494,6 +504,12 @@ lives in `src/lib/auth.ts`.
 - Accessible forms (labels, error messages, keyboard navigation); every
   drag-and-drop action has a keyboard alternative
 - Responsive down to 360px, no horizontal page scroll
+- No focus management after a client navigation: focus stays where the
+  browser leaves it (after a link click, on the page body), and the page
+  change is left to Next's route announcer. Accepted limitation: in this
+  app the announcer often announces the wrong name or nothing (measured,
+  decision log 2026-11-20, "focus after navigation"); our own announcement
+  is deferred (section 9)
 - Job URLs are rendered as links only after server-side `http`/`https`
   validation
 - TypeScript strict; lint and typecheck pass before every commit (checked
@@ -584,6 +600,12 @@ lives in `src/lib/auth.ts`.
   `userId` through `BroadcastChannel`, and tabs with a different id call
   `router.refresh()`. Deferred to M8: the case is rare and data isolation still
   holds
+- How should the app announce a client navigation itself? Next's route
+  announcer reads the first `h1` in the DOM, including hidden cached routes,
+  so it often announces the wrong name or nothing (decision log,
+  2026-11-20, "focus after navigation"). Deferred to a later milestone, not
+  the back-link focus branch: our own route announcement (for example a
+  live region filled from the page's title once it has streamed in)
 
 ## 10. Decision log
 
@@ -1600,6 +1622,72 @@ lives in `src/lib/auth.ts`.
   macOS not checked; in WebKit a transition still starts (about 20ms to
   `ready` in Playwright WebKit), and how long clicks are lost then on the
   iPhone wasn't measured
+- 2026-11-20: back-link focus (US-5, A1). Found during motion (M16): on a
+  client navigation to the detail or edit page, a keyboard user can tab to
+  the back link's `<Suspense>` fallback; when the real link replaces it,
+  focus drops to `<body>` (measured, production build, Chromium: the
+  fallback gets `blur` and is disconnected; the next Tab reaches the real
+  link). The same happens when the not-found page replaces a page whose
+  fallback has focus (measured: a stale list row of an application deleted
+  in another tab). Decision: the back link stays in its `<Suspense>` with
+  the `<BackLink />` fallback, and focus is handed over. A client component
+  puts a `ref` on the existing `<Link>` (next 16.4.6 `Link` merges a `ref`
+  prop; source, not in its docs), so the markup doesn't change. The
+  fallback's layout-effect cleanup stores its node if it is
+  `document.activeElement` (react-dom 19.3.0 source: a deleted function
+  component's layout cleanup runs before its `<a>` is removed), cleared in
+  a microtask. The real link, and the not-found page's link, focus
+  themselves on mount only if a node was stored in this commit, that node
+  is disconnected, and focus is on `<body>`. The disconnected check is
+  there because `<Activity>` also runs layout cleanups when it hides a
+  cached route, and shows a cached route by mounting its effects again in
+  the same commit (source). Measured: with the edit fallback focused,
+  browser back to the cached detail page ran the fallback's cleanup with
+  focus on it (hidden, still connected), and the detail's real link mounted
+  with focus on `<body>`. A plain flag would move focus there; the
+  disconnected check doesn't (the deleted fallback was disconnected by the
+  real link's mount, the hidden one wasn't). Enter on the focused fallback
+  (navigating to `/`) mounts no back link in that commit, so the microtask
+  clears the node. Accepted limitation (reasoning, not measured): on a full
+  page load React's inline streaming script swaps the fallback before or
+  during hydration, no layout cleanup runs, and focus on the fallback is
+  lost; the window is short, since the back link waits only on
+  `searchParams` in the same HTML stream. Rejected: a fallback with
+  `tabIndex={-1}` (a visible link the keyboard can't reach), dropping the
+  `<Suspense>` (under Cache Components, reading `searchParams` needs one,
+  2026-11-17 back-link entry), and a `blur`
+  flag (measured: `blur` fires both on removal and when tabbing away)
+- 2026-11-20: focus after navigation (section 7, B1). No focus management
+  after a client navigation: focus stays where the browser leaves it, and
+  we rely on Next's route announcer. Rejected: focusing the `h1` after
+  every navigation (it sends the user back through the nav, as in the
+  2026-11-17 board entry). `/` gets its own title "Applications" (it fell
+  back to the root layout's "Job Tracker"). Accepted limitation: the
+  announcer doesn't do what Next's docs say for next 16.4.6
+  (`03-architecture/accessibility.md`: `document.title`, then the `h1`,
+  then the pathname). In the installed source it reads `document.title`,
+  else the first `h1` in the DOM, with no pathname fallback; it runs when
+  the router tree changes and announces only if the text differs from the
+  last one. Measured (production build, Chromium): during every client
+  navigation `document.title` is `""` when the announcer reads it, and the
+  real title arrives 420–480 ms later and is never announced, so it reads
+  the first `h1`, which can belong to a hidden route that Cache Components
+  keeps in the DOM. Before the detail page's own `h1` streams in:
+  - list → detail, `/applications/new` visited before: "New application"
+    (measured)
+  - list → detail, fresh document on `/`: "Applications" (measured);
+    with the `/` title: nothing (measured; the first load stored
+    "Applications" as the last text)
+  - detail → back link → `/`: nothing, with and without the `/` title
+    (measured; same text as the last announcement)
+  - list → board: "Board" (measured)
+  - board → detail, second visit: the company name, from the hidden earlier
+    detail page (measured)
+  - pathname fallback: none (source)
+
+  So the `/` title changes the tab and history title, not what is
+  announced. Not reported upstream in this branch; our own route
+  announcement is deferred (section 9)
 
 ## 11. End-to-end verification
 
