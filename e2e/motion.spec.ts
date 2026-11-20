@@ -756,6 +756,11 @@ test.describe("overlay", () => {
 
     // Enter on the focused link navigates.
     await page.keyboard.press("Enter");
+    const [afterEnter] = await transitions(page);
+    expect(
+      afterEnter.finishedAt,
+      "Enter pressed while the transition ran",
+    ).toBeNull();
     await expect(page, "Enter on the back link navigates").toHaveURL("/");
     await expect(rowLink(page, company)).toBeVisible();
   });
