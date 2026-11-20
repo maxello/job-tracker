@@ -634,3 +634,14 @@
     animation-duration: 0s;
   }
 }
+
+/* WebKit (checked on iPhone Safari) paints the new page over the old one
+   during React/Next view transitions, so pages switch instantly there
+   (SPEC decision log, 2026-11-20, "motion in WebKit"). */
+@supports (font: -apple-system-body) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation: none !important;
+  }
+}
