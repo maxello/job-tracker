@@ -1531,9 +1531,9 @@ lives in `src/lib/auth.ts`.
   production build, list row → detail with transitions stretched to 3s:
   at the detail skeleton's centre, the back link's centre and the header's
   "Sign out", `document.elementFromPoint()`, the `pointerdown` target and
-  the `click` target were all `<body>`, with `::view-transition {
-pointer-events: none }` in place. The claim that this rule lets clicks
-  through to the page (from the Next.js view-transitions guide) is false
+  the `click` target were all `<body>`, with the rule
+  `::view-transition { pointer-events: none }` in place. The claim that
+  this rule lets clicks through to the page (from the Next.js view-transitions guide) is false
   here. Probe B, `:root { view-transition-name: none }` (root not a
   participant, confirmed: no `::view-transition-old(root)`), gave the same
   three `<body>` targets: rejected. So while a navigation transition runs,
@@ -1547,7 +1547,18 @@ pointer-events: none }` in place. The claim that this rule lets clicks
   window of lost clicks (396–401 ms, starting about 300 ms after the
   navigation's), and it landed exactly when the content appeared. Without
   it the content is clickable as soon as it shows; skeleton and content
-  already share positions. Skeletons swap instantly, as before motion
+  already share positions. Skeletons swap instantly, as before motion.
+  The `pointer-events: none` rule is dropped: with it the lost click lands
+  on `<body>`, without it (computed `auto`) on `<html>`, at the same three
+  points; in both cases it never reaches the content or the header, so the
+  rule changes nothing users get. A drag can't start during a navigation
+  transition because the cards don't exist then (0 card selects at
+  `ready` on `/` → `/board`, first and cached visit; the board's content
+  arrives without a transition, and a move starts none). Unmeasured: the
+  window of about 20 ms between `startViewTransition` and React's update
+  callback (17–24 ms measured to `ready`), when the leaving page (a board
+  with its cards) is still in the DOM with its rendering paused for the
+  snapshot; whether a drag can start then is not known
 
 ## 11. End-to-end verification
 
