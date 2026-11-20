@@ -131,6 +131,7 @@ export async function ApplicationDetails({
         <div className={actionsRowClass}>
           <Link
             href={`/applications/${application.id}/edit${returnTo ? listReturnQuery(returnTo) : ""}`}
+            transitionTypes={["nav-forward"]}
             className={quietButtonClass}
           >
             Edit

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { signUpFreshUser, uniqueName } from "./fresh-user";
+import { recordViewTransitions, settled } from "./view-transitions";
 
 // Like signUpFreshUser, but the email has no hyphens: a hyphen is a line-break
 // opportunity, so only an email without one proves the menu wraps it.
@@ -16,6 +17,19 @@ async function signUpWithUnbreakableEmail(page: Page) {
   await expect(page).toHaveURL("/");
 
   return { email };
+}
+
+// Waits until the view transitions after sign-up (the list crossfading and
+// its reveal) have finished: during one, the transition overlay takes the
+// trigger's click, and Playwright scrolls the page while it retries. Needs
+// recordViewTransitions(page) before the first navigation. The list's text
+// appears inside the reveal transition's update callback, so by then that
+// transition is recorded; settled() waits until every recorded one finished.
+async function waitForViewTransitions(page: Page) {
+  await expect(
+    page.getByRole("main").getByText("No applications yet."),
+  ).toBeVisible();
+  await settled(page);
 }
 
 // Header locators. Hidden elements are excluded from getByRole by default, so
@@ -118,9 +132,11 @@ test.describe("below sm (360px)", () => {
   test("account menu below sm: opens below the header, close to the trigger", async ({
     page,
   }) => {
+    await recordViewTransitions(page);
     const user = await signUpFreshUser(page);
     const { banner, trigger, menu } = header(page, user.email);
 
+    await waitForViewTransitions(page);
     await trigger.click();
     await expect(menu).toBeVisible();
 

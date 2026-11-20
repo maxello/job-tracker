@@ -17,7 +17,9 @@ export default function MainLayout({ children }: LayoutProps<"/">) {
   // the header doesn't change height when UserMenu streams in (#44).
   return (
     <>
-      <header className="border-b border-line bg-surface">
+      {/* Named for view transitions, so it stays put while the page content
+          slides (SPEC section 7). */}
+      <header className="border-b border-line bg-surface [view-transition-name:site-header]">
         <div className="mx-auto flex h-15 w-full max-w-page items-center justify-between gap-3 px-4">
           <Logo />
           <div className="flex min-w-0 items-center gap-2">

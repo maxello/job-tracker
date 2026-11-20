@@ -187,9 +187,7 @@ export function ApplicationForm({
       )}
 
       <fieldset className={fieldsetClass}>
-        <legend className={legendClass}>
-          Salary (annual gross)
-        </legend>
+        <legend className={legendClass}>Salary (annual gross)</legend>
         <div className={salaryGridClass}>
           {field(
             "salaryMin",
@@ -233,14 +231,14 @@ export function ApplicationForm({
       )}
 
       <div className={actionsClass}>
-        <button
-          type="submit"
-          disabled={pending}
-          className={inkButtonClass}
-        >
+        <button type="submit" disabled={pending} className={inkButtonClass}>
           {pending ? "Saving…" : submitLabel}
         </button>
-        <Link href={cancelHref} className={quietButtonClass}>
+        <Link
+          href={cancelHref}
+          transitionTypes={["nav-back"]}
+          className={quietButtonClass}
+        >
           Cancel
         </Link>
       </div>

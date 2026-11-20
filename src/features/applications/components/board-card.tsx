@@ -52,6 +52,7 @@ export function BoardCard({
       <Link
         // view=board: the detail page's back link returns to the board.
         href={`/applications/${application.id}${BOARD_QUERY}`}
+        transitionTypes={["nav-forward"]}
         draggable={false}
         className="truncate font-semibold underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >

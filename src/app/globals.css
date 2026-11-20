@@ -114,6 +114,20 @@
   --shadow-lip-danger: 0 1px 0 var(--color-bg), 0 4px 0 var(--color-danger-lip);
   --shadow-lip-danger-pressed:
     0 1px 0 var(--color-bg), 0 1px 0 var(--color-danger-lip);
+
+  /*
+   * Motion (SPEC section 7). Old content leaves fast (exit), new content
+   * arrives more gently (enter, after the exit), slides take longer (move).
+   * The press is short enough to keep the button feeling direct.
+   */
+  --duration-exit: 150ms;
+  --duration-enter: 210ms;
+  --duration-move: 400ms;
+  --duration-press: 80ms;
+  --slide-offset: 60px;
+  --ease-exit: ease-in;
+  --ease-enter: ease-out;
+  --ease-move: ease-in-out;
 }
 
 @theme inline {
@@ -217,6 +231,13 @@
   color: var(--color-on-ink);
   font-weight: var(--font-weight-semibold);
   box-shadow: var(--shadow-lip);
+  /* The press animates (SPEC section 7); with reduced motion it is instant. */
+  transition-property: translate, box-shadow;
+  transition-duration: var(--duration-press);
+  transition-timing-function: var(--ease-enter);
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0s;
+  }
   cursor: pointer;
 
   &:hover:not(:disabled) {
@@ -252,6 +273,13 @@
   color: var(--color-text);
   font-weight: var(--font-weight-medium);
   box-shadow: var(--lip, var(--shadow-lip-quiet));
+  /* The press animates (SPEC section 7); with reduced motion it is instant. */
+  transition-property: translate, box-shadow;
+  transition-duration: var(--duration-press);
+  transition-timing-function: var(--ease-enter);
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0s;
+  }
   cursor: pointer;
 
   &:hover:not(:disabled) {
@@ -296,6 +324,13 @@
   color: var(--color-on-danger);
   font-weight: var(--font-weight-semibold);
   box-shadow: var(--shadow-lip-danger);
+  /* The press animates (SPEC section 7); with reduced motion it is instant. */
+  transition-property: translate, box-shadow;
+  transition-duration: var(--duration-press);
+  transition-timing-function: var(--ease-enter);
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0s;
+  }
   cursor: pointer;
 
   &:hover:not(:disabled) {
@@ -488,5 +523,114 @@
     &::before {
       display: none;
     }
+  }
+}
+
+/*
+ * A popover that fades in when it opens (the account menu, SPEC section 7).
+ * Opacity only, so it stays with reduced motion and in forced colors.
+ * Closing is instant: the popover is display: none at once.
+ */
+@utility popover-fade {
+  transition: opacity var(--duration-enter) var(--ease-enter);
+  &:popover-open {
+    @starting-style {
+      opacity: 0;
+    }
+  }
+}
+
+/*
+ * View transitions (SPEC section 7). React's <ViewTransition> sets these
+ * classes: nav-forward and nav-back slide the page content (the Link's
+ * transitionTypes pick one) and crossfade switches between / and /board.
+ * Opacity carries every change; only the nav-* slides move, by the slide
+ * offset. While a transition runs, clicks anywhere on the page are lost
+ * (measured, SPEC decision log 2026-11-20), so nothing else animates.
+ */
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-slide-in-from-right {
+  from {
+    translate: var(--slide-offset) 0;
+  }
+}
+@keyframes vt-slide-in-from-left {
+  from {
+    translate: calc(-1 * var(--slide-offset)) 0;
+  }
+}
+@keyframes vt-slide-out-to-left {
+  to {
+    translate: calc(-1 * var(--slide-offset)) 0;
+  }
+}
+@keyframes vt-slide-out-to-right {
+  to {
+    translate: var(--slide-offset) 0;
+  }
+}
+
+::view-transition-old(.nav-forward) {
+  animation:
+    var(--duration-exit) var(--ease-exit) both vt-fade-out,
+    var(--duration-move) var(--ease-move) both vt-slide-out-to-left;
+}
+::view-transition-new(.nav-forward) {
+  animation:
+    var(--duration-enter) var(--ease-enter) var(--duration-exit) both vt-fade-in,
+    var(--duration-move) var(--ease-move) both vt-slide-in-from-right;
+}
+::view-transition-old(.nav-back) {
+  animation:
+    var(--duration-exit) var(--ease-exit) both vt-fade-out,
+    var(--duration-move) var(--ease-move) both vt-slide-out-to-right;
+}
+::view-transition-new(.nav-back) {
+  animation:
+    var(--duration-enter) var(--ease-enter) var(--duration-exit) both vt-fade-in,
+    var(--duration-move) var(--ease-move) both vt-slide-in-from-left;
+}
+::view-transition-old(.crossfade) {
+  animation: var(--duration-exit) var(--ease-exit) both vt-fade-out;
+}
+::view-transition-new(.crossfade) {
+  animation: var(--duration-enter) var(--ease-enter) var(--duration-exit) both
+    vt-fade-in;
+}
+
+/* The header is the fixed reference point: it never animates. */
+::view-transition-group(site-header) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header) {
+  display: none;
+}
+::view-transition-new(site-header) {
+  animation: none;
+}
+
+/* Reduced motion: the slides become the same fade, and nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(.nav-forward),
+  ::view-transition-old(.nav-back) {
+    animation: var(--duration-exit) var(--ease-exit) both vt-fade-out;
+  }
+  ::view-transition-new(.nav-forward),
+  ::view-transition-new(.nav-back) {
+    animation: var(--duration-enter) var(--ease-enter) var(--duration-exit) both
+      vt-fade-in;
+  }
+  ::view-transition-group(*) {
+    animation-duration: 0s;
   }
 }

@@ -21,6 +21,7 @@ export function BackLink({ to }: { to?: "board" | ListReturn } = {}) {
   return (
     <Link
       href={href}
+      transitionTypes={["nav-back"]}
       className="inline-flex items-center gap-1 text-sm font-medium text-text underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
       <ArrowIcon direction="left" />
