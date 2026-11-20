@@ -530,6 +530,11 @@ lives in `src/lib/auth.ts`.
     measure
   - Browsers without the View Transitions API navigate without animation
     (not tested)
+  - In WebKit browsers where `@supports (font: -apple-system-body)` holds
+    (checked on iPhone Safari), page transitions don't animate: pages
+    switch instantly, as before motion, with or without reduced motion
+    (decision log, 2026-11-20, "motion in WebKit"). Micro-interactions
+    are unchanged
 
 ## 8. Milestones
 
@@ -1559,6 +1564,42 @@ lives in `src/lib/auth.ts`.
   callback (17–24 ms measured to `ready`), when the leaving page (a board
   with its cards) is still in the DOM with its rendering paused for the
   snapshot; whether a drag can start then is not known
+- 2026-11-20: motion in WebKit (section 7). On a real iPhone (Safari and
+  Chrome, both WebKit) the new page showed while the old one was still
+  visible during page transitions, with and without Reduce Motion.
+  Measured in Playwright WebKit (production build, every view-transition
+  animation paused and seeked): the computed opacities follow our CSS
+  (`::view-transition-new` stays at 0 until 150ms), yet the new page is
+  painted at full strength from 0ms. The old page's text is in its named
+  `::view-transition-old`; hiding any single pseudo-element (`opacity: 0`
+  or `display: none` on the root, the page names, their groups and image
+  pairs) doesn't remove the new page's text. On back navigations WebKit
+  lists no fade-out for the leaving page. Two candidate fixes didn't
+  change the painting: keyframe offsets instead of the 150ms delay, and
+  removing the name from the `<main>` that `<Activity>` hides. Chromium
+  shows none of this. The official Next.js/React view-transitions demo
+  (react-view-transitions-demo.labs.vercel.dev) shows the same overlap in
+  Playwright WebKit and not in Chromium, which points to React/Next view
+  transitions in WebKit rather than this app's code. Decision: no
+  view-transition animations in WebKit, `animation: none` on every old,
+  new and group pseudo-element under
+  `@supports (font: -apple-system-body)`, so pages switch instantly there,
+  as before motion. The condition is false in Playwright WebKit on Windows and in Chromium,
+  and true on the iPhone. Checked by hand with a temporary marker: on the
+  iPhone (Safari) the marker showed, and pages switched with no animation
+  and no overlap, with and without Reduce Motion; in desktop Chrome the
+  condition was false, animations worked and there was no overlap.
+  Playwright Firefox 159: the condition is false; our animations are
+  present and transitions last 366–428 ms; its screenshots don't include
+  the view-transition overlay, so overlap in Firefox wasn't measured. Not
+  checked by hand. Rejected: fixing WebKit's painting in our CSS (nothing
+  we measured changed it); JavaScript user-agent sniffing; the CSS feature
+  query is engine detection too, chosen because it needs no JS and fails
+  safe (no match = animations stay). Limits: no automated test covers the
+  WebKit side (the condition is false in Playwright WebKit); Safari on
+  macOS not checked; in WebKit a transition still starts (about 20ms to
+  `ready` in Playwright WebKit), and how long clicks are lost then on the
+  iPhone wasn't measured
 
 ## 11. End-to-end verification
 
