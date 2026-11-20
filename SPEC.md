@@ -1515,7 +1515,15 @@ lives in `src/lib/auth.ts`.
   cached pages. With the account menu open during a list → detail
   navigation (390px, 3s transitions), the menu stayed open, and the old
   page's snapshot was painted over it while the transition ran (seen at
-  +100ms and +1000ms): a finding, how to handle it is decided in the plan
+  +100ms and +1000ms). Accepted: the spike reached that state through
+  `element.click()` on the link, which a user can't do; a pointer click
+  outside closes the `auto` popover first. The paths that keep it open
+  during a navigation are the keyboard (Tab out of the menu, then Enter),
+  the browser's back and forward, and Sign out. For Sign out the overlap is
+  unmeasured, and accepted because the menu leaves with the page; it lasts
+  at most one transition (≤400ms). Rejected: a `view-transition-name` on
+  the popover (unverified for the top layer, and its clicks would be dead
+  during transitions)
 
 ## 11. End-to-end verification
 
