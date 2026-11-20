@@ -555,6 +555,10 @@ for (const motion of ["no-preference", "reduce"] as const) {
 
       const row = await durations(rowLink(page, company));
       expect(row["background-color"], "list row hover").toBe("0.08s");
+      // The focus ring appears at once: only the hover tint transitions.
+      expect(Object.keys(row), "list row: no outline transition").not.toContain(
+        "outline-color",
+      );
     });
   });
 }
