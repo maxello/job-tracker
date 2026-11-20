@@ -102,7 +102,7 @@ As a job seeker, I want to quickly add an application I've sent, so that I have 
 As a job seeker, I want to see all my applications in one list, so that I know at a glance where each one stands.
 
 - The list is the home page; its page title is "Applications", like its `h1`
-  (decision log, 2026-11-20, "back-link focus")
+  (decision log, 2026-11-20, "focus after navigation")
 - Each row shows company, role, status and last updated date
 - Sorted by last updated, newest first
 - Archived applications are hidden by default (see US-8)
