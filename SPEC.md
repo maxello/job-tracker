@@ -236,11 +236,11 @@ As a job seeker, I want to see my applications on a board by status and move the
 - The loading skeleton shows the five column frames with the real column
   names as visible text; the counts and cards pulse. It keeps the same
   positions as the loaded board
-- (end of M5, motion, on its own branch after the board is merged) With `prefers-reduced-motion`, view transitions and
-  micro-interactions are off or reduced to a fade; dragging a card still
-  follows the pointer. Whether drag-and-drop conflicts with view transitions
-  is checked on the working board and recorded in the decision log (see the
-  2026-11-14 entry)
+- (end of M5, motion, on its own branch after the board is merged) Motion
+  rules for the whole app are in section 7. On the board: moving a card, by
+  drag-and-drop or by "Move", starts no view transition, so a card doesn't
+  animate to its new column; with `prefers-reduced-motion`, dragging a card
+  still follows the pointer (decision log, 2026-11-20)
 
 ### US-6 Search and filters (M5)
 
@@ -498,6 +498,37 @@ lives in `src/lib/auth.ts`.
   validation
 - TypeScript strict; lint and typecheck pass before every commit (checked
   manually in M1–M2, enforced by hooks from M3 and by CI on every PR from M7)
+- Motion (M5, decision log 2026-11-20). Durations and easing are design
+  tokens in `globals.css` (`@theme`): exit 150ms, enter 210ms, move 400ms,
+  press 80ms, slide offset 60px.
+  - Loading: when a `<Suspense>` boundary of the list, the board, the detail
+    page or the new and edit forms swaps its skeleton for the content, the
+    two crossfade (opacity only, same positions). This also happens on a
+    filter navigation that shows the skeleton
+  - Forward navigation (a list row, a board card's company link, Edit, "New
+    application" on `/` and `/board`) slides the old content out to the left
+    and the new content in from the right, by the slide offset, with a fade;
+    back navigation (the back link on the detail and edit pages, Cancel)
+    slides the other way. The header doesn't move. The "Views" links, the
+    empty-state links, the browser's back and forward, and the redirects
+    after create, Save and Delete carry no direction and don't slide
+  - Between `/` and `/board` ("Views") the content crossfades, also when the
+    page comes back from the router's cache
+  - Clicks pass through the transition overlay. Focus lands where it does
+    without motion
+  - Micro-interactions are CSS only: the three button styles animate their
+    press (move down, lip shrinks) in the press duration; hover states that
+    already exist (e.g. list rows) change with a transition, and none is
+    added; the account menu fades in when it opens (`@starting-style`), in
+    forced-colors mode too
+  - With `prefers-reduced-motion: reduce`, every view transition is an
+    opacity-only fade; micro-interactions lose their movement (a pressed
+    button still moves down, instantly, but nothing animates the move); the
+    skeletons' pulse stays; dragging a card still follows the pointer
+  - No CSS animation runs on page load on an element the layout specs
+    measure
+  - Browsers without the View Transitions API navigate without animation
+    (not tested)
 
 ## 8. Milestones
 
@@ -1429,6 +1460,57 @@ lives in `src/lib/auth.ts`.
   list parameter (names like `status` can collide with form fields), and
   returning to plain `/` after a change (it drops the filters this change
   exists to keep)
+- 2026-11-20: motion (M5, section 7 and US-5). Scope: crossfade on Suspense
+  reveals; forward and back slides between the list or board and the detail
+  and edit pages, with the header anchored; a crossfade between `/` and
+  `/board`; CSS-only micro-interactions (button press, transitions on
+  existing hover states, account-menu fade with `@starting-style`). Under
+  reduced motion every view transition is an opacity-only fade and
+  micro-interactions lose their movement; `animate-pulse` stays. Durations
+  and easing are `@theme` tokens (exit 150ms, enter 210ms, move 400ms, press
+  80ms, slide offset 60px). Directions: forward for the list row, the board
+  card, Edit and "New application"; back for the back links and Cancel;
+  untyped for "Views", the empty-state links and the Server Action
+  redirects (create, Save, Delete). Rejected: client-side navigation
+  instead of `redirect()` to give the redirects a direction; crossfade on
+  filter changes, a dragover column highlight, a pipeline-bar width morph,
+  a new card hover tint (design, not motion), and any new package. The
+  reveal crossfade also runs on filter navigations that show the skeleton:
+  accepted (opacity only, same positions). The header gets a
+  `view-transition-name` and doesn't animate; `::view-transition` gets
+  `pointer-events: none`. Unsupported browsers: documented, not tested.
+  Board card animation (T4): no-go, for drag and for "Move". Measured in a
+  throwaway spike (Chromium, production build, a named `<ViewTransition>`
+  per card, `document.startViewTransition` wrapped; times in ms of
+  `performance.now()`): (H2) a drop and a keyboard Move each start one
+  untyped transition, after the action's response (drop 1168, response
+  1460, transition 1581; Move response 2205, transition 2326) and none on
+  the optimistic commit, so the only transition runs when the card is
+  already in its new column; this confirms, for the optimistic commit only,
+  the claim that a list reorder doesn't animate with `useOptimistic`. (H1b,
+  transitions stretched to 3s) a raw-mouse drag of a second card while the
+  first move's transition ran fired no `dragstart`, with and without
+  `pointer-events: none` on `::view-transition` (without it the pointerdown
+  hit the document, with it the card); the same sequence with no transition
+  running fired `dragstart` and moved the card, so the transition blocks
+  dragging. (H1, Playwright `dragTo`) the second drag started 568ms after
+  the transition finished. (H3) a transition that started during an active
+  drag (at 5724, drag from 5295) resolved at 6203, 3ms after the drop at
+  6200: it ended at the drop's commit; the drop went through. Every
+  transition captured a root animation, so any transition on the board
+  page opens a window where a drag can't start: a board move must start
+  none. Unexplained, kept as measured: in one H1 run the first move's
+  response took 4567ms and no transition followed its refresh within 5s;
+  one run timed out with "Loading board" showing for over 5s (the next
+  run passed); in one run a transition started on a cached `/` reveal had
+  not reached `ready` when read, and the test then hit its 30s timeout at a
+  later step (the next run passed). A second spike (page-level `enter`/`exit` on `/` and `/board`)
+  showed that revealing a page kept by `<Activity>` runs exit and enter
+  (both directions, 250ms opacity), so the "Views" crossfade also covers
+  cached pages. With the account menu open during a list → detail
+  navigation (390px, 3s transitions), the menu stayed open, and the old
+  page's snapshot was painted over it while the transition ran (seen at
+  +100ms and +1000ms): a finding, how to handle it is decided in the plan
 
 ## 11. End-to-end verification
 
