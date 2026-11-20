@@ -155,6 +155,8 @@ for (const motion of ["no-preference", "reduce"] as const) {
         detailHeading(page, company),
       );
       expectDirectional(records, "forward", motion);
+      // The details replacing their skeleton start no second transition.
+      expect(records, "transitions for one navigation").toHaveLength(1);
     });
 
     test(`M2 §7 Motion (${motion}): the back links of the detail and edit pages go back`, async ({
@@ -267,6 +269,7 @@ for (const motion of ["no-preference", "reduce"] as const) {
         detailHeading(page, company),
       );
       expectDirectional(fromCard, "forward", motion);
+      expect(fromCard, "transitions for one navigation").toHaveLength(1);
 
       // The not-found page's back link: a deleted application's detail URL.
       const gone = uniqueName("Gone");
@@ -559,6 +562,41 @@ for (const motion of ["no-preference", "reduce"] as const) {
       expect(Object.keys(row), "list row: no outline transition").not.toContain(
         "outline-color",
       );
+    });
+
+    test(`M17 §7 Motion (${motion}): a filter navigation starts no view transition`, async ({
+      page,
+    }) => {
+      const company = uniqueName("Filter");
+      await create(page, company);
+
+      // Positive control: the recorder sees a navigation's transition.
+      const forward = await recordNavigation(
+        page,
+        () => rowLink(page, company).click(),
+        detailHeading(page, company),
+      );
+      expectTypes(forward, "nav-forward");
+      await backLink(page, "Applications").click();
+      await expect(rowLink(page, company)).toBeVisible();
+      await settled(page);
+
+      // The row is Wishlist, so filtering by Applied removes it. React starts
+      // a transition before it commits, so once the row is gone any
+      // transition is already recorded.
+      await resetRecords(page);
+      await main(page)
+        .getByRole("checkbox", { name: "Applied", exact: true })
+        .check();
+      await main(page)
+        .getByRole("button", { name: "Apply", exact: true })
+        .click();
+      await expect(page).toHaveURL(/[?&]status=applied(&|$)/);
+      await expect(rowLink(page, company)).toBeHidden();
+      expect(
+        await transitions(page),
+        "transitions on a filter navigation",
+      ).toEqual([]);
     });
   });
 }
