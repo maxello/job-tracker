@@ -236,11 +236,11 @@ As a job seeker, I want to see my applications on a board by status and move the
 - The loading skeleton shows the five column frames with the real column
   names as visible text; the counts and cards pulse. It keeps the same
   positions as the loaded board
-- (end of M5, motion, on its own branch after the board is merged) With `prefers-reduced-motion`, view transitions and
-  micro-interactions are off or reduced to a fade; dragging a card still
-  follows the pointer. Whether drag-and-drop conflicts with view transitions
-  is checked on the working board and recorded in the decision log (see the
-  2026-11-14 entry)
+- (end of M5, motion, on its own branch after the board is merged) Motion
+  rules for the whole app are in section 7. On the board: moving a card, by
+  drag-and-drop or by "Move", starts no view transition, so a card doesn't
+  animate to its new column; with `prefers-reduced-motion`, dragging a card
+  still follows the pointer (decision log, 2026-11-20)
 
 ### US-6 Search and filters (M5)
 
@@ -498,6 +498,43 @@ lives in `src/lib/auth.ts`.
   validation
 - TypeScript strict; lint and typecheck pass before every commit (checked
   manually in M1–M2, enforced by hooks from M3 and by CI on every PR from M7)
+- Motion (M5, decision log 2026-11-20). Durations and easing are design
+  tokens in `globals.css` (`@theme`): exit 150ms, enter 210ms, move 400ms,
+  press 80ms, slide offset 60px.
+  - Skeletons swap for their content instantly, as before motion. A filter
+    navigation keeps the current list until the new one arrives, and
+    nothing moves
+  - Forward navigation (a list row, a board card's company link, Edit, "New
+    application" on `/` and `/board`) slides the old content out to the left
+    and the new content in from the right, by the slide offset, with a fade;
+    back navigation (the back link on the detail, edit, new and not-found
+    pages, Cancel)
+    slides the other way. The header doesn't move. The "Views" links, the
+    empty-state links, the browser's back and forward, and the redirects
+    after create, Save and Delete carry no direction and don't slide
+  - Between `/` and `/board` ("Views") the content crossfades, also when the
+    page comes back from the router's cache
+  - While a navigation transition runs (396–433 ms measured), clicks and
+    drags anywhere on the page are lost; keyboard input isn't affected.
+    Focus lands where it does without motion
+  - Micro-interactions are CSS only: the three button styles animate their
+    press (move down, lip shrinks) in the press duration; the list rows'
+    existing hover tint changes with a transition, and no hover state is
+    added; the account menu fades in when it opens (`@starting-style`), in
+    forced-colors mode too
+  - With `prefers-reduced-motion: reduce`, every view transition is an
+    opacity-only fade; micro-interactions lose their movement (a pressed
+    button still moves down, instantly, but nothing animates the move); the
+    skeletons' pulse stays; dragging a card still follows the pointer
+  - No CSS animation runs on page load on an element the layout specs
+    measure
+  - Browsers without the View Transitions API navigate without animation
+    (not tested)
+  - In WebKit browsers where `@supports (font: -apple-system-body)` holds
+    (checked on iPhone Safari), page transitions don't animate: pages
+    switch instantly, as before motion, with or without reduced motion
+    (decision log, 2026-11-20, "motion in WebKit"). Micro-interactions
+    are unchanged
 
 ## 8. Milestones
 
@@ -1429,6 +1466,140 @@ lives in `src/lib/auth.ts`.
   list parameter (names like `status` can collide with form fields), and
   returning to plain `/` after a change (it drops the filters this change
   exists to keep)
+- 2026-11-20: motion (M5, section 7 and US-5). Scope: crossfade on Suspense
+  reveals; forward and back slides between the list or board and the detail
+  and edit pages, with the header anchored; a crossfade between `/` and
+  `/board`; CSS-only micro-interactions (button press, a transition on the
+  list rows' existing hover tint, account-menu fade with `@starting-style`). Under
+  reduced motion every view transition is an opacity-only fade and
+  micro-interactions lose their movement; `animate-pulse` stays. Durations
+  and easing are `@theme` tokens (exit 150ms, enter 210ms, move 400ms, press
+  80ms, slide offset 60px). Directions: forward for the list row, the board
+  card, Edit and "New application"; back for the back links (detail, edit,
+  new and not-found pages) and Cancel;
+  untyped for "Views", the empty-state links and the Server Action
+  redirects (create, Save, Delete). Rejected: client-side navigation
+  instead of `redirect()` to give the redirects a direction; crossfade on
+  filter changes, a dragover column highlight, a pipeline-bar width morph,
+  a new card hover tint (design, not motion), and any new package. A
+  filter navigation shows no skeleton (measured: with its request held,
+  the old results stayed on screen and no skeleton appeared), and nothing
+  animates on it; this replaces the earlier "accepted" reveal on filter
+  navigations. The header gets a
+  `view-transition-name` and doesn't animate; `::view-transition` gets
+  `pointer-events: none`, so clicks on the content pass through, but while
+  a transition runs a drag can't start (spike H1b) and the named header
+  doesn't take clicks. Unsupported browsers: documented, not tested.
+  Board card animation (T4): no-go, for drag and for "Move". Measured in a
+  throwaway spike (Chromium, production build, a named `<ViewTransition>`
+  per card, `document.startViewTransition` wrapped; times in ms of
+  `performance.now()`): (H2) a drop and a keyboard Move each start one
+  untyped transition, after the action's response (drop 1168, response
+  1460, transition 1581; Move response 2205, transition 2326) and none on
+  the optimistic commit, so the only transition runs when the card is
+  already in its new column; this confirms, for the optimistic commit only,
+  the claim that a list reorder doesn't animate with `useOptimistic`. (H1b,
+  transitions stretched to 3s) a raw-mouse drag of a second card while the
+  first move's transition ran fired no `dragstart`, with and without
+  `pointer-events: none` on `::view-transition` (without it the pointerdown
+  hit the document, with it the card); the same sequence with no transition
+  running fired `dragstart` and moved the card, so the transition blocks
+  dragging. (H1, Playwright `dragTo`) the second drag started 568ms after
+  the transition finished. (H3) a transition that started during an active
+  drag (at 5724, drag from 5295) resolved at 6203, 3ms after the drop at
+  6200: it ended at the drop's commit; the drop went through. Every
+  transition captured a root animation, so any transition on the board
+  page opens a window where a drag can't start: a board move must start
+  none. Unexplained, kept as measured: in one H1 run the first move's
+  response took 4567ms and no transition followed its refresh within 5s;
+  one run timed out with "Loading board" showing for over 5s (the next
+  run passed); in one run a transition started on a cached `/` reveal had
+  not reached `ready` when read, and the test then hit its 30s timeout at a
+  later step (the next run passed). A second spike (page-level `enter`/`exit` on `/` and `/board`)
+  showed that revealing a page kept by `<Activity>` runs exit and enter
+  (both directions, 250ms opacity), so the "Views" crossfade also covers
+  cached pages. With the account menu open during a list → detail
+  navigation (390px, 3s transitions), the menu stayed open, and the old
+  page's snapshot was painted over it while the transition ran (seen at
+  +100ms and +1000ms). Accepted: the spike reached that state through
+  `element.click()` on the link, which a user can't do; a pointer click
+  outside closes the `auto` popover first. The paths that keep it open
+  during a navigation are the keyboard (Tab out of the menu, then Enter),
+  the browser's back and forward, and Sign out. For Sign out the overlap is
+  unmeasured, and accepted because the menu leaves with the page; it lasts
+  at most one transition (≤400ms). Rejected: a `view-transition-name` on
+  the popover (unverified for the top layer, and its clicks would be dead
+  during transitions)
+- 2026-11-20: motion, after measuring clicks during transitions (section
+  7). This supersedes the 2026-11-20 entry's "clicks on the content pass
+  through" and its loading crossfade (T1). Measured in Chromium on the
+  production build, list row → detail with transitions stretched to 3s:
+  at the detail skeleton's centre, the back link's centre and the header's
+  "Sign out", `document.elementFromPoint()`, the `pointerdown` target and
+  the `click` target were all `<body>`, with the rule
+  `::view-transition { pointer-events: none }` in place. The claim that
+  this rule lets clicks through to the page (from the Next.js view-transitions guide) is false
+  here. Probe B, `:root { view-transition-name: none }` (root not a
+  participant, confirmed: no `::view-transition-old(root)`), gave the same
+  three `<body>` targets: rejected. So while a navigation transition runs,
+  clicks and drags anywhere on the page are lost; measured unstretched,
+  five runs each, a navigation transition lasts 430–433 ms (forward slide)
+  and 396–400 ms (crossfade, and every transition under reduced motion).
+  The ~400 ms is not one animation: the last one ends at 360 ms (the
+  enter fade, 150 ms delay + 210 ms), plus about 20 ms from
+  `startViewTransition` to `ready` and about one frame before `finished`.
+  T1 (the crossfade from skeleton to content) is removed: it was a second
+  window of lost clicks (396–401 ms, starting about 300 ms after the
+  navigation's), and it landed exactly when the content appeared. Without
+  it the content is clickable as soon as it shows; skeleton and content
+  already share positions. Skeletons swap instantly, as before motion.
+  The `pointer-events: none` rule is dropped: with it the lost click lands
+  on `<body>`, without it (computed `auto`) on `<html>`, at the same three
+  points; in both cases it never reaches the content or the header, so the
+  rule changes nothing users get. A drag can't start during a navigation
+  transition because the cards don't exist then (0 card selects at
+  `ready` on `/` → `/board`, first and cached visit; the board's content
+  arrives without a transition, and a move starts none). Unmeasured: the
+  window of about 20 ms between `startViewTransition` and React's update
+  callback (17–24 ms measured to `ready`), when the leaving page (a board
+  with its cards) is still in the DOM with its rendering paused for the
+  snapshot; whether a drag can start then is not known
+- 2026-11-20: motion in WebKit (section 7). On a real iPhone (Safari and
+  Chrome, both WebKit) the new page showed while the old one was still
+  visible during page transitions, with and without Reduce Motion.
+  Measured in Playwright WebKit (production build, every view-transition
+  animation paused and seeked): the computed opacities follow our CSS
+  (`::view-transition-new` stays at 0 until 150ms), yet the new page is
+  painted at full strength from 0ms. The old page's text is in its named
+  `::view-transition-old`; hiding any single pseudo-element (`opacity: 0`
+  or `display: none` on the root, the page names, their groups and image
+  pairs) doesn't remove the new page's text. On back navigations WebKit
+  lists no fade-out for the leaving page. Two candidate fixes didn't
+  change the painting: keyframe offsets instead of the 150ms delay, and
+  removing the name from the `<main>` that `<Activity>` hides. Chromium
+  shows none of this. The official Next.js/React view-transitions demo
+  (react-view-transitions-demo.labs.vercel.dev) shows the same overlap in
+  Playwright WebKit and not in Chromium, which points to React/Next view
+  transitions in WebKit rather than this app's code. Decision: no
+  view-transition animations in WebKit, `animation: none` on every old,
+  new and group pseudo-element under
+  `@supports (font: -apple-system-body)`, so pages switch instantly there,
+  as before motion. The condition is false in Playwright WebKit on Windows and in Chromium,
+  and true on the iPhone. Checked by hand with a temporary marker: on the
+  iPhone (Safari) the marker showed, and pages switched with no animation
+  and no overlap, with and without Reduce Motion; in desktop Chrome the
+  condition was false, animations worked and there was no overlap.
+  Playwright Firefox 159: the condition is false; our animations are
+  present and transitions last 366–428 ms; its screenshots don't include
+  the view-transition overlay, so overlap in Firefox wasn't measured. Not
+  checked by hand. Rejected: fixing WebKit's painting in our CSS (nothing
+  we measured changed it); JavaScript user-agent sniffing; the CSS feature
+  query is engine detection too, chosen because it needs no JS and fails
+  safe (no match = animations stay). Limits: no automated test covers the
+  WebKit side (the condition is false in Playwright WebKit); Safari on
+  macOS not checked; in WebKit a transition still starts (about 20ms to
+  `ready` in Playwright WebKit), and how long clicks are lost then on the
+  iPhone wasn't measured
 
 ## 11. End-to-end verification
 

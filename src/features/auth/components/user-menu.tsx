@@ -52,7 +52,7 @@ export async function UserMenu({ menuId }: { menuId: string }) {
       <div
         id={menuId}
         popover="auto"
-        className="inset-auto top-16 right-4 m-0 max-w-[calc(100vw-2rem)] rounded-md border border-control bg-surface p-3 text-text sm:hidden"
+        className="popover-fade inset-auto top-16 right-4 m-0 max-w-[calc(100vw-2rem)] rounded-md border border-control bg-surface p-3 text-text sm:hidden"
       >
         <div className="flex flex-col items-end gap-3">
           <p className="font-mono text-xs text-muted wrap-anywhere">

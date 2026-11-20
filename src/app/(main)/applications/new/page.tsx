@@ -5,6 +5,7 @@ import {
   NewApplicationForm,
   NewApplicationFormSkeleton,
 } from "@/features/applications/components/new-application-form";
+import { PageTransition } from "@/features/motion/components/page-transition";
 
 export const metadata: Metadata = {
   title: "New application",
@@ -12,16 +13,16 @@ export const metadata: Metadata = {
 
 export default function NewApplicationPage() {
   return (
-    <main className="mx-auto w-full max-w-page px-4 py-8">
-      <div className="max-w-3xl">
-        <BackLink />
-        <h1 className="mt-3 mb-6 page-heading">
-          New application
-        </h1>
-        <Suspense fallback={<NewApplicationFormSkeleton mode="new" />}>
-          <NewApplicationForm />
-        </Suspense>
-      </div>
-    </main>
+    <PageTransition>
+      <main className="mx-auto w-full max-w-page px-4 py-8">
+        <div className="max-w-3xl">
+          <BackLink />
+          <h1 className="mt-3 mb-6 page-heading">New application</h1>
+          <Suspense fallback={<NewApplicationFormSkeleton mode="new" />}>
+            <NewApplicationForm />
+          </Suspense>
+        </div>
+      </main>
+    </PageTransition>
   );
 }

@@ -6,6 +6,7 @@ import {
 } from "@/features/applications/components/application-details";
 import { BackLink } from "@/features/applications/components/back-link";
 import { parseListReturn } from "@/features/applications/list-return";
+import { PageTransition } from "@/features/motion/components/page-transition";
 
 export const metadata: Metadata = {
   title: "Application",
@@ -23,21 +24,23 @@ export default function ApplicationPage({
   searchParams,
 }: PageProps<"/applications/[id]">) {
   return (
-    <main className="mx-auto w-full max-w-page px-4 py-8">
-      <div className="max-w-3xl">
-        <Suspense fallback={<BackLink />}>
-          {searchParams.then((query) => (
-            <BackLink to={parseListReturn(query)} />
-          ))}
-        </Suspense>
-        <div className="mt-3">
-          <Suspense fallback={<ApplicationDetailsSkeleton />}>
-            {Promise.all([params, searchParams]).then(([{ id }, query]) => (
-              <ApplicationDetails id={id} returnTo={parseListReturn(query)} />
+    <PageTransition>
+      <main className="mx-auto w-full max-w-page px-4 py-8">
+        <div className="max-w-3xl">
+          <Suspense fallback={<BackLink />}>
+            {searchParams.then((query) => (
+              <BackLink to={parseListReturn(query)} />
             ))}
           </Suspense>
+          <div className="mt-3">
+            <Suspense fallback={<ApplicationDetailsSkeleton />}>
+              {Promise.all([params, searchParams]).then(([{ id }, query]) => (
+                <ApplicationDetails id={id} returnTo={parseListReturn(query)} />
+              ))}
+            </Suspense>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </PageTransition>
   );
 }

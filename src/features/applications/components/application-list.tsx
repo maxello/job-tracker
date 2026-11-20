@@ -72,7 +72,7 @@ const listBox =
   "divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface";
 const rowLayout =
   "flex flex-col gap-2 border-l-6 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4";
-const rowClass = `${rowLayout} hover:bg-row-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus`;
+const rowClass = `${rowLayout} hover:bg-row-hover transition-[background-color] duration-(--duration-press) focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus`;
 const rowMeta = "flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm";
 
 // Reads searchParams inside the page's <Suspense>, so the header stays in the
@@ -190,6 +190,7 @@ async function Results({
           <li key={application.id}>
             <Link
               href={`/applications/${application.id}${returnQuery}`}
+              transitionTypes={["nav-forward"]}
               className={`${rowClass} ${style.edge}`}
             >
               <div className="min-w-0">

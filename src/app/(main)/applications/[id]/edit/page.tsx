@@ -4,6 +4,7 @@ import { BackLink } from "@/features/applications/components/back-link";
 import { EditApplicationForm } from "@/features/applications/components/edit-application-form";
 import { NewApplicationFormSkeleton } from "@/features/applications/components/new-application-form";
 import { parseListReturn } from "@/features/applications/list-return";
+import { PageTransition } from "@/features/motion/components/page-transition";
 
 export const metadata: Metadata = {
   title: "Edit application",
@@ -20,22 +21,22 @@ export default function EditApplicationPage({
   searchParams,
 }: PageProps<"/applications/[id]/edit">) {
   return (
-    <main className="mx-auto w-full max-w-page px-4 py-8">
-      <div className="max-w-3xl">
-        <Suspense fallback={<BackLink />}>
-          {searchParams.then((query) => (
-            <BackLink to={parseListReturn(query)} />
-          ))}
-        </Suspense>
-        <h1 className="mt-3 mb-6 page-heading">
-          Edit application
-        </h1>
-        <Suspense fallback={<NewApplicationFormSkeleton mode="edit" />}>
-          {Promise.all([params, searchParams]).then(([{ id }, query]) => (
-            <EditApplicationForm id={id} returnTo={parseListReturn(query)} />
-          ))}
-        </Suspense>
-      </div>
-    </main>
+    <PageTransition>
+      <main className="mx-auto w-full max-w-page px-4 py-8">
+        <div className="max-w-3xl">
+          <Suspense fallback={<BackLink />}>
+            {searchParams.then((query) => (
+              <BackLink to={parseListReturn(query)} />
+            ))}
+          </Suspense>
+          <h1 className="mt-3 mb-6 page-heading">Edit application</h1>
+          <Suspense fallback={<NewApplicationFormSkeleton mode="edit" />}>
+            {Promise.all([params, searchParams]).then(([{ id }, query]) => (
+              <EditApplicationForm id={id} returnTo={parseListReturn(query)} />
+            ))}
+          </Suspense>
+        </div>
+      </main>
+    </PageTransition>
   );
 }
