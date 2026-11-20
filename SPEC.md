@@ -503,8 +503,9 @@ lives in `src/lib/auth.ts`.
   press 80ms, slide offset 60px.
   - Loading: when a `<Suspense>` boundary of the list, the board, the detail
     page or the new and edit forms swaps its skeleton for the content, the
-    two crossfade (opacity only, same positions). This also happens on a
-    filter navigation that shows the skeleton
+    two crossfade (opacity only, same positions). A filter navigation keeps
+    the current list until the new one arrives: no skeleton, no crossfade,
+    and nothing moves
   - Forward navigation (a list row, a board card's company link, Edit, "New
     application" on `/` and `/board`) slides the old content out to the left
     and the new content in from the right, by the slide offset, with a fade;
@@ -1477,9 +1478,11 @@ lives in `src/lib/auth.ts`.
   redirects (create, Save, Delete). Rejected: client-side navigation
   instead of `redirect()` to give the redirects a direction; crossfade on
   filter changes, a dragover column highlight, a pipeline-bar width morph,
-  a new card hover tint (design, not motion), and any new package. The
-  reveal crossfade also runs on filter navigations that show the skeleton:
-  accepted (opacity only, same positions). The header gets a
+  a new card hover tint (design, not motion), and any new package. A
+  filter navigation shows no skeleton (measured: with its request held,
+  the old results stayed on screen and no skeleton appeared), so it gets
+  no reveal crossfade; this replaces the earlier "accepted" reveal on
+  filter navigations. The header gets a
   `view-transition-name` and doesn't animate; `::view-transition` gets
   `pointer-events: none`, so clicks on the content pass through, but while
   a transition runs a drag can't start (spike H1b) and the named header
