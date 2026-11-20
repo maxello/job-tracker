@@ -501,11 +501,9 @@ lives in `src/lib/auth.ts`.
 - Motion (M5, decision log 2026-11-20). Durations and easing are design
   tokens in `globals.css` (`@theme`): exit 150ms, enter 210ms, move 400ms,
   press 80ms, slide offset 60px.
-  - Loading: when a `<Suspense>` boundary of the list, the board, the detail
-    page or the new and edit forms swaps its skeleton for the content, the
-    two crossfade (opacity only, same positions). A filter navigation keeps
-    the current list until the new one arrives: no skeleton, no crossfade,
-    and nothing moves
+  - Skeletons swap for their content instantly, as before motion. A filter
+    navigation keeps the current list until the new one arrives, and
+    nothing moves
   - Forward navigation (a list row, a board card's company link, Edit, "New
     application" on `/` and `/board`) slides the old content out to the left
     and the new content in from the right, by the slide offset, with a fade;
@@ -516,8 +514,8 @@ lives in `src/lib/auth.ts`.
     after create, Save and Delete carry no direction and don't slide
   - Between `/` and `/board` ("Views") the content crossfades, also when the
     page comes back from the router's cache
-  - Clicks on the content pass through the transition overlay; while a
-    transition runs a drag can't start and the header doesn't take clicks.
+  - While a navigation transition runs (396–433 ms measured), clicks and
+    drags anywhere on the page are lost; keyboard input isn't affected.
     Focus lands where it does without motion
   - Micro-interactions are CSS only: the three button styles animate their
     press (move down, lip shrinks) in the press duration; the list rows'
@@ -1480,9 +1478,9 @@ lives in `src/lib/auth.ts`.
   filter changes, a dragover column highlight, a pipeline-bar width morph,
   a new card hover tint (design, not motion), and any new package. A
   filter navigation shows no skeleton (measured: with its request held,
-  the old results stayed on screen and no skeleton appeared), so it gets
-  no reveal crossfade; this replaces the earlier "accepted" reveal on
-  filter navigations. The header gets a
+  the old results stayed on screen and no skeleton appeared), and nothing
+  animates on it; this replaces the earlier "accepted" reveal on filter
+  navigations. The header gets a
   `view-transition-name` and doesn't animate; `::view-transition` gets
   `pointer-events: none`, so clicks on the content pass through, but while
   a transition runs a drag can't start (spike H1b) and the named header
@@ -1527,6 +1525,29 @@ lives in `src/lib/auth.ts`.
   at most one transition (≤400ms). Rejected: a `view-transition-name` on
   the popover (unverified for the top layer, and its clicks would be dead
   during transitions)
+- 2026-11-20: motion, after measuring clicks during transitions (section
+  7). This supersedes the 2026-11-20 entry's "clicks on the content pass
+  through" and its loading crossfade (T1). Measured in Chromium on the
+  production build, list row → detail with transitions stretched to 3s:
+  at the detail skeleton's centre, the back link's centre and the header's
+  "Sign out", `document.elementFromPoint()`, the `pointerdown` target and
+  the `click` target were all `<body>`, with `::view-transition {
+pointer-events: none }` in place. The claim that this rule lets clicks
+  through to the page (from the Next.js view-transitions guide) is false
+  here. Probe B, `:root { view-transition-name: none }` (root not a
+  participant, confirmed: no `::view-transition-old(root)`), gave the same
+  three `<body>` targets: rejected. So while a navigation transition runs,
+  clicks and drags anywhere on the page are lost; measured unstretched,
+  five runs each, a navigation transition lasts 430–433 ms (forward slide)
+  and 396–400 ms (crossfade, and every transition under reduced motion).
+  The ~400 ms is not one animation: the last one ends at 360 ms (the
+  enter fade, 150 ms delay + 210 ms), plus about 20 ms from
+  `startViewTransition` to `ready` and about one frame before `finished`.
+  T1 (the crossfade from skeleton to content) is removed: it was a second
+  window of lost clicks (396–401 ms, starting about 300 ms after the
+  navigation's), and it landed exactly when the content appeared. Without
+  it the content is clickable as soon as it shows; skeleton and content
+  already share positions. Skeletons swap instantly, as before motion
 
 ## 11. End-to-end verification
 
