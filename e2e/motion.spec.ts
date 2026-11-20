@@ -726,4 +726,37 @@ test.describe("overlay", () => {
       "back link clicks after the transition",
     ).toBe(1);
   });
+
+  test("M16 §7 Motion: while a navigation transition runs, keyboard input isn't affected", async ({
+    page,
+  }) => {
+    const company = uniqueName("Keys");
+    await create(page, company);
+    await stretchTransitions(page);
+
+    await resetRecords(page);
+    await rowLink(page, company).click();
+    await waitForReady(page);
+
+    // Tab moves focus: after the click, focus is on the body (M10).
+    await page.keyboard.press("Tab");
+    expect(
+      await page.evaluate(() => document.activeElement === document.body),
+      "focus moved off the body",
+    ).toBe(false);
+    // Tab on to the detail page's back link (the header's Sign out first).
+    const back = backLink(page, "Applications");
+    for (let i = 0; i < 5; i++) {
+      if (await back.evaluate((el) => el === document.activeElement)) break;
+      await page.keyboard.press("Tab");
+    }
+    await expect(back, "back link focused by Tab").toBeFocused();
+    const [running] = await transitions(page);
+    expect(running.finishedAt, "tabbed while the transition ran").toBeNull();
+
+    // Enter on the focused link navigates.
+    await page.keyboard.press("Enter");
+    await expect(page, "Enter on the back link navigates").toHaveURL("/");
+    await expect(rowLink(page, company)).toBeVisible();
+  });
 });
