@@ -508,17 +508,19 @@ lives in `src/lib/auth.ts`.
   - Forward navigation (a list row, a board card's company link, Edit, "New
     application" on `/` and `/board`) slides the old content out to the left
     and the new content in from the right, by the slide offset, with a fade;
-    back navigation (the back link on the detail and edit pages, Cancel)
+    back navigation (the back link on the detail, edit, new and not-found
+    pages, Cancel)
     slides the other way. The header doesn't move. The "Views" links, the
     empty-state links, the browser's back and forward, and the redirects
     after create, Save and Delete carry no direction and don't slide
   - Between `/` and `/board` ("Views") the content crossfades, also when the
     page comes back from the router's cache
-  - Clicks pass through the transition overlay. Focus lands where it does
-    without motion
+  - Clicks on the content pass through the transition overlay; while a
+    transition runs a drag can't start and the header doesn't take clicks.
+    Focus lands where it does without motion
   - Micro-interactions are CSS only: the three button styles animate their
-    press (move down, lip shrinks) in the press duration; hover states that
-    already exist (e.g. list rows) change with a transition, and none is
+    press (move down, lip shrinks) in the press duration; the list rows'
+    existing hover tint changes with a transition, and no hover state is
     added; the account menu fades in when it opens (`@starting-style`), in
     forced-colors mode too
   - With `prefers-reduced-motion: reduce`, every view transition is an
@@ -1463,13 +1465,14 @@ lives in `src/lib/auth.ts`.
 - 2026-11-20: motion (M5, section 7 and US-5). Scope: crossfade on Suspense
   reveals; forward and back slides between the list or board and the detail
   and edit pages, with the header anchored; a crossfade between `/` and
-  `/board`; CSS-only micro-interactions (button press, transitions on
-  existing hover states, account-menu fade with `@starting-style`). Under
+  `/board`; CSS-only micro-interactions (button press, a transition on the
+  list rows' existing hover tint, account-menu fade with `@starting-style`). Under
   reduced motion every view transition is an opacity-only fade and
   micro-interactions lose their movement; `animate-pulse` stays. Durations
   and easing are `@theme` tokens (exit 150ms, enter 210ms, move 400ms, press
   80ms, slide offset 60px). Directions: forward for the list row, the board
-  card, Edit and "New application"; back for the back links and Cancel;
+  card, Edit and "New application"; back for the back links (detail, edit,
+  new and not-found pages) and Cancel;
   untyped for "Views", the empty-state links and the Server Action
   redirects (create, Save, Delete). Rejected: client-side navigation
   instead of `redirect()` to give the redirects a direction; crossfade on
@@ -1478,7 +1481,9 @@ lives in `src/lib/auth.ts`.
   reveal crossfade also runs on filter navigations that show the skeleton:
   accepted (opacity only, same positions). The header gets a
   `view-transition-name` and doesn't animate; `::view-transition` gets
-  `pointer-events: none`. Unsupported browsers: documented, not tested.
+  `pointer-events: none`, so clicks on the content pass through, but while
+  a transition runs a drag can't start (spike H1b) and the named header
+  doesn't take clicks. Unsupported browsers: documented, not tested.
   Board card animation (T4): no-go, for drag and for "Move". Measured in a
   throwaway spike (Chromium, production build, a named `<ViewTransition>`
   per card, `document.startViewTransition` wrapped; times in ms of
