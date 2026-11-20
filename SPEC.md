@@ -183,8 +183,8 @@ As a job seeker, I want to see my applications on a board by status and move the
   focus"): after a client navigation, if the fallback back link of the
   detail or edit page has focus when the real back link replaces it, focus
   moves to the real back link, not to the page body. The same holds when
-  the not-found page replaces the page while its fallback back link has
-  focus: focus moves to the not-found page's back link. If focus is
+  the not-found page replaces the page while its fallback back link or its
+  real back link has focus: focus moves to the not-found page's back link. If focus is
   anywhere else when the swap happens (the user has tabbed away from the
   fallback), it stays where it is. Showing a cached page again (browser
   back or forward) never moves focus to its back link
@@ -1629,11 +1629,17 @@ lives in `src/lib/auth.ts`.
   fallback gets `blur` and is disconnected; the next Tab reaches the real
   link). The same happens when the not-found page replaces a page whose
   fallback has focus (measured: a stale list row of an application deleted
-  in another tab). Decision: the back link stays in its `<Suspense>` with
+  in another tab). On that stale row the swap takes two commits (measured
+  with logging on each back link's mount and cleanup): `searchParams`
+  resolves first, so the real back link replaces the fallback and takes
+  focus; one commit later `notFound()` replaces the segment and removes the
+  focused real link. The first probe only compared before and after, so it
+  saw fallback → not-found and missed the real link in between. Decision: the back link stays in its `<Suspense>` with
   the `<BackLink />` fallback, and focus is handed over. A client component
   puts a `ref` on the existing `<Link>` (next 16.4.6 `Link` merges a `ref`
   prop; source, not in its docs), so the markup doesn't change. The
-  fallback's layout-effect cleanup stores its node if it is
+  layout-effect cleanup of the fallback, and of the real link (for the
+  two-commit not-found sequence), stores the link's node if it is
   `document.activeElement` (react-dom 19.3.0 source: a deleted function
   component's layout cleanup runs before its `<a>` is removed), cleared in
   a microtask. The real link, and the not-found page's link, focus
@@ -1646,7 +1652,14 @@ lives in `src/lib/auth.ts`.
   focus on it (hidden, still connected), and the detail's real link mounted
   with focus on `<body>`. A plain flag would move focus there; the
   disconnected check doesn't (the deleted fallback was disconnected by the
-  real link's mount, the hidden one wasn't). Enter on the focused fallback
+  real link's mount, the hidden one wasn't). Cached routes are evicted
+  (deleted) during normal navigation, but only after they were hidden, and
+  the route being left is always kept (source, next 16.4.6,
+  `bfcache-state-manager.js` / `layout-router.js`: with Cache Components
+  each layout level keeps 3 routes, most recent first), so a focused link
+  is hidden and stays connected when its page is left. One level deep is
+  measured (T5 in `e2e/back-link-focus.spec.ts`); deeper navigation chains
+  are reasoning, not measured. Enter on the focused fallback
   (navigating to `/`) mounts no back link in that commit, so the microtask
   clears the node. Accepted limitation (reasoning, not measured): on a full
   page load React's inline streaming script swaps the fallback before or
