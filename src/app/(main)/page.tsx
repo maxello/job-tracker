@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import {
@@ -5,6 +6,12 @@ import {
   ApplicationListSkeleton,
 } from "@/features/applications/components/application-list";
 import { PageTransition } from "@/features/motion/components/page-transition";
+
+// Its own title, like its h1 (US-2); without it the root layout's "Job
+// Tracker" shows (SPEC decision log, 2026-11-20, "focus after navigation").
+export const metadata: Metadata = {
+  title: "Applications",
+};
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
