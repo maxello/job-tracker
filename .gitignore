@@ -54,5 +54,8 @@ CLAUDE.local.md
 # local switch for the Stop hook
 /.claude/stop-checks.off
 
+# /new-feature plan files and review reports
+/plans/
+
 # prisma generated client
 /src/generated

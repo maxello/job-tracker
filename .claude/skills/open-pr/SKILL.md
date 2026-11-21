@@ -3,7 +3,7 @@ name: open-pr
 description: "Open a pull request for the current branch: run the checks, commit, push the branch and create the PR with gh. Never pushes to main or merges."
 argument-hint: "[issue number] [plan file path]"
 disable-model-invocation: true
-allowed-tools: Bash(git branch *) Bash(git status *) Bash(git log *) Bash(git diff *) Bash(git add *) Bash(git commit *) Bash(git push -u origin *) Bash(gh issue view *) Bash(gh pr view *) Bash(gh pr create *) Bash(gh pr comment *) Bash(npm run lint) Bash(npm run typecheck) Bash(cd D:/Projects/job-tracker && npm test) Bash(cd D:/Projects/job-tracker && npm run test:db) Bash(npm run e2e) Read(~/.claude/plans/**)
+allowed-tools: Bash(git branch *) Bash(git status *) Bash(git log *) Bash(git diff *) Bash(git add *) Bash(git commit *) Bash(git push -u origin *) Bash(gh issue view *) Bash(gh pr view *) Bash(gh pr create *) Bash(gh pr comment *) Bash(npm run lint) Bash(npm run typecheck) Bash(cd D:/Projects/job-tracker && npm test) Bash(cd D:/Projects/job-tracker && npm run test:db) Bash(npm run e2e) Read(~/.claude/plans/**) Read(plans/**)
 ---
 
 # Open a pull request for the current branch
@@ -37,7 +37,7 @@ If an issue number was given, run `gh issue view <number>` and compare it with t
 
 ## 2b. Plan file
 
-If a plan file path was given, read it with the Read tool and take its decisions, deviations and known limits for What and Notes. If it disagrees with the diff (something planned is missing, or the diff does something the plan rules out), stop and say where: the plan section and the file. Without a plan file path, don't search for one.
+If a plan file path was given, read it with the Read tool and take its decisions, deviations and known limits for What and Notes. If it disagrees with the diff (something planned is missing, or the diff does something the plan rules out), stop and say where: the plan section and the file. Manual checks listed under `## Manual checks done` in the plan file go to `## Verification`, each marked "manual, by me"; `## Notes` lists only the manual checks not done. Without a plan file path, don't search for one.
 
 ## 3. Checks
 
@@ -58,7 +58,7 @@ If a PR already exists, the push has updated it. Read it with `gh pr view <numbe
 - Title: a Conventional Commit summary of the branch (the commit subject if there is one commit).
 - Body sections:
   - `## What`: what changed and why, by area.
-  - `## Verification`: only the checks run in this session, each with its result and test counts. Don't claim any behaviour the checks didn't exercise. If the changes touch only docs, skills or config that no check reads, say so in one line: the checks pass but don't verify the change.
+  - `## Verification`: the checks run in this session, each with its result and test counts, plus the manual checks from the plan file's `## Manual checks done`, each marked "manual, by me". Don't claim any behaviour the checks didn't exercise. If the changes touch only docs, skills or config that no check reads, say so in one line: the checks pass but don't verify the change.
   - `## Notes`: what the change doesn't cover, manual checks I still need to do, and follow-ups (from the plan file if one was given). Omit if none.
 - Add `Closes #<number>` if an issue was given. End with `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
 
