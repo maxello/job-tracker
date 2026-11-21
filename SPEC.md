@@ -1659,7 +1659,14 @@ lives in `src/lib/auth.ts`.
   each layout level keeps 3 routes, most recent first), so a focused link
   is hidden and stays connected when its page is left. One level deep is
   measured (T5 in `e2e/back-link-focus.spec.ts`); deeper navigation chains
-  are reasoning, not measured. Enter on the focused fallback
+  are reasoning, not measured. The node is cleared in a microtask, which
+  assumes the cleanup and the new link's mount run in one task; inside a
+  view transition react-dom can defer the layout phase (fonts loading,
+  suspensey images; react-dom 19.3.0 source), and the hand-over would then
+  be lost. That can't apply to these commits: the stale-row not-found swap
+  starts no view transition (measured, one run, Chromium: only the list
+  row's `nav-forward` transition was recorded), and the in-page swap
+  starts none either (M1 in `e2e/motion.spec.ts`). Enter on the focused fallback
   (navigating to `/`) mounts no back link in that commit, so the microtask
   clears the node. Accepted limitation (reasoning, not measured): on a full
   page load React's inline streaming script swaps the fallback before or
