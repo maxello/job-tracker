@@ -119,3 +119,35 @@ test("US-3: the current status can't be submitted again", async ({ page }) => {
   await expect(updateButton(page)).toBeDisabled();
   await expect(records).toHaveCount(2);
 });
+
+// SPEC.md section 11, first bullet. Rows are matched as text plus time, which
+// also checks that each timestamp is shown.
+test("US-3: after a reload the detail page still shows the new status and both history records with timestamps", async ({
+  page,
+}) => {
+  const company = uniqueName("Hooli");
+  await createAndOpen(page, company);
+  await changeStatus(page, "Applied", 2);
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: company })).toBeVisible();
+
+  await expect(statusSelect(page)).toHaveValue("APPLIED");
+  await expect(historyList(page)).toMatchAriaSnapshot(`
+    - list:
+      - /children: equal
+      - listitem:
+        - text: Created as Wishlist
+        - time: /\\d/
+      - listitem:
+        - text: Wishlist to Applied
+        - time: /\\d/
+  `);
+
+  for (const record of await historyRecords(page).all()) {
+    const stamp = Date.parse(
+      (await record.getByRole("time").getAttribute("datetime")) ?? "",
+    );
+    expect(stamp).not.toBeNaN();
+  }
+});
