@@ -414,7 +414,10 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
   notice under the textarea: "The text is sent to Anthropic's Claude API to
   fill in the form. This app doesn't store it." There is no consent checkbox
 - Empty or whitespace-only text, and text over 20,000 characters, is rejected
-  with a message before any API call
+  with a message before any API call: "Paste the text of a job posting" and
+  "The text is too long (max 20,000 characters)", as errors on the text
+  field. The text is trimmed first, and its length is counted like the US-1
+  fields (UTF-16 units)
 - The app calls the Claude API from the server only (the API key is never sent
   to the browser). Only the prompt and the posting text are sent: no user id,
   no email. The model id comes from an environment variable, and `max_tokens`
@@ -434,7 +437,10 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
   - the currency is kept only if at least one salary value is kept
   - stack: invalid tags are dropped, and the rest is capped at the first 30
 - If the model's response doesn't have the expected structure, the server
-  retries once, within the same request
+  retries once, within the same request. A response cut off at `max_tokens`
+  counts as an invalid structure; a `refusal` or
+  `model_context_window_exceeded` stop reason gets the generic error below
+  with no retry
 - One parse request has 30 s in total, including the retry. If the API call
   fails (including HTTP 400 when the spend limit is reached), times out, or
   the retry is invalid too, the user sees "Couldn't parse the posting. Try
@@ -454,8 +460,20 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
   24 hours old), and can still fill in the form manually. Parallel requests
   at the limit can overshoot it by a few; accepted (the workspace spend limit
   caps the cost)
+  - HH:MM is 24-hour, in the browser's time zone: the form sends it as `tz`,
+    read with the US-6 rule (a valid Intl zone, otherwise UTC)
+  - The time is when the count in the window drops below 20: with exactly 20
+    counted requests, the oldest + 24 hours; after an overshoot, later (the
+    (count − 20 + 1)-th oldest + 24 hours)
+  - The request is recorded before the API call. If the database fails while
+    checking or recording the limit, the user gets the generic parse error
+    and the API is not called (fail closed)
+- A missing API key or model id gives the generic parse error; it is checked
+  before the rate limit (so it doesn't count) and doesn't fail the build
 - The pasted text and the model output are never stored or logged; on
-  errors the server logs only the error type and the text length
+  errors the server logs only its own error category and the text length,
+  never the error object, its message or the request id (SDK error messages
+  can embed model output)
 - Parsing quality is measured by a separate eval script on 12–15 real postings
   with hand-labelled expected fields, plus 2–3 texts that are not job postings:
   - One of the real postings has an injected instruction line (e.g. "Ignore
@@ -1816,6 +1834,22 @@ lives in `src/lib/auth.ts`.
   changes Job URL or Notes. Pasting only a URL is treated like any other
   text: with no web access the model returns `isJobPosting` false, and the
   user sees the "not a job posting" error
+- 2026-11-23: parse action contract (US-7, branch 1). `parseJobPostingAction`
+  takes `(prevState, formData)` for `useActionState` and returns
+  `ActionResult<ParsedFields, "text">` (no change to `ActionResult`): the 8
+  parsed fields as form-ready strings ("" when empty, stack joined with ", "
+  like `toFormValues`). Empty or too-long text is `fieldErrors.text`; "not a
+  job posting", the rate limit and the generic error are `error.message`.
+  Rate-limit time: 24-hour HH:MM in the `tz` sent by the form (US-6 rule,
+  else UTC), when the count drops below 20. `refusal` and
+  `model_context_window_exceeded` → generic error, no retry; `max_tokens` →
+  invalid structure → the one retry. The `RateLimitEvent` row is written
+  before the API call; a database failure in the check or the write fails
+  closed (generic error, no call). A missing API key or model id → generic
+  error, logged as `config_missing`, checked before the limit so it doesn't
+  count. Logs carry only our error category and the text length. Code lives
+  in `src/features/job-parsing/`, the rate limit included; it moves to
+  `src/lib` in M7 when sign-in and sign-up use it
 
 ## 11. End-to-end verification
 
