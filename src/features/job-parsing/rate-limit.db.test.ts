@@ -78,6 +78,14 @@ describe("getParseLimit (real database)", () => {
     });
   });
 
+  it("doesn't count an event exactly 24 hours old (allowed at resetAt)", async () => {
+    const now = new Date();
+    const key = newKey();
+    await seed(key, [...minutesAgo(now, 19), new Date(now.getTime() - DAY)]);
+
+    await expect(getParseLimit(key, now)).resolves.toEqual({ allowed: true });
+  });
+
   it("counts only this key's parse events", async () => {
     const now = new Date();
     const key = newKey();
