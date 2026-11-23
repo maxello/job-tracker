@@ -458,8 +458,8 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
   the limit the user sees "Daily limit reached. You can parse again after
   HH:MM." (local time at which the oldest counted request in the window turns
   24 hours old), and can still fill in the form manually. Parallel requests
-  at the limit can overshoot it by a few; accepted (the workspace spend limit
-  caps the cost)
+  at the limit can overshoot it by up to the number of parallel requests;
+  accepted (the workspace spend limit caps the cost)
   - HH:MM is 24-hour, in the browser's time zone: the form sends it as `tz`,
     read with the US-6 rule (a valid Intl zone, otherwise UTC)
   - The time is when the count in the window drops below 20: with exactly 20
@@ -654,6 +654,12 @@ lives in `src/lib/auth.ts`.
   (`RateLimitEvent`, section 5; decision log 2026-11-23); the numbers, the
   window and the key (email, IP or both) are decided at the start of M7 and
   ship before the deploy
+- How should the rate-limit check and insert become atomic? The US-7 parse
+  limit counts, then inserts, so parallel requests at the limit overshoot it
+  by up to the number of parallel requests (accepted for now: the workspace
+  spend limit caps the cost, but once it is used up every user gets the
+  generic parse error). Decide before the public deploy (M7), together with
+  the sign-in and sign-up limits that share `RateLimitEvent`
 - How should sign-out end the session when the database fails? `auth.api.signOut`
   clears the cookie and reports success, but the session row stays valid until it
   expires (at most 7 days), so a copied cookie keeps working. Decide before the
@@ -1789,8 +1795,9 @@ lives in `src/lib/auth.ts`.
   table `RateLimitEvent(id, action, key, createdAt)` indexed on (action, key,
   createdAt), shared with the M7 sign-in and sign-up limits (key = email or
   IP; numbers decided in M7). No cleanup job for now. Parallel requests at
-  the limit can overshoot it by a few; accepted instead of locking, because
-  the workspace spend limit caps the cost
+  the limit can overshoot it by up to the number of parallel requests;
+  accepted instead of locking, because the workspace spend limit caps the
+  cost
 - 2026-11-23: "not a job posting" (US-7, Q20). The structured output has a
   boolean `isJobPosting`; if false, an error is shown and nothing is
   pre-filled. Verified by 2–3 negative examples in the eval (the flag's
