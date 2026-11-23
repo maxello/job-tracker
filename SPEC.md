@@ -449,6 +449,24 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
   Job URL and Notes never change. If any parsed field is not empty when the
   user clicks "Parse", the user is asked to confirm before the request is
   sent; cancelling sends nothing
+  - "Not empty" is after trimming: a whitespace-only field counts as empty
+  - The confirmation is a dialog, "Replace the filled-in fields?", with
+    Cancel (focused first) and "Replace fields"
+- Parse UI (decision log 2026-11-23, "parse UI details"):
+  - The textarea is labelled "Job posting" and keeps its text after a
+    parse, whatever the result
+  - The text errors show under the textarea; "not a job posting", the
+    rate limit and the generic error show as an alert in the parse block.
+    No field changes on any error
+  - While a parse runs, the button reads "Parsing…" and is disabled; it is
+    also disabled until the page has loaded its JavaScript
+  - Focus after a parse: on success, Company; after a text error, the
+    textarea; after any other error, the Parse button
+  - Leaving the page and coming back keeps the textarea's text and the
+    fields as the user left them; the parse message is cleared, the
+    fields aren't filled again and focus doesn't move. The next parse
+    shows its own message
+  - Errors from a failed Save stay until the next Save
 - The user reviews and edits the fields and saves through the normal US-1
   flow. Nothing is saved automatically
 - Rate limit: 20 parse requests per user per rolling 24 hours (not a calendar
@@ -1861,6 +1879,25 @@ lives in `src/lib/auth.ts`.
   read or sent yet. Code lives
   in `src/features/job-parsing/`, the rate limit included; it moves to
   `src/lib` in M7 when sign-in and sign-up use it
+- 2026-11-23: parse UI details (US-7, branch 2). Confirmation: a
+  `<dialog>` like Delete's, not `window.confirm`; "not empty" is after
+  trim. The form's inputs stay uncontrolled and `ApplicationForm` doesn't
+  change: the parse block writes the 8 parsed inputs by name inside its
+  own wrapper, so a hidden copy of the page kept by `<Activity>` is never
+  touched. The parse form has no `action` prop: `onSubmit` prevents the
+  default and dispatches in `startTransition`, so React doesn't reset it
+  and the textarea keeps its text. The Parse button is disabled until
+  hydration, because a native submit before it would put the posting
+  text in a GET URL. Activity re-runs effects on re-show, so each action
+  result is handled once (a ref holds the last handled state): coming
+  back doesn't fill again or move focus. The parse message is cleared
+  when Activity hides the page (a layout-effect cleanup records the
+  shown state as dismissed); `useActionState` is never reset, and the
+  next result is a new object, so it shows. Parse is a quiet button, so
+  Save stays the page's one primary button. e2e uses a local Anthropic
+  API stub reached through `ANTHROPIC_BASE_URL`, set with a fake key and
+  model id in `playwright.config.ts` (they win over the shell), so tests
+  never call the real API
 
 ## 11. End-to-end verification
 
