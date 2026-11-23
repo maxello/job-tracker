@@ -6,9 +6,7 @@ export default function ErrorPage({ retry }: { retry: () => void }) {
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8">
       <div role="alert">
-        <h1 className="mb-2 page-heading">
-          Something went wrong
-        </h1>
+        <h1 className="mb-2 page-heading">Something went wrong</h1>
         <p className="mb-6 text-muted">
           We couldn&apos;t complete that. Please try again.
         </p>

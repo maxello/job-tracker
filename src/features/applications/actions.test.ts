@@ -236,7 +236,9 @@ describe("updateApplicationAction with the list's filters", () => {
     await expect(
       submit({ id: ID, ...valid, return: "?q=acme&status=applied&archived=1" }),
     ).rejects.toEqual(
-      new RedirectSignal(`/applications/${ID}?q=acme&status=applied&archived=1`),
+      new RedirectSignal(
+        `/applications/${ID}?q=acme&status=applied&archived=1`,
+      ),
     );
   });
 
@@ -249,7 +251,9 @@ describe("updateApplicationAction with the list's filters", () => {
           "?next=https://evil.example&archived=yes&tz=Foo/Bar&to=2026-11-30&from=board&status=OFFER&status=foo&q=%20acme%20",
       }),
     ).rejects.toEqual(
-      new RedirectSignal(`/applications/${ID}?q=acme&status=offer&to=2026-11-30`),
+      new RedirectSignal(
+        `/applications/${ID}?q=acme&status=offer&to=2026-11-30`,
+      ),
     );
   });
 
@@ -266,9 +270,9 @@ describe("updateApplicationAction with the list's filters", () => {
   ])(
     "A4 US-6: a return input that is %s redirects to the plain detail page",
     async (_, value) => {
-      await expect(
-        submit({ id: ID, ...valid, return: value }),
-      ).rejects.toEqual(new RedirectSignal(`/applications/${ID}`));
+      await expect(submit({ id: ID, ...valid, return: value })).rejects.toEqual(
+        new RedirectSignal(`/applications/${ID}`),
+      );
     },
   );
 
