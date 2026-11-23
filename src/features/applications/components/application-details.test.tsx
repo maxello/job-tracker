@@ -140,7 +140,9 @@ describe("ApplicationDetailsSkeleton", () => {
   });
 
   it("D2 US-4: the skeleton's field labels match the loaded page's, in order", async () => {
-    const skeleton = terms(renderToStaticMarkup(<ApplicationDetailsSkeleton />));
+    const skeleton = terms(
+      renderToStaticMarkup(<ApplicationDetailsSkeleton />),
+    );
     const loaded = terms(
       renderToStaticMarkup(await ApplicationDetails({ id: ID })),
     );
@@ -155,9 +157,9 @@ describe("ApplicationDetailsSkeleton", () => {
     for (const pattern of FORBIDDEN) {
       expect.soft(html, `no ${pattern}`).not.toMatch(pattern);
     }
-    expect.soft(html, "no aria-label or aria-busy").not.toMatch(
-      /aria-(label|busy)=/,
-    );
+    expect
+      .soft(html, "no aria-label or aria-busy")
+      .not.toMatch(/aria-(label|busy)=/);
     expect
       .soft(html, "sr-only text, then the aria-hidden visual root")
       .toMatch(

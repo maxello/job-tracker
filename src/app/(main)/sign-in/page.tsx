@@ -18,7 +18,10 @@ export default function SignInPage() {
       <SignInForm />
       <p className="mt-6 text-sm text-muted">
         No account yet?{" "}
-        <Link href="/sign-up" className="font-medium text-text underline underline-offset-2 hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+        <Link
+          href="/sign-up"
+          className="font-medium text-text underline underline-offset-2 hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        >
           Sign up
         </Link>
       </p>
