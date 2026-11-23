@@ -101,6 +101,18 @@ model Application {
   @@index([userId, status])
 }
 
+// One row per counted request (SPEC.md section 5). US-7 parsing: action "parse",
+// key = the session's userId. From M7 also sign-in and sign-up (key = email or
+// IP), so key has no relation to User.
+model RateLimitEvent {
+  id        String   @id @default(cuid())
+  action    String
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([action, key, createdAt])
+}
+
 // No userId: always accessed through an Application already checked for ownership.
 model StatusChange {
   id            String      @id @default(cuid())
