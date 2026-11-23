@@ -466,6 +466,9 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
     fields as the user left them; the parse message is cleared, the
     fields aren't filled again and focus doesn't move. The next parse
     shows its own message
+  - A parse still running when the user leaves is dropped: on return
+    nothing is filled, focus doesn't move and no message shows. It still
+    counts toward the limit (it reached the API)
   - Errors from a failed Save stay until the next Save
 - The user reviews and edits the fields and saves through the normal US-1
   flow. Nothing is saved automatically
@@ -1891,9 +1894,12 @@ lives in `src/lib/auth.ts`.
   text in a GET URL. Activity re-runs effects on re-show, so each action
   result is handled once (a ref holds the last handled state): coming
   back doesn't fill again or move focus. The parse message is cleared
-  when Activity hides the page (a layout-effect cleanup records the
-  shown state as dismissed); `useActionState` is never reset, and the
-  next result is a new object, so it shows. Parse is a quiet button, so
+  when Activity hides the page (a layout-effect cleanup sets a "hidden"
+  flag; the next submit clears it, so its result shows);
+  `useActionState` is never reset. A result that first arrives while the
+  page is hidden is dropped (no fill, no focus, no message), since
+  applying it on return would change the form behind the user's back;
+  it still counts toward the limit. Parse is a quiet button, so
   Save stays the page's one primary button. e2e uses a local Anthropic
   API stub reached through `ANTHROPIC_BASE_URL`, set with a fake key and
   model id in `playwright.config.ts` (they win over the shell), so tests
