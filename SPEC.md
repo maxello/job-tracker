@@ -1847,7 +1847,11 @@ lives in `src/lib/auth.ts`.
   before the API call; a database failure in the check or the write fails
   closed (generic error, no call). A missing API key or model id → generic
   error, logged as `config_missing`, checked before the limit so it doesn't
-  count. Logs carry only our error category and the text length. Code lives
+  count. Logs carry only our error category and the text length; this rule
+  covers the parse path from the text check on. A failed session read
+  before it keeps the shared session helper's existing log
+  (`tryGetCurrentUserId`), which can't contain the text: it hasn't been
+  read or sent yet. Code lives
   in `src/features/job-parsing/`, the rate limit included; it moves to
   `src/lib` in M7 when sign-in and sign-up use it
 
