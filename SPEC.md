@@ -2041,7 +2041,10 @@ lives in `src/lib/auth.ts`.
   null) and location ("Remote" only when the job itself is remote). The
   revision targets the label rules that the baseline errors showed the prompt
   contradicted or didn't mention; most of them predate the baseline, and the
-  version and one-tag rules record what the labels already did. No posting
+  rules this branch adds to US-7 (names as written without a version, one tag
+  per technology, a choice between remote and office, a period that isn't
+  stated) record what the labels already did; no label changed after the
+  baseline. No posting
   text or examples were added to the prompt. The same set measures it, so the
   result may be optimistic for new postings. Result on the same
   set (Haiku 5.5, 3 runs): stack 68.9% -> 84.4%, location 86.7% -> 100%,
