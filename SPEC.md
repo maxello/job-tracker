@@ -681,6 +681,8 @@ lives in `src/lib/auth.ts`.
   spend limit caps the cost, but once it is used up every user gets the
   generic parse error). Decide before the public deploy (M7), together with
   the sign-in and sign-up limits that share `RateLimitEvent`
+- Never set `ANTHROPIC_BASE_URL` in production (the SDK sends the key to
+  that host); e2e points it at a local stub. Check the deploy env in M7
 - How should sign-out end the session when the database fails? `auth.api.signOut`
   clears the cookie and reports success, but the session row stays valid until it
   expires (at most 7 days), so a copied cookie keeps working. Decide before the
@@ -1903,7 +1905,9 @@ lives in `src/lib/auth.ts`.
   Save stays the page's one primary button. e2e uses a local Anthropic
   API stub reached through `ANTHROPIC_BASE_URL`, set with a fake key and
   model id in `playwright.config.ts` (they win over the shell), so tests
-  never call the real API
+  never call the real API. A parse that finishes while a Save is in
+  flight is overwritten if that Save fails (React resets the form to the
+  values sent with the Save): accepted as last write wins (section 4)
 
 ## 11. End-to-end verification
 
