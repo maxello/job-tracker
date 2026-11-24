@@ -241,7 +241,16 @@ test("US-4: the detail skeleton keeps the loaded page's boxes", async ({
 function formPairs(page: Page, submitLabel: string): Pair[] {
   const main = page.getByRole("main");
   return [
-    ["form card", main.locator("form"), "form", ALL],
+    [
+      "form card",
+      // The new page also has the parse form (US-7). `has` resolves inside
+      // the form, so the button is rooted at the page.
+      main.locator("form").filter({
+        has: page.getByRole("button", { name: submitLabel, exact: true }),
+      }),
+      "form",
+      ALL,
+    ],
     ["required note", main.getByText(/^Fields marked/), "required-note", ALL],
     ...FORM_FIELDS.flatMap(
       ([label, role, slug]) =>

@@ -5,6 +5,7 @@ import {
   NewApplicationForm,
   NewApplicationFormSkeleton,
 } from "@/features/applications/components/new-application-form";
+import { JobPostingParser } from "@/features/job-parsing/components/job-posting-parser";
 import { PageTransition } from "@/features/motion/components/page-transition";
 
 export const metadata: Metadata = {
@@ -18,9 +19,11 @@ export default function NewApplicationPage() {
         <div className="max-w-3xl">
           <BackLink />
           <h1 className="mt-3 mb-6 page-heading">New application</h1>
-          <Suspense fallback={<NewApplicationFormSkeleton mode="new" />}>
-            <NewApplicationForm />
-          </Suspense>
+          <JobPostingParser>
+            <Suspense fallback={<NewApplicationFormSkeleton mode="new" />}>
+              <NewApplicationForm />
+            </Suspense>
+          </JobPostingParser>
         </div>
       </main>
     </PageTransition>
