@@ -2050,6 +2050,8 @@ lives in `src/lib/auth.ts`.
   posting with a monthly lower bound, the figure isn't multiplied by 12 (the
   baseline did). One more wording was tried, didn't fix it and was dropped.
   Amends E6/E8: the baseline figures compared here are recorded in this entry.
+- 2026-11-24: API spend limit (US-7, amends Q26). The Console workspace's
+  monthly limit is $1 instead of $5, now that the paid eval runs are done
 
 ## 11. End-to-end verification
 
