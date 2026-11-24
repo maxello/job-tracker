@@ -1,0 +1,11 @@
+{
+  "isJobPosting": true,
+  "company": "Example Widgets",
+  "role": "Senior Frontend Engineer",
+  "location": "Springfield",
+  "level": "Senior",
+  "stack": ["React", "TypeScript", "Playwright"],
+  "salaryMin": 60000,
+  "salaryMax": 72000,
+  "salaryCurrency": "USD"
+}

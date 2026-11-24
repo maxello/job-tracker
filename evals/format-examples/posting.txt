@@ -1,0 +1,8 @@
+Senior Frontend Engineer (Remote)
+
+Example Widgets is an invented company. We are looking for a Senior Frontend
+Engineer in Springfield to work on our widget catalogue.
+
+You know React and TypeScript. Playwright is nice to have.
+
+Salary: 60,000 to 72,000 USD gross per year.
