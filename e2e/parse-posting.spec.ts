@@ -446,3 +446,53 @@ test("US-7: Save's field errors stay after a parse", async ({ page }) => {
     main.getByText("Role is required", { exact: true }),
   ).toBeVisible();
 });
+
+// After a client navigation the prefetched shell shows the parse block
+// before the form streams in. The navigation's RSC response is held until
+// the test releases it, so the window is deterministic. Its own context: the
+// beforeEach has already visited the new page, which <Activity> keeps.
+test("US-7: Parse stays disabled until the form has streamed in", async ({
+  browser,
+}) => {
+  const context = await browser.newContext();
+  let release = () => {};
+  try {
+    const page = await context.newPage();
+    await signUpFreshUser(page);
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let held = 0;
+    await page.route(/\/applications\/new(\?|$)/, async (route) => {
+      const request = route.request();
+      const headers = request.headers();
+      const prefetch = Object.keys(headers).some((name) =>
+        /^next-router-(segment-)?prefetch/.test(name),
+      );
+      if (request.method() === "GET" && headers["rsc"] === "1" && !prefetch) {
+        held += 1;
+        await gate;
+      }
+      await route.continue();
+    });
+
+    await page
+      .getByRole("link", { name: "New application", exact: true })
+      .first()
+      .click();
+    await expect(page).toHaveURL("/applications/new");
+    await expect.poll(() => held).toBeGreaterThan(0);
+    await expect(
+      page.getByRole("main").getByText("Loading form", { exact: true }),
+    ).toHaveCount(1);
+    await expect(region(page)).toBeVisible();
+    await expect(parseButton(page)).toBeDisabled();
+
+    release();
+    await expect(field(page, "Company")).toBeVisible();
+    await expect(parseButton(page)).toBeEnabled();
+  } finally {
+    release();
+    await context.close();
+  }
+});

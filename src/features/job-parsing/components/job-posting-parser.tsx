@@ -3,6 +3,7 @@
 import {
   startTransition,
   useActionState,
+  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
@@ -68,6 +69,22 @@ export function JobPostingParser({ children }: { children: ReactNode }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+
+  // false until the application form's inputs are inside the wrapper: after a
+  // client navigation the prefetched shell shows this block while the form
+  // still streams in, and a parse then would fill nothing.
+  const subscribeToForm = useCallback((onChange: () => void) => {
+    const scope = scopeRef.current;
+    if (!scope) return () => {};
+    const observer = new MutationObserver(onChange);
+    observer.observe(scope, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+  const formReady = useSyncExternalStore(
+    subscribeToForm,
+    () => Boolean(scopeRef.current?.querySelector('[name="company"]')),
+    serverSnapshot,
+  );
 
   const baseId = useId();
   const headingId = `${baseId}-heading`;
@@ -181,7 +198,7 @@ export function JobPostingParser({ children }: { children: ReactNode }) {
             <button
               ref={buttonRef}
               type="submit"
-              disabled={!hydrated || pending}
+              disabled={!hydrated || !formReady || pending}
               className={quietButtonClass}
             >
               {pending ? "Parsing…" : "Parse"}
