@@ -67,8 +67,12 @@ describe("runEval (US-7 eval)", () => {
   });
 
   it("is complete when every result is scored, a timeout included", async () => {
-    const parse: ParseFn = async (text) =>
-      text === "text b" ? { ok: false, category: "timeout" } : good;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const parse: ParseFn = async (text) => {
+      if (text !== "text b") return good;
+      vi.setSystemTime(Date.now() + 30_000);
+      return { ok: false, category: "timeout" };
+    };
     const result = await runEval({ examples, parse, settle });
     expect(result.runs).toHaveLength(3);
     expect(result.complete).toBe(true);
@@ -81,6 +85,40 @@ describe("runEval (US-7 eval)", () => {
       category: "timeout",
     });
   });
+
+  it.each([10_700, 28_999])(
+    "takes a timeout after %i ms as an unscored connection error",
+    async (elapsed) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const parse: ParseFn = async () => {
+        vi.setSystemTime(Date.now() + elapsed);
+        return { ok: false, category: "timeout" };
+      };
+      const result = await runEval({ examples, parse, settle });
+      expect(result.complete).toBe(false);
+      // Each request has its own start: the last one is no different.
+      for (const { score } of result.runs.flatMap((run) => run.results)) {
+        expect(score).toEqual({ kind: "unscored", category: "api_connection" });
+      }
+    },
+  );
+
+  it.each([29_000, 29_990])(
+    "keeps a timeout after %i ms as a scored timeout",
+    async (elapsed) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const parse: ParseFn = async () => {
+        vi.setSystemTime(Date.now() + elapsed);
+        return { ok: false, category: "timeout" };
+      };
+      const result = await runEval({ examples, parse, settle });
+      expect(result.complete).toBe(true);
+      for (const { outcome, score } of result.runs.flatMap((r) => r.results)) {
+        expect(outcome).toEqual({ kind: "failed", category: "timeout" });
+        expect(score).toMatchObject({ kind: "scored", flag: false });
+      }
+    },
+  );
 
   it("gives each request the 30 s budget from its own start, as deadline and signal", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });

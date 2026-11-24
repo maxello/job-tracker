@@ -243,6 +243,24 @@ describe("runCommand results (US-7 eval)", () => {
     expect(text()).toContain("run 1 (incomplete)");
   });
 
+  it("isn't ok when a connect timeout leaves the command incomplete", async () => {
+    writeSet();
+    // Like Node's fetch: the SDK reads the cause as a request timeout.
+    fake.mockImplementationOnce(async () => {
+      throw new TypeError("fetch failed", {
+        cause: Object.assign(new Error("Connect Timeout Error"), {
+          name: "ConnectTimeoutError",
+          code: "UND_ERR_CONNECT_TIMEOUT",
+        }),
+      });
+    });
+    expect(await run()).toEqual({ ok: false });
+    expect(fake).toHaveBeenCalledTimes(14 * 3);
+    expect(text()).toContain("run 1 (incomplete)");
+    expect(text()).toContain("Not scored: n0, run 1: api_connection");
+    expect(text()).toContain("Timeouts: run 1: 0, run 2: 0, run 3: 0");
+  });
+
   it.each(["a success", "an API error"])(
     "restores fetch after %s",
     async (kind) => {

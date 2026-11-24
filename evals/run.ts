@@ -10,6 +10,11 @@ const RUNS = 3;
 // src/features/job-parsing/actions.ts.
 const BUDGET_MS = 30_000;
 
+// The SDK also reports a connect timeout as a timeout, long before the budget
+// ends. The margin is for the deadline, the signal and the SDK's own timer,
+// which can end a few ms apart.
+const TIMEOUT_MIN_MS = BUDGET_MS - 1_000;
+
 export type ParseFn = (
   text: string,
   options: { signal: AbortSignal; deadline: number },
@@ -26,12 +31,22 @@ export type Run = { results: ExampleResult[]; usage: Usage };
 export type EvalResult = { runs: Run[]; complete: boolean };
 
 async function outcomeOf(text: string, parse: ParseFn): Promise<Outcome> {
+  const start = Date.now();
   try {
     const result = await parse(text, {
       signal: AbortSignal.timeout(BUDGET_MS),
-      deadline: Date.now() + BUDGET_MS,
+      deadline: start + BUDGET_MS,
     });
-    if (!result.ok) return { kind: "failed", category: result.category };
+    if (!result.ok) {
+      const early = Date.now() - start < TIMEOUT_MIN_MS;
+      return {
+        kind: "failed",
+        category:
+          result.category === "timeout" && early
+            ? "api_connection"
+            : result.category,
+      };
+    }
     return {
       kind: "parsed",
       isJobPosting: result.output.isJobPosting,
