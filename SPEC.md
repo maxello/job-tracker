@@ -2038,9 +2038,12 @@ lives in `src/lib/auth.ts`.
   the baseline: stack (concrete technologies only, names as written without a
   separate version number, one tag per technology), salary ("from" and "up
   to" fill only the stated side, net is null, a period that isn't stated is
-  null) and location ("Remote" only when the job itself is remote). The rules
-  were chosen from baseline errors, with no posting text or examples copied
-  into the prompt
+  null) and location ("Remote" only when the job itself is remote). The
+  revision targets the label rules that the baseline errors showed the prompt
+  contradicted or didn't mention; most of them predate the baseline, and the
+  version and one-tag rules record what the labels already did. No posting
+  text or examples were added to the prompt. The same set measures it, so the
+  result may be optimistic for new postings.
 
 ## 11. End-to-end verification
 
