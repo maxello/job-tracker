@@ -2043,7 +2043,12 @@ lives in `src/lib/auth.ts`.
   contradicted or didn't mention; most of them predate the baseline, and the
   version and one-tag rules record what the labels already did. No posting
   text or examples were added to the prompt. The same set measures it, so the
-  result may be optimistic for new postings.
+  result may be optimistic for new postings. Result on the same
+  set (Haiku 5.5, 3 runs): stack 68.9% -> 84.4%, location 86.7% -> 100%,
+  salary max 80.0% -> 93.3%, currency 86.7% -> 93.3%, level 93.3% -> 88.9%,
+  salary min 86.7% in both; all targets met. Known limitation: on the one
+  posting with a monthly lower bound, the figure isn't multiplied by 12 (the
+  baseline did). One more wording was tried, didn't fix it and was dropped.
 
 ## 11. End-to-end verification
 
