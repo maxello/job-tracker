@@ -537,9 +537,10 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
     exits non-zero
   - It reports the model id, the tokens (a retry's included) and the cost,
     from prices kept in the script with a "checked" date. A model without a
-    price shows tokens and no cost. A timed-out request can't report its
-    tokens: such requests are counted, and the tokens and cost are then shown
-    as a lower bound
+    price shows tokens and no cost. An attempt whose usage can't be read (no
+    response, a body that fails, or a 2xx body without readable usage) is
+    counted as unknown usage, and the tokens and cost are then shown as a
+    lower bound. HTTP error responses don't count
   - It calls the app's parse request and validation without the Server
     Action: no session, and the 20-a-day limit doesn't apply (the workspace
     spend limit does)
@@ -1988,8 +1989,10 @@ lives in `src/lib/auth.ts`.
 - 2026-11-24: eval cost (US-7, E5). `requestParse` doesn't return usage, so
   the eval wraps the global fetch in its own process and reads `usage` from
   each response; the app doesn't change. Prices (USD per MTok,
-  input/output): Haiku 5.5 0.10/0.50, Sonnet 5.5 2/10. After a timeout the
-  tokens are unknown, so the totals are a lower bound
+  input/output): Haiku 5.5 0.10/0.50, Sonnet 5.5 2/10. Any attempt whose
+  usage can't be read (no response, a failed body, a 2xx body without
+  readable usage) counts as unknown usage, which makes the totals a lower
+  bound; HTTP error responses don't count
 - 2026-11-24: eval command (US-7, E6, E8). A separate Vitest config, not part
   of `npm test`; env comes from `process.loadEnvFile`, and the shell wins. A
   set `ANTHROPIC_BASE_URL` means refusing to run, so a stub can't produce a
