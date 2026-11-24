@@ -1,0 +1,11 @@
+{
+  "isJobPosting": false,
+  "company": null,
+  "role": null,
+  "location": null,
+  "level": null,
+  "stack": [],
+  "salaryMin": null,
+  "salaryMax": null,
+  "salaryCurrency": null
+}
