@@ -566,20 +566,24 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
   - role: the full title as written, seniority included, without additions
     such as "(Remote)" or "to our team"
   - location: as written, in its shortest full form; several locations stay
-    as written, in one string. "Remote" when the posting says the job is
-    remote; a hybrid format with no city is null, and so is a general
-    "remote-first" culture
+    as written, in one string. "Remote" when the posting says the job
+    itself is remote; a hybrid format with no city is null, and so are a
+    general "remote-first" culture and a choice between remote and office when
+    no city is given
   - level: the seniority word as written, the title included; years of
     experience alone are null
   - stack: every named technology, "nice to have" included; no soft skills
     and no spoken languages. Concrete languages, frameworks, tools, services
     and query languages count (GraphQL included); practices, concepts,
     categories and protocols don't (REST, CI/CD, infrastructure as code,
-    generative AI, "SQL/NoSQL databases", SSH, OAuth2, MQTT, MCP)
+    generative AI, "SQL/NoSQL databases", SSH, OAuth2, MQTT, MCP). Names are as
+    written in the posting, without a separate version number ("Vue 3" is
+    "Vue"); a number that is part of the name stays ("HTML5"). One technology
+    named in several forms is one tag
   - salary: annual gross; a monthly salary × 12. A single exact figure fills
-    both sides; "from X" and "up to X" fill only the stated side. Hourly or an
-    unclear period is null. A salary stated as net is null for min, max and
-    currency
+    both sides; "from X" and "up to X" fill only the stated side. Hourly,
+    or a period that is unclear or not stated, is null. A salary stated as net
+    is null for min, max and currency
   - Some postings are translated (file name ending in "-translated"), or have
     an edited or added salary line, an added injection or a removed company
     name ("-edited"). One of the negatives is invented, and one is the company
@@ -2030,6 +2034,27 @@ lives in `src/lib/auth.ts`.
   than 29 s into the 30 s budget is a connection error and isn't scored; from
   29 s on it is a timeout. The 1 s margin is for the deadline, the signal and
   the SDK's own timer, which can end a few ms apart. The app doesn't change
+- 2026-11-24: prompt iteration (US-7, amends E9). One prompt revision after
+  the baseline: stack (concrete technologies only, names as written without a
+  separate version number, one tag per technology), salary ("from" and "up
+  to" fill only the stated side, net is null, a period that isn't stated is
+  null) and location ("Remote" only when the job itself is remote). The
+  revision targets the label rules that the baseline errors showed the prompt
+  contradicted or didn't mention; most of them predate the baseline, and the
+  rules this branch adds to US-7 (names as written without a version, one tag
+  per technology, a choice between remote and office, a period that isn't
+  stated) record what the labels already did; no label changed after the
+  baseline. No posting
+  text or examples were added to the prompt. The same set measures it, so the
+  result may be optimistic for new postings. Result on the same
+  set (Haiku 5.5, 3 runs): stack 68.9% -> 84.4%, location 86.7% -> 100%,
+  salary max 80.0% -> 93.3%, currency 86.7% -> 93.3%, level 93.3% -> 88.9%,
+  salary min 86.7% in both; all targets met. Known limitation: on the one
+  posting with a monthly lower bound, the figure isn't multiplied by 12 (the
+  baseline did). One more wording was tried, didn't fix it and was dropped.
+  Amends E6/E8: the baseline figures compared here are recorded in this entry.
+- 2026-11-24: API spend limit (US-7, amends Q26). The Console workspace's
+  monthly limit is $1 instead of $5, now that the paid eval runs are done
 
 ## 11. End-to-end verification
 

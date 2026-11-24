@@ -13,9 +13,9 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { modelOutputSchema, type ModelOutput } from "./schemas";
 
 // The Claude API call for US-7, server-only: imported only by the "use server"
-// action. Only the prompt and the posting text are sent, never a user id or
-// email. Nothing here logs: SDK errors can embed model output, so the action
-// logs only the category below and the text length.
+// action and the eval script. Only the prompt and the posting text are sent,
+// never a user id or email. Nothing here logs: SDK errors can embed model
+// output, so the action logs only the category below and the text length.
 
 export type ParseFailureCategory =
   | "invalid_output"
@@ -49,11 +49,11 @@ You have no web access. If the text isn't a job posting (for example, it is only
 Fields:
 - company: the hiring company's name.
 - role: the job title.
-- location: where the job is, as written (for example "Kyiv, Ukraine" or "Remote").
+- location: where the job is, as written (for example "Kyiv, Ukraine"). Use "Remote" when the posting says the job itself is remote. A general remote-first culture, or a choice between remote and office, doesn't make the job remote.
 - level: the seniority, if stated (for example "Junior", "Middle", "Senior", "Lead").
-- stack: the technologies, languages, frameworks and tools named, each a short tag with no commas.
-- salaryMin and salaryMax: the annual gross salary as whole numbers. Multiply a monthly salary by 12. If only one figure is given, use it for both. If the period is hourly or unclear, use null.
-- salaryCurrency: the ISO 4217 code of the salary's currency (for example "USD", "EUR", "UAH").
+- stack: the concrete languages, frameworks, tools, services and query languages named, each a short tag with no commas, with the name as written in the posting but without a separate version number; a number that is part of the name stays. One technology named in several forms is one tag. Leave out practices, concepts, categories and protocols.
+- salaryMin and salaryMax: the annual gross salary as whole numbers. Multiply a monthly salary by 12. A single exact figure fills both. A lower bound ("from") fills only salaryMin and an upper bound ("up to") only salaryMax; the other is null. If the period is hourly, unclear or not stated, use null for both; never guess the period. If the salary is stated as net, use null for both.
+- salaryCurrency: the ISO 4217 code of the salary's currency (for example "USD", "EUR", "UAH"). If the salary is stated as net, use null.
 
 Use null for anything the posting doesn't state. Don't guess.`;
 
