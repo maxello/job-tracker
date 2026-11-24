@@ -559,7 +559,8 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
     it unchanged, `"injection": true` is only on a posting, and a text that
     is not a posting has null fields and an empty stack
 - Label rules (for the labeller; the eval can't check them):
-  - Text is labelled in the posting's own language, never translated
+  - Text is labelled in the posting's own language, never translated. A
+    "-translated" posting is labelled in the language of the translated text
   - company: only if named ("our client" and similar are null), as written,
     in its shortest full form
   - role: the full title as written, seniority included, without additions
