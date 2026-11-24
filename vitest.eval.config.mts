@@ -12,7 +12,9 @@ export default defineConfig({
     include: ["evals/**/*.eval.ts"],
     // The report prints as is, without a "stdout |" header per line.
     disableConsoleIntercept: true,
-    // Worst case 18 examples x 3 runs x 30 s = 27 min, plus a margin.
-    testTimeout: 35 * 60_000,
+    // Worst case for a full set: 18 examples x 3 runs x 30 s = 27 min. 60 min
+    // also covers a partial set of up to 39 examples, with a margin: the report
+    // prints at the end, so a timeout would lose it.
+    testTimeout: 60 * 60_000,
   },
 });
