@@ -5,6 +5,9 @@ import { BASE_URL, E2E_PORT, loadE2eEnv } from "./e2e/env";
 // file points at the e2e database.
 const e2eEnv = loadE2eEnv();
 
+// The port e2e/anthropic-stub.ts listens on.
+const STUB_URL = "http://127.0.0.1:3101";
+
 export default defineConfig({
   testDir: "e2e",
   globalSetup: "./e2e/global-setup.ts",
@@ -28,14 +31,29 @@ export default defineConfig({
       dependencies: ["setup"],
     },
   ],
-  // Production build: tests the PPR shell, the soft 404 and Secure cookies.
-  // Migrations run here because the webServer starts before globalSetup.
-  webServer: {
-    command: `npx prisma migrate deploy && npm run build && npm run start -- -p ${E2E_PORT}`,
-    url: `${BASE_URL}/sign-in`,
-    // Never reuse a server that may run with the dev env.
-    reuseExistingServer: false,
-    timeout: 180_000,
-    env: e2eEnv,
-  },
+  webServer: [
+    // A local Claude API stub (US-7): e2e never calls the real API.
+    {
+      command: "node e2e/anthropic-stub.ts",
+      url: `${STUB_URL}/requests`,
+      reuseExistingServer: false,
+    },
+    // Production build: tests the PPR shell, the soft 404 and Secure cookies.
+    // Migrations run here because the webServer starts before globalSetup.
+    {
+      command: `npx prisma migrate deploy && npm run build && npm run start -- -p ${E2E_PORT}`,
+      url: `${BASE_URL}/sign-in`,
+      // Never reuse a server that may run with the dev env.
+      reuseExistingServer: false,
+      timeout: 180_000,
+      // Set here, so they win over the shell and any env file: a real key
+      // in the shell can't reach the real API.
+      env: {
+        ...e2eEnv,
+        ANTHROPIC_BASE_URL: STUB_URL,
+        ANTHROPIC_API_KEY: "e2e-stub-key",
+        PARSE_MODEL: "e2e-stub-model",
+      },
+    },
+  ],
 });

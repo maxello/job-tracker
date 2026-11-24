@@ -52,9 +52,9 @@ function searchBox(page: Page) {
 
 // tz is filled in after hydration; waiting for it means Apply sends it.
 async function apply(page: Page) {
-  await expect(page.locator('input[type="hidden"][name="tz"]')).toHaveValue(
-    TOKYO,
-  );
+  await expect(
+    page.getByRole("main").locator('input[type="hidden"][name="tz"]'),
+  ).toHaveValue(TOKYO);
   await page.getByRole("button", { name: "Apply", exact: true }).click();
 }
 

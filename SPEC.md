@@ -449,6 +449,28 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
   Job URL and Notes never change. If any parsed field is not empty when the
   user clicks "Parse", the user is asked to confirm before the request is
   sent; cancelling sends nothing
+  - "Not empty" is after trimming: a whitespace-only field counts as empty
+  - The confirmation is a dialog, "Replace the filled-in fields?", with
+    Cancel (focused first) and "Replace fields"
+- Parse UI (decision log 2026-11-23, "parse UI details"):
+  - The textarea is labelled "Job posting" and keeps its text after a
+    parse, whatever the result
+  - The text errors show under the textarea; "not a job posting", the
+    rate limit and the generic error show as an alert in the parse block.
+    No field changes on any error
+  - While a parse runs, the button reads "Parsing…" and is disabled; it is
+    also disabled until the page has loaded its JavaScript and until the
+    form has loaded (after a client navigation the block can show first)
+  - Focus after a parse: on success, Company; after a text error, the
+    textarea; after any other error, the Parse button
+  - Leaving the page and coming back keeps the textarea's text and the
+    fields as the user left them; the parse message is cleared, the
+    fields aren't filled again and focus doesn't move. The next parse
+    shows its own message
+  - A parse still running when the user leaves is dropped: on return
+    nothing is filled, focus doesn't move and no message shows. It still
+    counts toward the limit (it reached the API)
+  - Errors from a failed Save stay until the next Save
 - The user reviews and edits the fields and saves through the normal US-1
   flow. Nothing is saved automatically
 - Rate limit: 20 parse requests per user per rolling 24 hours (not a calendar
@@ -660,6 +682,8 @@ lives in `src/lib/auth.ts`.
   spend limit caps the cost, but once it is used up every user gets the
   generic parse error). Decide before the public deploy (M7), together with
   the sign-in and sign-up limits that share `RateLimitEvent`
+- Never set `ANTHROPIC_BASE_URL` in production (the SDK sends the key to
+  that host); e2e points it at a local stub. Check the deploy env in M7
 - How should sign-out end the session when the database fails? `auth.api.signOut`
   clears the cookie and reports success, but the session row stays valid until it
   expires (at most 7 days), so a copied cookie keeps working. Decide before the
@@ -1861,6 +1885,30 @@ lives in `src/lib/auth.ts`.
   read or sent yet. Code lives
   in `src/features/job-parsing/`, the rate limit included; it moves to
   `src/lib` in M7 when sign-in and sign-up use it
+- 2026-11-23: parse UI details (US-7, branch 2). Confirmation: a
+  `<dialog>` like Delete's, not `window.confirm`; "not empty" is after
+  trim. The form's inputs stay uncontrolled and `ApplicationForm` doesn't
+  change: the parse block writes the 8 parsed inputs by name inside its
+  own wrapper, so a hidden copy of the page kept by `<Activity>` is never
+  touched. The parse form has no `action` prop: `onSubmit` prevents the
+  default and dispatches in `startTransition`, so React doesn't reset it
+  and the textarea keeps its text. The Parse button is disabled until
+  hydration, because a native submit before it would put the posting
+  text in a GET URL. Activity re-runs effects on re-show, so each action
+  result is handled once (a ref holds the last handled state): coming
+  back doesn't fill again or move focus. The parse message is cleared
+  when Activity hides the page (a layout-effect cleanup sets a "hidden"
+  flag; the next submit clears it, so its result shows);
+  `useActionState` is never reset. A result that first arrives while the
+  page is hidden is dropped (no fill, no focus, no message), since
+  applying it on return would change the form behind the user's back;
+  it still counts toward the limit. Parse is a quiet button, so
+  Save stays the page's one primary button. e2e uses a local Anthropic
+  API stub reached through `ANTHROPIC_BASE_URL`, set with a fake key and
+  model id in `playwright.config.ts` (they win over the shell), so tests
+  never call the real API. A parse that finishes while a Save is in
+  flight is overwritten if that Save fails (React resets the form to the
+  values sent with the Save): accepted as last write wins (section 4)
 
 ## 11. End-to-end verification
 

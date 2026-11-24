@@ -75,7 +75,7 @@ function toInput(page: Page) {
 
 // A hidden input has no role (see the e2e skill: CSS for hidden inputs).
 function tzInput(page: Page) {
-  return page.locator('input[type="hidden"][name="tz"]');
+  return page.getByRole("main").locator('input[type="hidden"][name="tz"]');
 }
 
 // Checks the input first, so a missing field fails on an assertion, not on
