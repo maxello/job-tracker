@@ -459,7 +459,8 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
     rate limit and the generic error show as an alert in the parse block.
     No field changes on any error
   - While a parse runs, the button reads "Parsing…" and is disabled; it is
-    also disabled until the page has loaded its JavaScript
+    also disabled until the page has loaded its JavaScript and until the
+    form has loaded (after a client navigation the block can show first)
   - Focus after a parse: on success, Company; after a text error, the
     textarea; after any other error, the Parse button
   - Leaving the page and coming back keeps the textarea's text and the
