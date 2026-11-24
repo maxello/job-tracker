@@ -521,7 +521,8 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
     number of timeouts is printed per run
   - Connection, 429, 5xx, auth, 400 and other API or unexpected errors are not
     scored; they are reported separately, the remaining requests continue,
-    and the whole command is incomplete
+    and the whole command is incomplete. A timeout that comes back less than
+    29 s into the 30 s budget is a connection error
   - 3 runs over the set, with sequential requests and the same 30 s budget per
     request. Each run and the mean of the runs are reported
   - Targets, compared with the mean, unrounded: ≥ 90% for company and role,
@@ -2004,6 +2005,12 @@ lives in `src/lib/auth.ts`.
   salary: net is null, "from" and "up to" fill only the stated side. The
   prompt says less (a single figure fills both, net isn't mentioned) and
   stays as it is for the baseline; the prompt iteration is a later branch
+- 2026-11-24: eval early timeouts (US-7, amends E2; found in code review). The
+  SDK reports a connect timeout (about 10 s in Node) as a timeout, so an
+  unreachable API scored as misses. In the eval, a timeout that comes back less
+  than 29 s into the 30 s budget is a connection error and isn't scored; from
+  29 s on it is a timeout. The 1 s margin is for the deadline, the signal and
+  the SDK's own timer, which can end a few ms apart. The app doesn't change
 
 ## 11. End-to-end verification
 
