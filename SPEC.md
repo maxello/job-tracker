@@ -2049,6 +2049,7 @@ lives in `src/lib/auth.ts`.
   salary min 86.7% in both; all targets met. Known limitation: on the one
   posting with a monthly lower bound, the figure isn't multiplied by 12 (the
   baseline did). One more wording was tried, didn't fix it and was dropped.
+  Amends E6/E8: the baseline figures compared here are recorded in this entry.
 
 ## 11. End-to-end verification
 
