@@ -565,15 +565,23 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
   - role: the full title as written, seniority included, without additions
     such as "(Remote)" or "to our team"
   - location: as written, in its shortest full form; several locations stay
-    as written, in one string
+    as written, in one string. "Remote" when the posting says the job is
+    remote; a hybrid format with no city is null, and so is a general
+    "remote-first" culture
   - level: the seniority word as written, the title included; years of
     experience alone are null
   - stack: every named technology, "nice to have" included; no soft skills
-    and no spoken languages
+    and no spoken languages. Concrete languages, frameworks, tools, services
+    and query languages count (GraphQL included); practices, concepts and
+    categories don't (REST, CI/CD, infrastructure as code, generative AI,
+    "SQL/NoSQL databases")
   - salary: annual gross; a monthly salary × 12. A single exact figure fills
     both sides; "from X" and "up to X" fill only the stated side. Hourly or an
     unclear period is null. A salary stated as net is null for min, max and
     currency
+  - Some postings are translated (file name ending in "-translated"), or have
+    an edited salary line or an added injection ("-edited"). Some stack labels
+    started from a Claude draft that the user checked
 
 ### US-8 Archive application (M4)
 
@@ -2004,7 +2012,13 @@ lives in `src/lib/auth.ts`.
 - 2026-11-24: eval labels (US-7, E9). The label rules are in US-7, including
   salary: net is null, "from" and "up to" fill only the stated side. The
   prompt says less (a single figure fills both, net isn't mentioned) and
-  stays as it is for the baseline; the prompt iteration is a later branch
+  stays as it is for the baseline; the prompt iteration is a later branch.
+  stack takes concrete technologies, GraphQL included, not practices, concepts
+  or categories; location is "Remote" only when the posting says the job is
+  remote, so a hybrid format with no city and a "remote-first" culture are
+  null. Some postings are translated ("-translated"), or have an edited salary
+  line or an added injection ("-edited"), and some stack labels started from a
+  Claude draft that the user checked
 - 2026-11-24: eval early timeouts (US-7, amends E2; found in code review). The
   SDK reports a connect timeout (about 10 s in Node) as a timeout, so an
   unreachable API scored as misses. In the eval, a timeout that comes back less
