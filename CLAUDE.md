@@ -40,6 +40,7 @@ Web app to track job applications (statuses, notes, history), built milestone by
 
 - Never read or edit `.env` files: they hold secrets (`.env.example` is fine)
 - Never run destructive DB commands (`migrate reset`, `--force-reset`) without asking
+- Never run `npm run eval` without asking: it calls the real, paid API
 - Before installing any new package, stop and ask for confirmation, even if the user requested it: name the package, why it's needed, and a no-dependency alternative (e.g. `Intl.DateTimeFormat`). Install only after an explicit "yes".
 - Every app DB query is scoped to the current user through the DAL, no exceptions: `Application` queries filter by `userId`, and `StatusChange` queries go through an `Application` already checked for ownership. `userId` comes from the session, never from the request
 - Keep diffs small: one task = one change, no unrelated refactors
