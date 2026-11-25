@@ -196,7 +196,7 @@ export async function countApplicationsByStatus(
 ): Promise<StatusCounts> {
   const rows = await db.application.groupBy({
     by: ["status"],
-    where: { userId, ...(!includeArchived && { archivedAt: null }) },
+    where: { ...(!includeArchived && { archivedAt: null }) },
     _count: { _all: true },
   });
   return toStatusCounts(rows);
