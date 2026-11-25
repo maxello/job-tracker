@@ -48,6 +48,21 @@ afterAll(async () => {
   await db.user.deleteMany({ where: { id: { in: createdUserIds } } });
 });
 
+describe("getApplication (real database)", () => {
+  it("US-0: another user's application comes back as null, the owner gets it", async () => {
+    const owner = await createUser();
+    const intruder = await createUser();
+    const { id } = await createApplication(owner, {
+      company: "Acme",
+      role: "Engineer",
+      stack: [],
+    });
+
+    expect((await getApplication(owner, id))?.id).toBe(id);
+    expect(await getApplication(intruder, id)).toBeNull();
+  });
+});
+
 describe("changeApplicationStatus (real database)", () => {
   // Injected failure: a trigger that rejects history inserts (not the initial
   // one) for applications with this company only, so no other data is affected
