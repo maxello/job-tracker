@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Board, BoardSkeleton } from "@/features/applications/components/board";
@@ -11,7 +12,8 @@ export const metadata: Metadata = {
 
 // The board reads the session inside <Suspense>, so the header, the switcher
 // and the skeleton stay in the static shell.
-export default function BoardPage() {
+export default async function BoardPage() {
+  await headers();
   return (
     <PageTransition untyped="crossfade">
       <main className="mx-auto w-full max-w-page px-4 py-8">
