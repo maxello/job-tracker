@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A new push to a PR cancels that PR's older run. Runs on main use their unique
+# run id, so they are never cancelled.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: job_tracker_e2e
+        ports:
+          - 5432:5432
+        # -h: over TCP. The image's first start runs a temporary server that
+        # listens on the socket only, so a socket check can pass too early.
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U postgres -d job_tracker_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          # postinstall runs prisma generate: needs a value, never connects.
+          DATABASE_URL: postgresql://unused:unused@localhost:5432/unused
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Generate route types
+        run: npx next typegen
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      # e2e/env.ts reads only this file. Throwaway values, not secrets.
+      - name: Create the test env file
+        run: |
+          cat > .env.test <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/job_tracker_e2e
+          BETTER_AUTH_SECRET=ci-throwaway-value-not-a-real-secret
+          BETTER_AUTH_URL=http://localhost:3100
+          EOF
+
+      - name: Database tests
+        run: npm run test:db
+
+      # next build doesn't read the test env file, so the values are set here.
+      - name: Build
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/job_tracker_e2e
+          BETTER_AUTH_SECRET: ci-throwaway-value-not-a-real-secret
+          BETTER_AUTH_URL: http://localhost:3100
