@@ -133,5 +133,5 @@ export const applicationIdSchema = z.string().min(1).refine(hasNoNul);
 // Only values of the Prisma Status enum are accepted.
 export const changeStatusSchema = z.object({
   id: applicationIdSchema,
-  status: z.enum(Status),
+  status: z.enum(Status).catch(Status.WISHLIST),
 });
