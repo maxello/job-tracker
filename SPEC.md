@@ -2055,6 +2055,19 @@ lives in `src/lib/auth.ts`.
   Amends E6/E8: the baseline figures compared here are recorded in this entry.
 - 2026-11-24: API spend limit (US-7, amends Q26). The Console workspace's
   monthly limit is $1 instead of $5, now that the paid eval runs are done
+- 2026-11-25: CI (M7). GitHub Actions, one workflow with one job, on pull
+  requests and on pushes to `main`: format check, lint, route type generation
+  (`next typegen`; `PageProps` and `LayoutProps` are git-ignored output),
+  typecheck, unit tests, database tests and the production build. Node 26, no
+  `engines` field. Database tests use a throwaway `postgres:18` service
+  container, never Neon. No GitHub Secrets: every value is a placeholder, no
+  Claude API key is present and the eval never runs. The token is read-only and
+  isn't kept after checkout. Only `actions/checkout` and `actions/setup-node`,
+  pinned to commit SHAs. No `.next/cache` caching (it would need a third
+  action). e2e is added on a separate branch. The repository is private on a
+  GitHub plan without branch protection, so for now a red run doesn't block a
+  merge; the repository becomes public before the public deploy, after a check
+  of its git history for secrets, and `main` is protected then
 
 ## 11. End-to-end verification
 
