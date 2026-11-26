@@ -88,9 +88,15 @@ As a job seeker, I want to sign up and sign in, so that my applications are priv
     in N minutes." N is the time until the count drops below the limit (the
     US-7 rule), in minutes, rounded up, at least 1; "1 minute" when N is 1.
     When both sign-in counters are over, N uses the later time
-  - When the client IP can't be read, the request uses one shared "unknown"
-    IP counter. The server logs only an error category, never the IP or the
-    email
+  - The client IP is the first comma-separated value of the
+    `x-forwarded-for` header, trimmed (Vercel overwrites the header; decision
+    log 2026-11-26, "client IP")
+  - When the client IP can't be read (no header or an empty value), the
+    request uses one shared "unknown" IP counter. The server logs only an
+    error category, never the IP or the email
+  - More than 5 attempts waiting at once on one counter, or a wait longer
+    than 2 s, give the generic sign-in or sign-up error and don't count
+    (decision log 2026-11-26, "rate-limit queue")
   - If the database fails while checking or recording the limit, the user
     gets the generic sign-in or sign-up error and `auth.api` is not called
     (fail closed, as in US-7)
@@ -513,6 +519,9 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
   - The request is recorded before the API call. If the database fails while
     checking or recording the limit, the user gets the generic parse error
     and the API is not called (fail closed)
+  - More than 5 requests waiting at once for one user, or a wait longer
+    than 2 s, give the generic parse error and don't count (decision log
+    2026-11-26, "rate-limit queue")
 - A missing API key or model id gives the generic parse error; it is checked
   before the rate limit (so it doesn't count) and doesn't fail the build
 - The pasted text and the model output are never stored or logged; on
@@ -777,18 +786,6 @@ lives in `src/lib/auth.ts`.
 
 ## 9. Open questions
 
-- How is the client IP read on Vercel, and can that header be trusted (a
-  client could send its own)? Check the Vercel docs before implementing the
-  US-0 limits (M7)
-- How should a check waiting on the rate-limit lock use the connection
-  pool? A waiting check holds a pooled connection for up to 2 s
-  (`lock_timeout`), and the pool has 10 by default, so a burst of checks on
-  one key can delay other requests on the same instance or make them fail
-  with the generic error (security review of the atomic check, 2026-11-26;
-  reasoning, not measured). Low for the US-7 parse limit, which needs a
-  session. Measure it (many checks on one key plus one check on another
-  key) and decide before the US-0 sign-in and sign-up limits, which run
-  without one
 - Never set `ANTHROPIC_BASE_URL` in production (the SDK sends the key to
   that host); e2e points it at a local stub. The same holds for the e2e
   override of the US-0 IP limits (it would raise them for everyone). Check
@@ -2167,6 +2164,41 @@ lives in `src/lib/auth.ts`.
   keys of the action) could delete a row still inside the waiting check's
   window and let it exceed the limit by one. One hour is far longer than
   any check can run. Found in the plan review
+- 2026-11-26: rate-limit queue (US-0, US-7, M7; amends the 2026-11-26
+  atomic rate-limit check entry, closes the section 9 pool question). A
+  check waiting on the advisory lock held a pooled connection the whole
+  time. Measured against the e2e database (about 40 ms round trip; one
+  uncontended check about 280 ms, the lock held about 130–160 ms): with 50
+  or 200 parallel checks on one key, a single check on another key failed
+  with P2028 (no connection within `maxWait` 2 s) in 3 of 3 runs each; with
+  15 it passed after 1.2–1.4 s. Now checks of the same counter first wait in
+  an in-process queue in the shared module, and only the queue head opens
+  the transaction, so a burst on one counter holds one connection per
+  instance. At most 5 checks wait at once per counter; a check that finds
+  its queue full, or waits longer than 2 s, is rejected with the generic
+  error (fail closed, no new message) and records nothing. A check with
+  several counters (sign-in) joins their queues in the same sorted lock-id
+  order as the locks; any full queue rejects it. The advisory lock stays:
+  the queue is per instance, the lock covers all instances. Applies to every
+  limit (parse, sign-in, sign-up). e2e is unaffected (`workers: 1`).
+  Rejected: a bigger pool or a shorter `lock_timeout` (they only move the
+  threshold, and the pool's own queue is still first in, first out);
+  `pg_try_advisory_xact_lock` (rejects legitimate parallel requests such as
+  a double click). Production round trips to Neon are likely shorter, so
+  the measured numbers are an upper bound (reasoning; to be measured on the
+  deploy). A Vercel Firewall rate limit is a possible extra layer, to be
+  checked on the deploy
+- 2026-11-26: client IP (US-0, M7; closes the section 9 client IP question
+  and the 2026-11-26 sign-in and sign-up entry's open IP question). The
+  client IP is the first comma-separated value of `x-forwarded-for`,
+  trimmed; no header or an empty value is "unknown". The Vercel docs say
+  Vercel overwrites `x-forwarded-for` to prevent IP spoofing; they state it
+  for a proxy placed in front of Vercel, and that the same holds without one
+  is reasoning. They don't say whether the value can be a list, hence the
+  first value. Not chosen: `x-vercel-forwarded-for` (needed only behind
+  another proxy, which the app doesn't have). To be checked on the deploy:
+  a request with a forged `X-Forwarded-For` on a preview records the real
+  IP, not the forged one
 
 ## 11. End-to-end verification
 
