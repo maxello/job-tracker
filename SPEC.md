@@ -76,6 +76,28 @@ As a job seeker, I want to sign up and sign in, so that my applications are priv
   exists" message, the same as for a missing id)
 - Data created under the M1 demo-user stub is wiped when M2 ships (it is dev
   data only; no migration)
+- Rate limits (M7, decision log 2026-11-26):
+  - Sign-in: 5 attempts per email and 20 per client IP, each in a rolling
+    15 minutes. The email is the validated one (trimmed and lowercased)
+  - Sign-up: 5 attempts per client IP in a rolling 1 hour; no email limit
+  - An attempt counts once it reaches the `auth.api` call, whatever the
+    result, and is recorded before the call. Requests rejected earlier (form
+    validation, or at the limit) don't count. Parallel attempts at the limit
+    can overshoot it (section 9, atomic check and insert)
+  - At either limit, whichever counter is hit: "Too many attempts. Try again
+    in N minutes." N is the time until the count drops below the limit (the
+    US-7 rule), in minutes, rounded up, at least 1; "1 minute" when N is 1.
+    When both sign-in counters are over, N uses the later time
+  - When the client IP can't be read, the request uses one shared "unknown"
+    IP counter. The server logs only an error category, never the IP or the
+    email
+  - If the database fails while checking or recording the limit, the user
+    gets the generic sign-in or sign-up error and `auth.api` is not called
+    (fail closed, as in US-7)
+  - e2e raises only the IP limits, through an environment variable that the
+    `playwright.config.ts` `webServer` sets (like `ANTHROPIC_BASE_URL`). The
+    email limit is never overridden. The variable is never set in production
+    (section 9)
 
 ### US-1 Add application (M1)
 
@@ -646,8 +668,13 @@ Application that has already been checked for ownership.
 
 `RateLimitEvent` logs one row per counted request. For US-7 parsing, `action`
 is "parse" and `key` is the `userId` from the session (never from the
-request). From M7 the same table holds the sign-in and sign-up limits (`key`
-= email or IP). Old rows are not cleaned up for now.
+request). From M7 the same table holds the US-0 limits: `action` "sign-in"
+writes two rows per counted attempt, one with `key` = email and one with
+`key` = client IP; `action` "sign-up" writes one, `key` = client IP. An IP
+that can't be read is the key "unknown". Each limit check (parse, sign-in,
+sign-up) deletes that action's rows older than its window, for all keys.
+There is no hard retention bound: old rows stay until the next check of the
+same action.
 
 ## 6. Architecture
 
@@ -748,20 +775,19 @@ lives in `src/lib/auth.ts`.
 
 ## 9. Open questions
 
-- What are the sign-in and sign-up rate limits before the public deploy (M7)?
-  Better Auth's limiter does not apply to `auth.api` calls from Server
-  Actions, so attempts are currently unlimited. The storage is decided
-  (`RateLimitEvent`, section 5; decision log 2026-11-23); the numbers, the
-  window and the key (email, IP or both) are decided at the start of M7 and
-  ship before the deploy
 - How should the rate-limit check and insert become atomic? The US-7 parse
   limit counts, then inserts, so parallel requests at the limit overshoot it
   by up to the number of parallel requests (accepted for now: the workspace
   spend limit caps the cost, but once it is used up every user gets the
   generic parse error). Decide before the public deploy (M7), together with
   the sign-in and sign-up limits that share `RateLimitEvent`
+- How is the client IP read on Vercel, and can that header be trusted (a
+  client could send its own)? Check the Vercel docs before implementing the
+  US-0 limits (M7)
 - Never set `ANTHROPIC_BASE_URL` in production (the SDK sends the key to
-  that host); e2e points it at a local stub. Check the deploy env in M7
+  that host); e2e points it at a local stub. The same holds for the e2e
+  override of the US-0 IP limits (it would raise them for everyone). Check
+  the deploy env in M7
 - How should sign-out end the session when the database fails? `auth.api.signOut`
   clears the cookie and reports success, but the session row stays valid until it
   expires (at most 7 days), so a copied cookie keeps working. Decide before the
@@ -2074,6 +2100,24 @@ lives in `src/lib/auth.ts`.
   report, which includes the traces, is uploaded with `actions/upload-artifact`
   pinned to a commit SHA, kept 7 days, one artifact per run attempt. Job
   timeout 30 minutes. No GitHub Secrets
+- 2026-11-26: sign-in and sign-up rate limits (US-0, M7; amends the
+  2026-11-23 parse rate limit entry's "No cleanup job for now"). Better
+  Auth's limiter does not apply to `auth.api` calls from Server Actions, so
+  attempts were unlimited; the limits are built on `RateLimitEvent`
+  instead. Sign-in has two counters: 5 per email and 20 per client IP,
+  rolling 15 minutes. Sign-up: 5 per IP, rolling 1 hour. Every attempt that
+  reaches the `auth.api` call counts, recorded before the call; form
+  validation errors don't count. At either limit: "Too many attempts. Try
+  again in N minutes." (N by the US-7 rule, rounded up, at least 1; the
+  later time when both sign-in counters are over). An unreadable IP shares
+  one "unknown" counter; logs carry only an error category, never the IP or
+  the email. A database failure in the check or the write fails closed
+  (generic error, no `auth.api` call). Each limit check, parse included,
+  deletes that action's rows older than its window, for all keys; no hard
+  retention bound. e2e raises only the IP limits through an environment
+  variable set in `playwright.config.ts`; the email limit is never
+  overridden and the variable is never set in production. Atomic check and
+  insert and the Vercel client IP stay open (section 9)
 
 ## 11. End-to-end verification
 
