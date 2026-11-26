@@ -94,15 +94,23 @@ As a job seeker, I want to sign up and sign in, so that my applications are priv
   - When the client IP can't be read (no header or an empty value), the
     request uses one shared "unknown" IP counter. The server logs only an
     error category, never the IP or the email
-  - More than 5 attempts waiting at once on one counter, or a wait longer
-    than 2 s, give the generic sign-in or sign-up error and don't count
-    (decision log 2026-11-26, "rate-limit queue")
+  - More than 5 checks at once on one counter, including the one running
+    (the 6th is rejected at once), or a wait longer than 2 s to reach the
+    head of every queue the check joins (sign-in: 2 s in total for both
+    counters), give the generic sign-in or sign-up error and don't count
+    (decision log 2026-11-26, "rate-limit queue" and "rate-limit queue
+    details")
   - If the database fails while checking or recording the limit, the user
     gets the generic sign-in or sign-up error and `auth.api` is not called
     (fail closed, as in US-7)
-  - e2e raises only the IP limits, through an environment variable that the
-    `playwright.config.ts` `webServer` sets (like `ANTHROPIC_BASE_URL`). The
-    email limit is never overridden. The variable is never set in production
+  - The log category is `rate_limit_queue` for a queue rejection and
+    `rate_limit_db` for a database failure; the log carries no IP, email or
+    error object
+  - e2e raises only the IP limits, through `E2E_AUTH_IP_LIMIT`, which the
+    `playwright.config.ts` `webServer` sets to 1000 (like
+    `ANTHROPIC_BASE_URL`). One value for both IP limits. A value that isn't
+    a positive integer is ignored and the limit above applies. The email
+    limit is never overridden. The variable is never set in production
     (section 9)
 
 ### US-1 Add application (M1)
@@ -519,9 +527,12 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
   - The request is recorded before the API call. If the database fails while
     checking or recording the limit, the user gets the generic parse error
     and the API is not called (fail closed)
-  - More than 5 requests waiting at once for one user, or a wait longer
-    than 2 s, give the generic parse error and don't count (decision log
-    2026-11-26, "rate-limit queue")
+  - More than 5 checks at once for one user, including the one running
+    (the 6th is rejected at once), or a wait longer than 2 s to reach the
+    head of the queue, give the generic parse error and don't count
+    (decision log 2026-11-26, "rate-limit queue" and "rate-limit queue
+    details"). The log category is `rate_limit_queue` for a queue
+    rejection and `rate_limit_db` for a database failure
 - A missing API key or model id gives the generic parse error; it is checked
   before the rate limit (so it doesn't count) and doesn't fail the build
 - The pasted text and the model output are never stored or logged; on
@@ -2198,7 +2209,31 @@ lives in `src/lib/auth.ts`.
   first value. Not chosen: `x-vercel-forwarded-for` (needed only behind
   another proxy, which the app doesn't have). To be checked on the deploy:
   a request with a forged `X-Forwarded-For` on a preview records the real
-  IP, not the forged one
+  IP, not the forged one. Locally and in e2e the key is the socket address
+  (`127.0.0.1` or `::1`), not "unknown": `next start` and `next dev` fill a
+  missing `x-forwarded-for` with it (source: `next` 16.4.6
+  `base-server.js`), so "unknown" is covered by unit tests only
+- 2026-11-26: rate-limit queue details (US-0, US-7, M7; amends the
+  2026-11-26 rate-limit queue and atomic rate-limit check entries). The cap
+  of 5 per counter includes the check that is running: 1 running and 4
+  waiting, the 6th at once is rejected. The 2 s wait runs from joining the
+  queues until the check is the head of all of them; for sign-in it is 2 s
+  in total for both counters, not per queue. A check with several counters
+  first checks, synchronously, that none of its queues is full and only
+  then joins all of them, so a rejected check never holds a place. The
+  cleanup now runs after the queue (only a queue head runs it), still as a
+  separate statement before the locked transaction, so a burst doesn't send
+  one cleanup per waiting check. A queue rejection is its own error class,
+  thrown by the shared module: callers already fail closed on any throw and
+  tell the two apart only for the log category (`rate_limit_queue` or
+  `rate_limit_db`, in sign-in, sign-up and parse; no IP, email or error
+  object). Prisma's transaction defaults stay (`maxWait` 2 s, `timeout`
+  5 s); in Prisma 7.10.1 `timeout` starts only once the transaction has
+  started, so `maxWait` isn't part of it (source). e2e: one variable,
+  `E2E_AUTH_IP_LIMIT`, raises both IP limits, 1000 in
+  `playwright.config.ts`; a value that isn't a positive integer is ignored,
+  so a mistake never weakens a limit. `e2e/reset.sql` also truncates
+  `RateLimitEvent`, so rows from one run don't count in the next
 
 ## 11. End-to-end verification
 
