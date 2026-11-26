@@ -10,15 +10,13 @@ vi.hoisted(() => {
 
 const mocks = vi.hoisted(() => ({
   requestParse: vi.fn(),
-  getParseLimit: vi.fn(),
-  recordParseRequest: vi.fn(),
+  checkRateLimit: vi.fn(),
   tryGetCurrentUserId: vi.fn(),
 }));
 
 vi.mock("./client", () => ({ requestParse: mocks.requestParse }));
-vi.mock("./rate-limit", () => ({
-  getParseLimit: mocks.getParseLimit,
-  recordParseRequest: mocks.recordParseRequest,
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: mocks.checkRateLimit,
 }));
 vi.mock("@/lib/current-user", () => ({
   tryGetCurrentUserId: mocks.tryGetCurrentUserId,
@@ -61,8 +59,7 @@ beforeEach(() => {
   vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
   vi.stubEnv("PARSE_MODEL", "test-model");
   mocks.tryGetCurrentUserId.mockResolvedValue(USER);
-  mocks.getParseLimit.mockResolvedValue({ allowed: true });
-  mocks.recordParseRequest.mockResolvedValue(undefined);
+  mocks.checkRateLimit.mockResolvedValue({ allowed: true });
   mocks.requestParse.mockResolvedValue({ ok: true, output });
   consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -74,7 +71,6 @@ afterEach(() => {
 });
 
 function expectNothingSent() {
-  expect(mocks.recordParseRequest).not.toHaveBeenCalled();
   expect(mocks.requestParse).not.toHaveBeenCalled();
 }
 
@@ -99,7 +95,7 @@ describe("parseJobPostingAction before the API call (US-7)", () => {
       error: { message: GENERIC },
       values: { text: TEXT },
     });
-    expect(mocks.getParseLimit).not.toHaveBeenCalled();
+    expect(mocks.checkRateLimit).not.toHaveBeenCalled();
     expectNothingSent();
   });
 
@@ -118,7 +114,7 @@ describe("parseJobPostingAction before the API call (US-7)", () => {
         error: { fieldErrors: { text: [error] } },
         values: { text },
       });
-      expect(mocks.getParseLimit).not.toHaveBeenCalled();
+      expect(mocks.checkRateLimit).not.toHaveBeenCalled();
       expectNothingSent();
     },
   );
@@ -132,7 +128,7 @@ describe("parseJobPostingAction before the API call (US-7)", () => {
         error: { message: GENERIC },
         values: { text: TEXT },
       });
-      expect(mocks.getParseLimit).not.toHaveBeenCalled();
+      expect(mocks.checkRateLimit).not.toHaveBeenCalled();
       expectNothingSent();
       expectOnlyLog("config_missing");
     },
@@ -141,7 +137,7 @@ describe("parseJobPostingAction before the API call (US-7)", () => {
 
 describe("parseJobPostingAction rate limit (US-7)", () => {
   const atLimit = (resetAt: string) =>
-    mocks.getParseLimit.mockResolvedValue({
+    mocks.checkRateLimit.mockResolvedValue({
       allowed: false,
       resetAt: new Date(resetAt),
     });
@@ -165,30 +161,24 @@ describe("parseJobPostingAction rate limit (US-7)", () => {
         },
         values: { text: TEXT },
       });
-      expect(mocks.getParseLimit).toHaveBeenCalledWith(USER, expect.any(Date));
+      expect(mocks.checkRateLimit).toHaveBeenCalledWith({
+        action: "parse",
+        windowMs: 24 * 60 * 60 * 1000,
+        counters: [{ key: USER, limit: 20 }],
+        now: expect.any(Date),
+      });
       expectNothingSent();
     },
   );
 
   it("fails closed when the limit check throws", async () => {
-    mocks.getParseLimit.mockRejectedValue(new Error(`db down ${TEXT}`));
+    mocks.checkRateLimit.mockRejectedValue(new Error(`db down ${TEXT}`));
     await expect(submit()).resolves.toEqual({
       ok: false,
       error: { message: GENERIC },
       values: { text: TEXT },
     });
     expectNothingSent();
-    expectOnlyLog("rate_limit_db");
-  });
-
-  it("fails closed when recording the request throws", async () => {
-    mocks.recordParseRequest.mockRejectedValue(new Error("db down"));
-    await expect(submit()).resolves.toEqual({
-      ok: false,
-      error: { message: GENERIC },
-      values: { text: TEXT },
-    });
-    expect(mocks.requestParse).not.toHaveBeenCalled();
     expectOnlyLog("rate_limit_db");
   });
 });
@@ -208,11 +198,16 @@ describe("parseJobPostingAction API call (US-7)", () => {
         salaryCurrency: "USD",
       },
     });
-    expect(mocks.recordParseRequest).toHaveBeenCalledTimes(1);
-    expect(mocks.recordParseRequest).toHaveBeenCalledWith(USER);
+    expect(mocks.checkRateLimit).toHaveBeenCalledTimes(1);
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith({
+      action: "parse",
+      windowMs: 24 * 60 * 60 * 1000,
+      counters: [{ key: USER, limit: 20 }],
+      now: expect.any(Date),
+    });
     expect(mocks.requestParse).toHaveBeenCalledTimes(1);
     expect(mocks.requestParse.mock.calls[0][0]).toBe(TEXT);
-    expect(mocks.recordParseRequest.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(mocks.checkRateLimit.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.requestParse.mock.invocationCallOrder[0],
     );
     expect(consoleError).not.toHaveBeenCalled();
@@ -222,12 +217,9 @@ describe("parseJobPostingAction API call (US-7)", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-11-23T10:00:00Z"));
     // The session and database steps take time before the call.
-    mocks.getParseLimit.mockImplementation(async () => {
-      vi.setSystemTime(Date.now() + 1_000);
+    mocks.checkRateLimit.mockImplementation(async () => {
+      vi.setSystemTime(Date.now() + 2_000);
       return { allowed: true };
-    });
-    mocks.recordParseRequest.mockImplementation(async () => {
-      vi.setSystemTime(Date.now() + 1_000);
     });
     let calledAt = 0;
     mocks.requestParse.mockImplementation(async () => {
@@ -254,7 +246,7 @@ describe("parseJobPostingAction API call (US-7)", () => {
       error: { message: NOT_POSTING },
       values: { text: TEXT },
     });
-    expect(mocks.recordParseRequest).toHaveBeenCalledTimes(1);
+    expect(mocks.checkRateLimit).toHaveBeenCalledTimes(1);
     expect(consoleError).not.toHaveBeenCalled();
   });
 
@@ -267,7 +259,7 @@ describe("parseJobPostingAction API call (US-7)", () => {
         error: { message: GENERIC },
         values: { text: TEXT },
       });
-      expect(mocks.recordParseRequest).toHaveBeenCalledTimes(1);
+      expect(mocks.checkRateLimit).toHaveBeenCalledTimes(1);
       expectOnlyLog(category);
     },
   );
