@@ -801,6 +801,13 @@ lives in `src/lib/auth.ts`.
   that host); e2e points it at a local stub. The same holds for the e2e
   override of the US-0 IP limits (it would raise them for everyone). Check
   the deploy env in M7
+- Should the database pool bound how long a query waits for a connection
+  (M7)? `src/lib/db.ts` passes only `connectionString`, so the pg pool uses
+  its defaults: 10 connections and no `connectionTimeoutMillis`, so a
+  checkout waits with no bound (source: `pg-pool`). This holds for every
+  query in the app, not only the rate-limit cleanup; interactive
+  transactions are bounded by Prisma's `maxWait`. To be decided in a
+  separate change
 - How should sign-out end the session when the database fails? `auth.api.signOut`
   clears the cookie and reports success, but the session row stays valid until it
   expires (at most 7 days), so a copied cookie keeps working. Decide before the
