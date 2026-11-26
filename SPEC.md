@@ -672,7 +672,8 @@ request). From M7 the same table holds the US-0 limits: `action` "sign-in"
 writes two rows per counted attempt, one with `key` = email and one with
 `key` = client IP; `action` "sign-up" writes one, `key` = client IP. An IP
 that can't be read is the key "unknown". Each limit check (parse, sign-in,
-sign-up) deletes that action's rows older than its window, for all keys.
+sign-up) deletes that action's rows older than its window plus one hour,
+for all keys.
 There is no hard retention bound: old rows stay until the next check of the
 same action. Checks of the same counter (`action` and `key`) run one at a
 time (decision log 2026-11-26).
@@ -2149,6 +2150,14 @@ lives in `src/lib/auth.ts`.
   unsupported and says nothing about transaction-level ones. Reasoning, not
   checked: a transaction-level lock lives inside one transaction, so it
   should work through the pooler; to be checked on the deploy
+- 2026-11-26: cleanup margin (US-0, US-7, M7; amends the 2026-11-26 atomic
+  rate-limit check entry and section 5). Each limit check deletes the
+  action's rows older than its window plus one hour (a constant margin),
+  not just older than its window. A check waiting on its lock holds an
+  earlier `now`; another check's cleanup (any key, since cleanup covers all
+  keys of the action) could delete a row still inside the waiting check's
+  window and let it exceed the limit by one. One hour is far longer than
+  any check can run. Found in the plan review
 
 ## 11. End-to-end verification
 
