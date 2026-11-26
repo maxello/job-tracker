@@ -2068,6 +2068,12 @@ lives in `src/lib/auth.ts`.
   GitHub plan without branch protection, so for now a red run doesn't block a
   merge; the repository becomes public before the public deploy, after a check
   of its git history for secrets, and `main` is protected then
+- 2026-11-26: e2e in CI (M7, amends the 2026-11-25 CI entry). e2e runs in CI
+  as a second job, `e2e`, after `checks` (`needs`), on the same triggers. It
+  starts its own `postgres:18` service container. On failure only the HTML
+  report, which includes the traces, is uploaded with `actions/upload-artifact`
+  pinned to a commit SHA, kept 7 days, one artifact per run attempt. Job
+  timeout 30 minutes. No GitHub Secrets
 
 ## 11. End-to-end verification
 
