@@ -9,7 +9,7 @@ test("sign-in with a seeded user lands on the list", async ({ page }) => {
 
   await expect(page).toHaveURL("/");
   await expect(
-    page.getByRole("heading", { name: "Applications" }),
+    page.getByRole("heading", { name: "Applications (red proof)" }),
   ).toBeVisible();
   await expect(page.getByText("No applications yet.")).toBeVisible();
 });
