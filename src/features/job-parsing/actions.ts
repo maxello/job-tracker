@@ -4,7 +4,7 @@ import { z } from "zod";
 import { parseTimeZone } from "@/features/applications/date-filter";
 import type { ActionResult } from "@/lib/action-result";
 import { tryGetCurrentUserId } from "@/lib/current-user";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, RateLimitBusyError } from "@/lib/rate-limit";
 import { requestParse } from "./client";
 import { toParsedFields } from "./parsed-fields";
 import { parseInputSchema, type ParsedFields } from "./schemas";
@@ -91,8 +91,13 @@ export async function parseJobPostingAction(
         `Daily limit reached. You can parse again after ${formatResetTime(limit.resetAt, formData.get("tz"))}.`,
       );
     }
-  } catch {
-    logFailure("rate_limit_db", text.length);
+  } catch (error) {
+    logFailure(
+      error instanceof RateLimitBusyError
+        ? "rate_limit_queue"
+        : "rate_limit_db",
+      text.length,
+    );
     return fail(PARSE_FAILED);
   }
 

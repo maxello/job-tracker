@@ -8,15 +8,20 @@ vi.hoisted(() => {
   vi.stubEnv("PARSE_MODEL", "test-model");
 });
 
-const mocks = vi.hoisted(() => ({
-  requestParse: vi.fn(),
-  checkRateLimit: vi.fn(),
-  tryGetCurrentUserId: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  class RateLimitBusyError extends Error {}
+  return {
+    requestParse: vi.fn(),
+    checkRateLimit: vi.fn(),
+    tryGetCurrentUserId: vi.fn(),
+    RateLimitBusyError,
+  };
+});
 
 vi.mock("./client", () => ({ requestParse: mocks.requestParse }));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: mocks.checkRateLimit,
+  RateLimitBusyError: mocks.RateLimitBusyError,
 }));
 vi.mock("@/lib/current-user", () => ({
   tryGetCurrentUserId: mocks.tryGetCurrentUserId,
@@ -180,6 +185,19 @@ describe("parseJobPostingAction rate limit (US-7)", () => {
     });
     expectNothingSent();
     expectOnlyLog("rate_limit_db");
+  });
+
+  it("fails closed on a queue rejection, logged as rate_limit_queue", async () => {
+    mocks.checkRateLimit.mockRejectedValue(
+      new mocks.RateLimitBusyError(`busy ${TEXT}`),
+    );
+    await expect(submit()).resolves.toEqual({
+      ok: false,
+      error: { message: GENERIC },
+      values: { text: TEXT },
+    });
+    expectNothingSent();
+    expectOnlyLog("rate_limit_queue");
   });
 });
 

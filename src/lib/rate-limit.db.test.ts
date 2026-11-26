@@ -1,7 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
-import { checkRateLimit, lockId, type RateLimitCounter } from "./rate-limit";
+import {
+  checkRateLimit,
+  checkRateLimitWithoutQueue,
+  lockId,
+  RateLimitBusyError,
+  type RateLimitCounter,
+} from "./rate-limit";
 
 // Real-database checks of the shared rate limit (SPEC.md US-7, US-0, section
 // 5, decision log 2026-11-26). Run with `npm run test:db` against
@@ -171,7 +177,7 @@ describe("checkRateLimit, parallel checks (real database)", () => {
 
     const results = await Promise.all(
       Array.from({ length: 25 }, () =>
-        checkRateLimit({
+        checkRateLimitWithoutQueue({
           action,
           windowMs: DAY,
           counters: [{ key, limit: 5 }],
@@ -225,6 +231,62 @@ describe("checkRateLimit, parallel checks (real database)", () => {
     expect(elapsed).toBeGreaterThanOrEqual(1_500);
     expect(elapsed).toBeLessThan(4_000);
     await expect(rowCount(action, key)).resolves.toBe(0);
+  });
+});
+
+describe("checkRateLimit queue (real database, decision log 2026-11-26)", () => {
+  type Outcome = { result: unknown } | { error: unknown };
+  const outcome = (promise: Promise<unknown>): Promise<Outcome> =>
+    promise.then(
+      (result) => ({ result }),
+      (error: unknown) => ({ error }),
+    );
+
+  // The measurement from the "rate-limit queue" entry: without the queue the
+  // check on key B failed with P2028 in 3 of 3 runs at 50 and at 200.
+  it.each([50, 200])(
+    "a burst of %i checks on one key doesn't starve a check on another key",
+    async (burstSize) => {
+      const action = newAction();
+      const busyKey = newKey();
+      const otherKey = newKey();
+
+      const burst = Array.from({ length: burstSize }, () =>
+        outcome(checkOne(action, busyKey, new Date())),
+      );
+      const other = await outcome(checkOne(action, otherKey, new Date()));
+      const burstOutcomes = await Promise.all(burst);
+
+      expect(other).toEqual({ result: { allowed: true } });
+      const errors = burstOutcomes.flatMap((o) =>
+        "error" in o ? [o.error] : [],
+      );
+      expect(errors.length).toBeGreaterThan(0);
+      for (const error of errors) {
+        expect(error).toBeInstanceOf(RateLimitBusyError);
+      }
+    },
+  );
+
+  it("6 parallel checks on one key: 5 allowed, 1 rejected by the queue, exactly 5 rows", async () => {
+    const action = newAction();
+    const key = newKey();
+
+    const outcomes = await Promise.all(
+      Array.from({ length: 6 }, () =>
+        outcome(checkOne(action, key, new Date())),
+      ),
+    );
+
+    expect(
+      outcomes.filter(
+        (o) => "result" in o && (o.result as { allowed: boolean }).allowed,
+      ),
+    ).toHaveLength(5);
+    const errors = outcomes.flatMap((o) => ("error" in o ? [o.error] : []));
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBeInstanceOf(RateLimitBusyError);
+    await expect(rowCount(action, key)).resolves.toBe(5);
   });
 });
 
