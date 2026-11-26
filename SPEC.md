@@ -91,8 +91,9 @@ As a job seeker, I want to sign up and sign in, so that my applications are priv
   - The client IP is the first comma-separated value of the
     `x-forwarded-for` header, trimmed (Vercel overwrites the header; decision
     log 2026-11-26, "client IP")
-  - When the client IP can't be read (no header or an empty value), the
-    request uses one shared "unknown" IP counter. The server logs only an
+  - When the client IP can't be read (no header, an empty value, or an
+    empty first value such as `" , 1.2.3.4"`), the request uses one shared
+    "unknown" IP counter. The server logs only an
     error category, never the IP or the email
   - More than 5 checks at once on one counter, including the one running
     (the 6th is rejected at once), or a wait longer than 2 s to reach the
@@ -2209,7 +2210,9 @@ lives in `src/lib/auth.ts`.
 - 2026-11-26: client IP (US-0, M7; closes the section 9 client IP question
   and the 2026-11-26 sign-in and sign-up entry's open IP question). The
   client IP is the first comma-separated value of `x-forwarded-for`,
-  trimmed; no header or an empty value is "unknown". The Vercel docs say
+  trimmed; no header, an empty value or an empty first value
+  (`" , 1.2.3.4"`, not falling through to the next one) is "unknown". The
+  Vercel docs say
   Vercel overwrites `x-forwarded-for` to prevent IP spoofing; they state it
   for a proxy placed in front of Vercel, and that the same holds without one
   is reasoning. They don't say whether the value can be a list, hence the
