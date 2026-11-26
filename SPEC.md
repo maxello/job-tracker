@@ -82,8 +82,8 @@ As a job seeker, I want to sign up and sign in, so that my applications are priv
   - Sign-up: 5 attempts per client IP in a rolling 1 hour; no email limit
   - An attempt counts once it reaches the `auth.api` call, whatever the
     result, and is recorded before the call. Requests rejected earlier (form
-    validation, or at the limit) don't count. Parallel attempts at the limit
-    can overshoot it (section 9, atomic check and insert)
+    validation, or at the limit) don't count. Parallel attempts can't
+    exceed the limit: they are checked one at a time per counter
   - At either limit, whichever counter is hit: "Too many attempts. Try again
     in N minutes." N is the time until the count drops below the limit (the
     US-7 rule), in minutes, rounded up, at least 1; "1 minute" when N is 1.
@@ -503,13 +503,13 @@ As a job seeker, I want to paste a job posting and have the form filled in for m
   the limit the user sees "Daily limit reached. You can parse again after
   HH:MM." (local time at which the oldest counted request in the window turns
   24 hours old), and can still fill in the form manually. Parallel requests
-  at the limit can overshoot it by up to the number of parallel requests;
-  accepted (the workspace spend limit caps the cost)
+  can't exceed the limit: they are checked one at a time per user
   - HH:MM is 24-hour, in the browser's time zone: the form sends it as `tz`,
     read with the US-6 rule (a valid Intl zone, otherwise UTC)
   - The time is when the count in the window drops below 20: with exactly 20
-    counted requests, the oldest + 24 hours; after an overshoot, later (the
-    (count − 20 + 1)-th oldest + 24 hours)
+    counted requests, the oldest + 24 hours; with more than 20 (for example
+    after the limit is lowered), later (the (count − 20 + 1)-th oldest + 24
+    hours)
   - The request is recorded before the API call. If the database fails while
     checking or recording the limit, the user gets the generic parse error
     and the API is not called (fail closed)
@@ -674,7 +674,8 @@ writes two rows per counted attempt, one with `key` = email and one with
 that can't be read is the key "unknown". Each limit check (parse, sign-in,
 sign-up) deletes that action's rows older than its window, for all keys.
 There is no hard retention bound: old rows stay until the next check of the
-same action.
+same action. Checks of the same counter (`action` and `key`) run one at a
+time (decision log 2026-11-26).
 
 ## 6. Architecture
 
@@ -775,12 +776,6 @@ lives in `src/lib/auth.ts`.
 
 ## 9. Open questions
 
-- How should the rate-limit check and insert become atomic? The US-7 parse
-  limit counts, then inserts, so parallel requests at the limit overshoot it
-  by up to the number of parallel requests (accepted for now: the workspace
-  spend limit caps the cost, but once it is used up every user gets the
-  generic parse error). Decide before the public deploy (M7), together with
-  the sign-in and sign-up limits that share `RateLimitEvent`
 - How is the client IP read on Vercel, and can that header be trusted (a
   client could send its own)? Check the Vercel docs before implementing the
   US-0 limits (M7)
@@ -2118,6 +2113,42 @@ lives in `src/lib/auth.ts`.
   variable set in `playwright.config.ts`; the email limit is never
   overridden and the variable is never set in production. Atomic check and
   insert and the Vercel client IP stay open (section 9)
+- 2026-11-26: atomic rate-limit check (US-0, US-7, M7; amends the
+  2026-11-23 parse rate limit entry's "accepted instead of locking" and
+  "moves to `src/lib` in M7 when sign-in and sign-up use it", and the
+  2026-11-26 sign-in and sign-up entry's "Atomic check and insert ... stay
+  open": only the client IP question stays open). Each limit check runs in
+  a Prisma interactive transaction at the database default isolation (Read
+  Committed) and first takes a transaction-level Postgres advisory lock
+  (`pg_advisory_xact_lock`) per counter, then counts and inserts. Requests
+  for the same counter run one at a time; different counters don't wait
+  for each other. The lock is released at commit or rollback. Lock key: the
+  first 8 bytes of SHA-256 of "action:key", computed in Node
+  (`node:crypto`, no new dependency) and passed as a bigint parameter; a
+  collision only makes two counters wait for each other, it never changes a
+  count. A check with several counters (sign-in: email and IP) sorts the
+  lock ids ascending before locking, so two checks can't deadlock. The
+  cleanup (the action's rows older than its window, for all keys) runs as a
+  separate statement before the locked transaction, so the lock covers only
+  the count and the insert; a cleanup failure is a check failure. Waiting:
+  Prisma's defaults (`maxWait` 2 s, `timeout` 5 s) plus
+  `SET LOCAL lock_timeout = '2s'` before the lock. The Postgres docs don't
+  say that `lock_timeout` covers advisory locks; a db test proves it. Any
+  timeout or database error fails closed, as already specified (generic
+  error, no API or `auth.api` call). Code: one shared module in `src/lib`
+  (several counters per check, each with its own limit; when more than one
+  is over, the later reset time). The parse limit moves onto it in the same
+  change and `src/features/job-parsing/rate-limit.ts` is removed; sign-in
+  and sign-up use it in the next change. Rejected: Serializable with a
+  retry on P2034 (the cleanup of all keys on every check would make
+  unrelated checks conflict, and an exhausted retry gives the generic error
+  below the limit); `SELECT ... FOR UPDATE` (it locks only existing rows,
+  so it doesn't protect a counter going from 19 to 20 with a new row);
+  hashing in SQL (the JS hash is unit-testable). Neon: its pooler runs
+  PgBouncer in transaction mode; Neon lists session-level advisory locks as
+  unsupported and says nothing about transaction-level ones. Reasoning, not
+  checked: a transaction-level lock lives inside one transaction, so it
+  should work through the pooler; to be checked on the deploy
 
 ## 11. End-to-end verification
 
