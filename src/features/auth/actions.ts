@@ -6,6 +6,18 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { ActionResult } from "@/lib/action-result";
 import { auth } from "@/lib/auth";
+import {
+  checkRateLimit,
+  RateLimitBusyError,
+  type RateLimitCounter,
+} from "@/lib/rate-limit";
+import {
+  clientIp,
+  ipLimit,
+  SIGN_IN_LIMIT,
+  SIGN_UP_LIMIT,
+  tooManyAttemptsMessage,
+} from "./limits";
 import { signInSchema, signUpSchema } from "./schemas";
 
 export type AuthFieldName = "name" | "email" | "password";
@@ -23,6 +35,33 @@ function readString(formData: FormData, name: AuthFieldName) {
 // failed user insert and 401 for a failed session insert.
 function hasErrorCode(error: unknown, code: string) {
   return isAPIError(error) && error.body?.code === code;
+}
+
+const SIGN_UP_FAILED = "Couldn't create the account. Please try again.";
+const SIGN_IN_FAILED = "Couldn't sign in. Please try again.";
+
+// Checks and records the attempt before auth.api (SPEC.md US-0). Returns the
+// message to show when the attempt can't go on, or null. Fails closed: any
+// error gives `failedMessage`, logged with only its category (never the
+// email, the IP or the error).
+async function rateLimitMessage(
+  label: string,
+  failedMessage: string,
+  check: { action: string; windowMs: number; counters: RateLimitCounter[] },
+): Promise<string | null> {
+  try {
+    const limit = await checkRateLimit({ ...check, now: new Date() });
+    if (limit.allowed) return null;
+    // N from the time after the check: it can have waited in the queue.
+    return tooManyAttemptsMessage(limit.resetAt, new Date());
+  } catch (error) {
+    const category =
+      error instanceof RateLimitBusyError
+        ? "rate_limit_queue"
+        : "rate_limit_db";
+    console.error(`${label} rate limit failed`, { category });
+    return failedMessage;
+  }
 }
 
 export async function signUpAction(
@@ -46,10 +85,20 @@ export async function signUpAction(
     };
   }
 
+  const requestHeaders = await headers();
+  const limited = await rateLimitMessage("Sign-up", SIGN_UP_FAILED, {
+    action: SIGN_UP_LIMIT.action,
+    windowMs: SIGN_UP_LIMIT.windowMs,
+    counters: [
+      { key: clientIp(requestHeaders), limit: ipLimit(SIGN_UP_LIMIT.perIp) },
+    ],
+  });
+  if (limited) return { ok: false, error: { message: limited }, values };
+
   try {
     await auth.api.signUpEmail({
       body: result.data,
-      headers: await headers(),
+      headers: requestHeaders,
     });
   } catch (error) {
     if (hasErrorCode(error, "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL")) {
@@ -60,11 +109,7 @@ export async function signUpAction(
       };
     }
     console.error("Failed to sign up", error);
-    return {
-      ok: false,
-      error: { message: "Couldn't create the account. Please try again." },
-      values,
-    };
+    return { ok: false, error: { message: SIGN_UP_FAILED }, values };
   }
 
   // redirect throws, so it stays outside the try/catch.
@@ -90,10 +135,22 @@ export async function signInAction(
     };
   }
 
+  const requestHeaders = await headers();
+  const limited = await rateLimitMessage("Sign-in", SIGN_IN_FAILED, {
+    action: SIGN_IN_LIMIT.action,
+    windowMs: SIGN_IN_LIMIT.windowMs,
+    counters: [
+      // The validated email (trimmed and lowercased), not the raw value.
+      { key: result.data.email, limit: SIGN_IN_LIMIT.perEmail },
+      { key: clientIp(requestHeaders), limit: ipLimit(SIGN_IN_LIMIT.perIp) },
+    ],
+  });
+  if (limited) return { ok: false, error: { message: limited }, values };
+
   try {
     await auth.api.signInEmail({
       body: result.data,
-      headers: await headers(),
+      headers: requestHeaders,
     });
   } catch (error) {
     // The same text for an unknown email and a wrong password.
@@ -105,11 +162,7 @@ export async function signInAction(
       };
     }
     console.error("Failed to sign in", error);
-    return {
-      ok: false,
-      error: { message: "Couldn't sign in. Please try again." },
-      values,
-    };
+    return { ok: false, error: { message: SIGN_IN_FAILED }, values };
   }
 
   redirect("/");

@@ -53,6 +53,9 @@ export default defineConfig({
         ANTHROPIC_BASE_URL: STUB_URL,
         ANTHROPIC_API_KEY: "e2e-stub-key",
         PARSE_MODEL: "e2e-stub-model",
+        // Raises only the US-0 IP limits: every e2e request comes from one
+        // socket address. Never set in production (SPEC.md section 9).
+        E2E_AUTH_IP_LIMIT: "1000",
       },
     },
   ],
