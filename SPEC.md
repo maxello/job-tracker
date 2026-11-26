@@ -780,6 +780,15 @@ lives in `src/lib/auth.ts`.
 - How is the client IP read on Vercel, and can that header be trusted (a
   client could send its own)? Check the Vercel docs before implementing the
   US-0 limits (M7)
+- How should a check waiting on the rate-limit lock use the connection
+  pool? A waiting check holds a pooled connection for up to 2 s
+  (`lock_timeout`), and the pool has 10 by default, so a burst of checks on
+  one key can delay other requests on the same instance or make them fail
+  with the generic error (security review of the atomic check, 2026-11-26;
+  reasoning, not measured). Low for the US-7 parse limit, which needs a
+  session. Measure it (many checks on one key plus one check on another
+  key) and decide before the US-0 sign-in and sign-up limits, which run
+  without one
 - Never set `ANTHROPIC_BASE_URL` in production (the SDK sends the key to
   that host); e2e points it at a local stub. The same holds for the e2e
   override of the US-0 IP limits (it would raise them for everyone). Check
