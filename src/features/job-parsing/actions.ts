@@ -4,10 +4,16 @@ import { z } from "zod";
 import { parseTimeZone } from "@/features/applications/date-filter";
 import type { ActionResult } from "@/lib/action-result";
 import { tryGetCurrentUserId } from "@/lib/current-user";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { requestParse } from "./client";
 import { toParsedFields } from "./parsed-fields";
-import { getParseLimit, recordParseRequest } from "./rate-limit";
 import { parseInputSchema, type ParsedFields } from "./schemas";
+
+// Parse rate limit (SPEC.md US-7): 20 counted requests per user per rolling
+// 24 hours, keyed by the session's userId.
+const PARSE_ACTION = "parse";
+const PARSE_LIMIT = 20;
+const PARSE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const PARSE_FAILED =
   "Couldn't parse the posting. Try again or fill in the form manually.";
@@ -70,16 +76,21 @@ export async function parseJobPostingAction(
     return fail(PARSE_FAILED);
   }
 
-  // The key is the session's userId. Fails closed: no API call when the
-  // database can't check or record the request.
+  // The key is the session's userId. Checked and recorded in one call, before
+  // the API call. Fails closed: no API call when the database can't check or
+  // record the request.
   try {
-    const limit = await getParseLimit(userId, new Date());
+    const limit = await checkRateLimit({
+      action: PARSE_ACTION,
+      windowMs: PARSE_WINDOW_MS,
+      counters: [{ key: userId, limit: PARSE_LIMIT }],
+      now: new Date(),
+    });
     if (!limit.allowed) {
       return fail(
         `Daily limit reached. You can parse again after ${formatResetTime(limit.resetAt, formData.get("tz"))}.`,
       );
     }
-    await recordParseRequest(userId);
   } catch {
     logFailure("rate_limit_db", text.length);
     return fail(PARSE_FAILED);
