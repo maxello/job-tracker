@@ -1,0 +1,4 @@
+{
+  "buildCommand": "next build && prisma migrate deploy",
+  "regions": ["fra1"]
+}
