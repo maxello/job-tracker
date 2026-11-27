@@ -809,10 +809,6 @@ lives in `src/lib/auth.ts`.
   query in the app, not only the rate-limit cleanup; interactive
   transactions are bounded by Prisma's `maxWait`. To be decided in a
   separate change
-- How should sign-out end the session when the database fails? `auth.api.signOut`
-  clears the cookie and reports success, but the session row stays valid until it
-  expires (at most 7 days), so a copied cookie keeps working. Decide before the
-  public deploy (M7)
 - Which security headers ship with the public deploy (M7)? HSTS and a CSP with
   only `frame-ancestors` are expected; neither affects rendering. A `script-src`
   policy needs a separate decision: nonces require dynamic rendering and are
@@ -2244,6 +2240,23 @@ lives in `src/lib/auth.ts`.
   `playwright.config.ts`; a value that isn't a positive integer is ignored,
   so a mistake never weakens a limit. `e2e/reset.sql` also truncates
   `RateLimitEvent`, so rows from one run don't count in the next
+- 2026-11-27: sign-out when the database fails (M7; confirms the
+  2026-11-04 `signOutAction` entry, closes the open question). Kept as is:
+  `auth.api.signOut` logs a failed session read or delete, clears the
+  cookie and returns success (better-auth 1.7.16,
+  `dist/api/routes/sign-out.mjs`), so the user lands on `/sign-in` and the
+  browser is signed out. The session row stays valid until it expires (at
+  most 7 days): a cookie copied earlier still works. Accepted: during an
+  outage, ending the session in the browser in front of the user matters
+  most (a shared computer), and the cookie is HttpOnly (and Secure in production).
+  Rejected: keeping the cookie and showing an error until the delete
+  succeeds (the user stays signed in during an outage), and a warning
+  after sign-out (the user can't act on it). Measured with a temporary db
+  test against `job_tracker_e2e`: with a working database `signOut`
+  returned success, deleted the row and the old cookie was rejected; with
+  an auth instance whose database was unreachable it returned success in
+  7 ms with the same cookie-clearing `Set-Cookie`, the row stayed and the
+  old cookie still signed in. Recheck on a Better Auth upgrade
 
 ## 11. End-to-end verification
 
