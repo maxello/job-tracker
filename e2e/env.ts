@@ -42,6 +42,10 @@ export function loadE2eEnv() {
     throw new Error(`e2e: BETTER_AUTH_URL must be ${BASE_URL}`);
   }
 
+  // Set after the guard: the Prisma CLI reads this first, so a value from the
+  // shell or the dev .env must never reach e2e or db test migrations.
+  process.env.DATABASE_URL_UNPOOLED = process.env.DATABASE_URL;
+
   return Object.fromEntries(
     REQUIRED_KEYS.map((key) => [key, process.env[key]!]),
   ) as Record<(typeof REQUIRED_KEYS)[number], string>;

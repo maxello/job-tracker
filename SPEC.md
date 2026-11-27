@@ -2298,6 +2298,33 @@ lives in `src/lib/auth.ts`.
   reset `preview` from `dev` (asked first; to be checked when needed).
   Previews also share `RateLimitEvent` rows and the dev project's compute
   hours. Replaces "each preview uses its own Neon branch" in section 6.
+- 2026-11-27: database URLs (M7). The app keeps reading `DATABASE_URL`
+  (Neon's pooled URL on Vercel); the Prisma CLI (`migrate deploy`, `db
+execute`) reads `DATABASE_URL_UNPOOLED` (Neon's name for the direct URL)
+  through `datasource.url` in `prisma.config.ts`, falling back to
+  `DATABASE_URL` when it is unset or empty. Why: migrations need a direct
+  connection (Neon docs), and Prisma 7's CLI takes its URL from the config
+  while the app passes its own string to the adapter. The app stays on
+  `DATABASE_URL` and the new name goes to migrations, not the reverse: `next
+start` falls back to the dev `.env` for any variable not set (Next docs,
+  env load order) and the e2e guard checks only `DATABASE_URL`, so a new app
+  variable could reach the dev database past the guard. For the same reason
+  `e2e/env.ts`, after the guard passes, sets `DATABASE_URL_UNPOOLED` to the
+  guarded e2e `DATABASE_URL`: `process.loadEnvFile` in `prisma.config.ts`
+  only fills variables that are not set (measured on Node 26.13; the
+  `--env-file` docs say the environment takes precedence), so the dev value
+  can't reach e2e or db test migrations. Not a new key in the e2e env file;
+  CI needs no change. Fallback rather than a required variable: it keeps
+  `prisma generate` (postinstall, CI) and local dev unchanged; cost: a
+  forgotten Vercel variable sends migrations through the pooler, caught by
+  the deploy log check. Checked by `prisma migrate status` with a bogus
+  `DATABASE_URL_UNPOOLED` (fails naming its host) and without it (dev
+  database), `npm run test:db` and the full e2e suite passing with that
+  bogus value exported, and on the deploy, once the build command runs
+  `migrate deploy` (step 4.2), per Vercel environment the `migrate deploy`
+  host (build log, no `-pooler`) and the runtime `DATABASE_URL` host (with
+  `-pooler`) have the same Neon endpoint id (`ep-...`), so a variable set for
+  the wrong environment is caught.
 
 ## 11. End-to-end verification
 
