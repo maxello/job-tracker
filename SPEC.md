@@ -2351,7 +2351,7 @@ start` falls back to the dev `.env` for any variable not set (Next docs,
     `preview`, pooled and direct), `BETTER_AUTH_SECRET` (new, different from
     Production). No `BETTER_AUTH_URL`, `ANTHROPIC_API_KEY` or `PARSE_MODEL`
   - Never set in any environment: `NODE_ENV`, `ANTHROPIC_BASE_URL`,
-    `E2E_AUTH_IP_LIMIT`. Checked: neither variable is in the Production or
+    `E2E_AUTH_IP_LIMIT`. Checked: none of these variables is in the Production or
     Preview list (Vercel dashboard, 2026-11-27); this resolves the section 9
     item.
 
@@ -2383,6 +2383,16 @@ start` falls back to the dev `.env` for any variable not set (Next docs,
   URLs are guessable, and an open preview allows sign-ups on the shared
   preview database. Cost: `curl` checks on a preview need the
   `x-vercel-protection-bypass` header (no bypass secret created yet).
+
+  Vercel makes a project's first deployment a production deployment, even
+  from a non-production branch, with Production variables only (Vercel
+  docs, deployments/environments, "First deployment"). Here the first push
+  of PR #91 became the production deployment and applied the 4 migrations
+  to the empty production database (checked: 0 rows in `User`, `Session`,
+  `Application` and `RateLimitEvent`; 4 rows in `_prisma_migrations`). The
+  app code matched `main` (the PR changes SPEC.md only). Deleting every
+  deployment would make the next one "first" again, so the deployment was
+  kept.
 
   To be checked on the first deploys: sign-in works on a preview and on
   production
