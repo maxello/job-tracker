@@ -2321,8 +2321,10 @@ start` falls back to the dev `.env` for any variable not set (Next docs,
   `DATABASE_URL_UNPOOLED` (fails naming its host) and without it (dev
   database), `npm run test:db` and the full e2e suite passing with that
   bogus value exported, and on the deploy, once the build command runs
-  `migrate deploy` (step 4.2), the `migrate deploy` host in the Vercel build
-  log has no `-pooler` while the runtime `DATABASE_URL` has it.
+  `migrate deploy` (step 4.2), per Vercel environment the `migrate deploy`
+  host (build log, no `-pooler`) and the runtime `DATABASE_URL` host (with
+  `-pooler`) have the same Neon endpoint id (`ep-...`), so a variable set for
+  the wrong environment is caught.
 
 ## 11. End-to-end verification
 
