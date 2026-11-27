@@ -7,7 +7,7 @@ Web app to track job applications (statuses, notes, history), built milestone by
 
 ## Commands
 
-- A task is done only when `npm run lint && npm run typecheck && npm test` pass.
+- A task is done only when `npm run lint && npm run typecheck && npm run format:check && npm test` pass.
 - If `npm test` reports "no tests" in every file, run it from `D:\` (Vitest fails from a lowercase drive).
 - Never run `npm run test:db` alongside `npm run e2e`: both use `job_tracker_e2e`, and e2e always binds port 3100. This holds across worktrees and other checkouts too: one run at a time.
 

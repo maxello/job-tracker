@@ -3,7 +3,7 @@ name: open-pr
 description: "Open a pull request for the current branch: run the checks, commit, push the branch and create the PR with gh. Never pushes to main or merges."
 argument-hint: "[issue number] [plan file path]"
 disable-model-invocation: true
-allowed-tools: Bash(git branch *) Bash(git status *) Bash(git log *) Bash(git diff *) Bash(git add *) Bash(git commit *) Bash(git push -u origin *) Bash(gh issue view *) Bash(gh pr view *) Bash(gh pr create *) Bash(gh pr comment *) Bash(npm run lint) Bash(npm run typecheck) Bash(cd D:/Projects/job-tracker && npm test) Bash(cd D:/Projects/job-tracker && npm run test:db) Bash(npm run e2e) Read(~/.claude/plans/**) Read(plans/**)
+allowed-tools: Bash(git branch *) Bash(git status *) Bash(git log *) Bash(git diff *) Bash(git add *) Bash(git commit *) Bash(git push -u origin *) Bash(gh issue view *) Bash(gh pr view *) Bash(gh pr create *) Bash(gh pr comment *) Bash(npm run lint) Bash(npm run typecheck) Bash(npm run format:check) Bash(cd D:/Projects/job-tracker && npm test) Bash(cd D:/Projects/job-tracker && npm run test:db) Bash(npm run e2e) Read(~/.claude/plans/**) Read(plans/**)
 ---
 
 # Open a pull request for the current branch
@@ -41,7 +41,7 @@ If a plan file path was given, read it with the Read tool and take its decisions
 
 ## 3. Checks
 
-Run each check as a separate Bash call: `npm run lint`, `npm run typecheck`, `cd D:/Projects/job-tracker && npm test` (Vitest needs the uppercase drive, see CLAUDE.md). Also run `cd D:/Projects/job-tracker && npm run test:db` if the changes touch `*.db.test.ts`, `queries.ts` or `prisma/`, and `npm run e2e` if they touch `src/app/`, `components/` or `e2e/` (never both at once). On any failure: show the output and stop. Nothing is committed or pushed.
+Run each check as a separate Bash call: `npm run lint`, `npm run typecheck`, `npm run format:check`, `cd D:/Projects/job-tracker && npm test` (Vitest needs the uppercase drive, see CLAUDE.md). Also run `cd D:/Projects/job-tracker && npm run test:db` if the changes touch `*.db.test.ts`, `queries.ts` or `prisma/`, and `npm run e2e` if they touch `src/app/`, `components/` or `e2e/` (never both at once). On any failure: show the output and stop. Nothing is committed or pushed.
 
 ## 4. Commit
 
