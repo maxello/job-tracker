@@ -798,10 +798,6 @@ lives in `src/lib/auth.ts`.
 
 ## 9. Open questions
 
-- Never set `ANTHROPIC_BASE_URL` in production (the SDK sends the key to
-  that host); e2e points it at a local stub. The same holds for the e2e
-  override of the US-0 IP limits (it would raise them for everyone). Check
-  the deploy env in M7
 - Should the database pool bound how long a query waits for a connection
   (M7)? `src/lib/db.ts` passes only `connectionString`, so the pg pool uses
   its defaults: 10 connections and no `connectionTimeoutMillis`, so a
@@ -2355,7 +2351,9 @@ start` falls back to the dev `.env` for any variable not set (Next docs,
     `preview`, pooled and direct), `BETTER_AUTH_SECRET` (new, different from
     Production). No `BETTER_AUTH_URL`, `ANTHROPIC_API_KEY` or `PARSE_MODEL`
   - Never set in any environment: `NODE_ENV`, `ANTHROPIC_BASE_URL`,
-    `E2E_AUTH_IP_LIMIT`
+    `E2E_AUTH_IP_LIMIT`. Checked: neither variable is in the Production or
+    Preview list (Vercel dashboard, 2026-11-27); this resolves the section 9
+    item.
 
   `BETTER_AUTH_URL` is unset on Preview. Why (measured with `npm run dev`
   and a shell variable): with `BETTER_AUTH_URL=https://wrong.example`,
