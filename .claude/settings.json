@@ -3,6 +3,7 @@
     "allow": [
       "Bash(npm run lint)",
       "Bash(npm run typecheck)",
+      "Bash(npm run format:check)",
       "Bash(git status)",
       "Bash(git diff *)",
       "Bash(npm run e2e)",
