@@ -9,7 +9,9 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
   },
+  // The CLI (migrate, db execute) needs Neon's direct URL; the app keeps the
+  // pooled DATABASE_URL. `||`: an empty value falls back too (env() throws on it).
   datasource: {
-    url: env("DATABASE_URL"),
+    url: process.env.DATABASE_URL_UNPOOLED || env("DATABASE_URL"),
   },
 });
