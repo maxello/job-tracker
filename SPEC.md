@@ -701,15 +701,15 @@ time (decision log 2026-11-26).
 
 ## 6. Architecture
 
-| Layer   | What                                                                                                                    |
-| ------- | ----------------------------------------------------------------------------------------------------------------------- |
-| UI      | Next.js (App Router), Server Components by default, Tailwind, responsive down to 360px, accessible forms                |
-| Logic   | Server Actions with Zod validation on the server                                                                        |
-| Data    | Postgres on Neon via Prisma: User, Session, Account, Verification, Application, StatusChange, RateLimitEvent            |
-| Access  | Better Auth (email + password, database sessions) + owner check on every request through a data access layer            |
-| AI      | Claude API, called from server code only (M6)                                                                           |
-| Quality | Vitest (unit), Playwright (e2e); from M7: CI and error monitoring                                                       |
-| Deploy  | From M7: Vercel, preview deployment for every PR, each preview uses its own Neon branch (never the production database) |
+| Layer   | What                                                                                                                                                 |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UI      | Next.js (App Router), Server Components by default, Tailwind, responsive down to 360px, accessible forms                                             |
+| Logic   | Server Actions with Zod validation on the server                                                                                                     |
+| Data    | Postgres on Neon via Prisma: User, Session, Account, Verification, Application, StatusChange, RateLimitEvent                                         |
+| Access  | Better Auth (email + password, database sessions) + owner check on every request through a data access layer                                         |
+| AI      | Claude API, called from server code only (M6)                                                                                                        |
+| Quality | Vitest (unit), Playwright (e2e); from M7: CI and error monitoring                                                                                    |
+| Deploy  | From M7: Vercel, preview deployment for every PR, previews share one `preview` branch in the dev Neon project; production is a separate Neon project |
 
 Code layout: `src/features/applications/` and `src/features/auth/`, each with
 `components/`, `actions.ts`, `schemas.ts`, `queries.ts`. The Better Auth instance
@@ -2279,6 +2279,25 @@ lives in `src/lib/auth.ts`.
   file, `public/` file, a signed-in page), the full e2e suite, a manual
   dev check (no CSP errors in the console) and `curl -I` on the preview
   deploy (CSP, `nosniff`, Vercel's HSTS)
+- 2026-11-27: production and previews use separate Neon projects. Production
+  is its own project (`job-tracker-prod`, Postgres 18, Frankfurt, as dev) with
+  its own roles and passwords. The dev project has three branches: `dev`
+  (local development, renamed from `production`), `e2e` (e2e and db tests)
+  and `preview`, copied from `dev` (test records only) with its role password
+  reset, so a leaked preview database URL does not open `dev`. Every Vercel preview
+  uses that one `preview` branch. `DATABASE_URL` is set by hand per Vercel
+  environment, with no Neon–Vercel integration. Why: both integrations always
+  create preview branches from the default branch of the connected project,
+  and the Neon-managed one also sets Production's `DATABASE_URL` from that
+  project (Neon docs), so per-PR branches would either copy production data or
+  move production into the dev project. A GitHub Action per PR needs a Neon
+  API key and a Vercel token in GitHub Secrets, and CI has none. Accepted risk
+  of the shared branch (Prisma docs: `migrate deploy` detects no drift and is
+  blocked after a failed migration): a migration from one PR stays for the
+  others, and a failed one blocks every preview until resolved. Recovery:
+  reset `preview` from `dev` (asked first; to be checked when needed).
+  Previews also share `RateLimitEvent` rows and the dev project's compute
+  hours. Replaces "each preview uses its own Neon branch" in section 6.
 
 ## 11. End-to-end verification
 
