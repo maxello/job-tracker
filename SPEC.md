@@ -2342,6 +2342,52 @@ start` falls back to the dev `.env` for any variable not set (Next docs,
   a build), so `NODE_ENV` is never set in a Vercel environment. To be checked
   on the first deploy, in the build log: region `fra1`, Node 26,
   `migrate deploy` ran
+- 2026-11-27: Vercel environment variables and preview protection (M7).
+  Variables are set by hand per Vercel environment (no Neon–Vercel
+  integration, see the Neon entry above). Development has none: local runs
+  use `.env`.
+  - Production: `DATABASE_URL` (`job-tracker-prod`, branch `production`,
+    pooled), `DATABASE_URL_UNPOOLED` (same branch, direct),
+    `BETTER_AUTH_SECRET` (new), `BETTER_AUTH_URL` =
+    `https://job-tracker-rho-gules.vercel.app`, `ANTHROPIC_API_KEY`,
+    `PARSE_MODEL`
+  - Preview: `DATABASE_URL` and `DATABASE_URL_UNPOOLED` (dev project, branch
+    `preview`, pooled and direct), `BETTER_AUTH_SECRET` (new, different from
+    Production). No `BETTER_AUTH_URL`, `ANTHROPIC_API_KEY` or `PARSE_MODEL`
+  - Never set in any environment: `NODE_ENV`, `ANTHROPIC_BASE_URL`,
+    `E2E_AUTH_IP_LIMIT`
+
+  `BETTER_AUTH_URL` is unset on Preview. Why (measured with `npm run dev`
+  and a shell variable): with `BETTER_AUTH_URL=https://wrong.example`,
+  sign-up, sign-out, sign-in and a wrong password all behave normally; the
+  control `BETTER_AUTH_URL=not-a-url` fails sign-in with "Invalid base URL",
+  so the value does reach Better Auth. Source (better-auth 1.7.16): the
+  origin check middleware returns early without `ctx.request`, and our
+  `auth.api` calls pass only headers; CSRF protection for Server Actions is
+  Next's Origin vs Host check (Next docs, data security). Unset means a
+  startup warning on previews. Cost: a malformed Production value breaks
+  auth at runtime while the build stays green, caught by the sign-in check
+  below.
+
+  `ANTHROPIC_API_KEY` and `PARSE_MODEL` are in Production only. Why: a
+  preview runs any branch's code before review and before CI, so a key there
+  is one more path to it; parsing on a preview shows the generic error.
+  Rejected: the same key on Preview (an account-level leak would expose both
+  anyway, but the unreviewed-code path stays) and a separate key (the $1
+  limit is per workspace). Can be added later; environment variable changes
+  apply to new deployments only (Vercel docs).
+
+  Deployment Protection: Vercel Authentication with Standard Protection
+  (previews and generated deployment URLs need a Vercel login with access
+  to the project; the production domain is public). Measured: this is the
+  Hobby default on a new project; Hobby has no password protection or
+  trusted IPs. Why: the repository is public, so branch names and preview
+  URLs are guessable, and an open preview allows sign-ups on the shared
+  preview database. Cost: `curl` checks on a preview need the
+  `x-vercel-protection-bypass` header (no bypass secret created yet).
+
+  To be checked on the first deploys: sign-in works on a preview and on
+  production
 
 ## 11. End-to-end verification
 
