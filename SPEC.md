@@ -2325,6 +2325,23 @@ start` falls back to the dev `.env` for any variable not set (Next docs,
   host (build log, no `-pooler`) and the runtime `DATABASE_URL` host (with
   `-pooler`) have the same Neon endpoint id (`ep-...`), so a variable set for
   the wrong environment is caught.
+- 2026-11-27: Vercel build and region (M7). `vercel.json` at the repo root
+  sets only `buildCommand` (`next build && prisma migrate deploy`) and
+  `regions` (`["fra1"]`). Build first, then migrate: a failed build leaves
+  the database untouched, and `next build` needs no database (CI builds
+  without one). This is the build command the 2026-11-27 database URL deploy
+  check depends on. `buildCommand` in `vercel.json` overrides the dashboard
+  Build Command and the `build` script in `package.json` (Vercel docs,
+  vercel.json). `fra1` (Frankfurt) puts the functions next to both Neon
+  projects; Vercel's default is `iad1`, and Hobby allows a single region
+  (Vercel docs, function regions). No `engines` field in `package.json`
+  (keeps the 2026-11-25 CI entry): Node 26 comes from Vercel's default.
+  `prisma` is a devDependency: Vercel installs devDependencies, but
+  environment variables are visible during the install and npm skips
+  devDependencies when `NODE_ENV` is `production` (Vercel docs, troubleshoot
+  a build), so `NODE_ENV` is never set in a Vercel environment. To be checked
+  on the first deploy, in the build log: region `fra1`, Node 26,
+  `migrate deploy` ran
 
 ## 11. End-to-end verification
 
