@@ -805,6 +805,11 @@ lives in `src/lib/auth.ts`.
   query in the app, not only the rate-limit cleanup; interactive
   transactions are bounded by Prisma's `maxWait`. To be decided in a
   separate change
+- Should the install scripts be allowed explicitly? npm warns during the
+  Vercel install that the install scripts of `prisma`, `@prisma/engines`
+  and `unrs-resolver` are "not yet covered by allowScripts". Today they run
+  (the build and `migrate deploy` pass). A future npm major may block them,
+  which would fail the build at `prisma`. To be decided in a separate change
 - How should other open tabs react when the account changes? The session cookie
   is shared, but `UserMenu` sits in a layout that doesn't re-render on
   navigation: a stale tab keeps the old email and the old list, while new actions
@@ -2354,6 +2359,17 @@ start` falls back to the dev `.env` for any variable not set (Next docs,
     `E2E_AUTH_IP_LIMIT`. Checked: none of these variables is in the Production or
     Preview list (Vercel dashboard, 2026-11-27); this resolves the section 9
     item.
+
+  In both Production and Preview, `DATABASE_URL` uses `sslmode=verify-full`
+  instead of Neon's `sslmode=require`. pg 8.23.1 already treats `require` as
+  `verify-full` and warns at runtime that pg v9 (pg-connection-string v3)
+  will switch to libpq semantics, where `require` doesn't verify the server
+  certificate; the explicit value keeps today's behavior.
+  `DATABASE_URL_UNPOOLED` is unchanged: it is read by the Prisma CLI's
+  schema engine, not pg, and whether that engine accepts `verify-full`
+  wasn't checked. Checked on a preview redeploy: the warning is gone, and
+  sign-in and creating an application work. Local `.env` is unchanged (the
+  Prisma CLI falls back to `DATABASE_URL` there).
 
   `BETTER_AUTH_URL` is unset on Preview. Why (measured with `npm run dev`
   and a shell variable): with `BETTER_AUTH_URL=https://wrong.example`,
