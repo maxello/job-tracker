@@ -2302,3 +2302,6 @@ lives in `src/lib/auth.ts`.
   survive a reload
 - (from M6) Paste a job posting: the form is pre-filled, nothing is saved until
   the user submits; the eval script reports per-field accuracy against targets
+- (from M7) Every response (page, proxy redirect, 404, static and `public/`
+  file) carries the `Content-Security-Policy` and `X-Content-Type-Options`
+  values from the decision log (2026-11-27)
