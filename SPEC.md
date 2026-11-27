@@ -791,8 +791,8 @@ lives in `src/lib/auth.ts`.
 - M6 (week 6): AI job posting parsing + eval script
 - M7–M8 (weeks 7–8): deploy, preview deployments, CI, monitoring, portfolio prep
   - Required before the public deploy (M7): rate limiting for sign-in and sign-up,
-    the sign-out behavior when the database fails, security headers (see Open
-    questions)
+    the sign-out behavior when the database fails, security headers (see the
+    decision log)
   - Required by the end of M8: open tabs react when the account changes (see Open
     questions)
 
@@ -809,12 +809,6 @@ lives in `src/lib/auth.ts`.
   query in the app, not only the rate-limit cleanup; interactive
   transactions are bounded by Prisma's `maxWait`. To be decided in a
   separate change
-- Which security headers ship with the public deploy (M7)? HSTS and a CSP with
-  only `frame-ancestors` are expected; neither affects rendering. A `script-src`
-  policy needs a separate decision: nonces require dynamic rendering and are
-  incompatible with Partial Prerendering, which the app uses. The alternative,
-  `'unsafe-inline'`, allows the inline scripts from Next.js and `LocalDate` but
-  adds little XSS protection
 - How should other open tabs react when the account changes? The session cookie
   is shared, but `UserMenu` sits in a layout that doesn't re-render on
   navigation: a stale tab keeps the old email and the old list, while new actions
@@ -2257,6 +2251,34 @@ lives in `src/lib/auth.ts`.
   an auth instance whose database was unreachable it returned success in
   7 ms with the same cookie-clearing `Set-Cookie`, the row stayed and the
   old cookie still signed in. Recheck on a Better Auth upgrade
+- 2026-11-27: security headers for the public deploy (M7; closes the open
+  question). One rule in `next.config.ts` `headers()` for every path sets
+  `X-Content-Type-Options: nosniff` and this `Content-Security-Policy`:
+  `frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'`.
+  None of these directives touches scripts or styles, so rendering,
+  Partial Prerendering and dev mode are unchanged. No
+  `script-src`: nonces need dynamic rendering and are incompatible with
+  Partial Prerendering (Next 16.4.6 CSP guide); SRI is experimental and
+  covers only script files, not the inline scripts from Next.js and
+  `LocalDate`; `'unsafe-inline'` would still run an injected inline
+  script. XSS protection stays with React's escaping: the only
+  `dangerouslySetInnerHTML` is `InlineScript`, used by `LocalDate` with
+  code-generated values only (`useId()`, constant options,
+  `Date.toISOString()`), and the application URL accepts only http and
+  https. `JSON.stringify` doesn't escape `<`, so user text must never
+  reach `LocalDate`'s script. HSTS is set by Vercel
+  (`max-age=63072000; includeSubDomains; preload` on `*.vercel.app`,
+  `max-age=63072000` on a custom domain; Vercel docs, encryption), not by
+  the app. Not shipped:
+  `X-Frame-Options` (`frame-ancestors` replaces it), `Referrer-Policy`
+  (the browser default is enough; the job link has `noreferrer`),
+  `Permissions-Policy` (no such features used). `headers()` over the
+  proxy: its matcher skips static files, and the proxy stays a redirect
+  only; over `vercel.json`: e2e and local runs wouldn't see it. Checked by
+  an e2e spec on each kind of response (page, proxy redirect, 404, static
+  file, `public/` file, a signed-in page), the full e2e suite, a manual
+  dev check (no CSP errors in the console) and `curl -I` on the preview
+  deploy (CSP, `nosniff`, Vercel's HSTS)
 
 ## 11. End-to-end verification
 
@@ -2280,3 +2302,6 @@ lives in `src/lib/auth.ts`.
   survive a reload
 - (from M6) Paste a job posting: the form is pre-filled, nothing is saved until
   the user submits; the eval script reports per-field accuracy against targets
+- (from M7) Every response (page, proxy redirect, 404, static and `public/`
+  file) carries the `Content-Security-Policy` and `X-Content-Type-Options`
+  values from the decision log (2026-11-27)
